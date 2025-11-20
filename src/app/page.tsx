@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { Map, Share2, Download } from "lucide-react";
+import { Map, Share2, Download, Coffee } from "lucide-react";
 
 export default function Home() {
   return (
     <div className="flex flex-col items-center">
       {/* Hero Section */}
-      <section className="w-full py-20 md:py-32 bg-gradient-to-b from-blue-50 to-white text-center px-4">
+      <section className="w-full py-12 md:py-20 bg-gradient-to-b from-blue-50 to-white text-center px-4">
         <div className="container mx-auto max-w-4xl">
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-gray-900 mb-6">
             Turn Shapes into <span className="text-blue-600">Routes</span>
@@ -23,7 +23,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="w-full py-20 bg-white px-4">
+      <section className="w-full py-12 bg-white px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-3 gap-12">
             <div className="flex flex-col items-center text-center">
@@ -53,6 +53,42 @@ export default function Home() {
                 Create unique GPS art for birthdays, events, or just to spice up your daily workout.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Support Section */}
+      <section className="w-full py-12 bg-gradient-to-b from-white to-amber-50 px-4">
+        <div className="container mx-auto max-w-2xl text-center">
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-amber-100">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-md">
+                <Coffee className="w-6 h-6 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Enjoying Routista?
+              </h2>
+            </div>
+            <p className="text-base text-gray-600 mb-6">
+              This service is completely free! If it helped you create an amazing route, consider supporting development with a coffee ☕
+            </p>
+            <a
+              href="https://buymeacoffee.com/jakubanderwald"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block"
+            >
+              <Button
+                size="md"
+                className="px-6 py-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
+              >
+                <Coffee className="w-4 h-4 mr-2" />
+                Buy Me a Coffee
+              </Button>
+            </a>
+            <p className="text-xs text-gray-500 mt-4">
+              Every coffee fuels new features! 🚀
+            </p>
           </div>
         </div>
       </section>

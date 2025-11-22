@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Routista 🏃‍♂️🎨
 
-## Getting Started
+Turn any shape into a real-world GPS route! Routista is a fun, free tool for runners, cyclists, and explorers who want to create GPS art or just spice up their training.
 
-First, run the development server:
+## Features ✨
+
+- **Shape-to-Route Magic**: Upload an image (logo, symbol, drawing) or draw directly on the map, and Routista will find the best matching roads in your chosen area.
+- **Interactive Mapping**: Powered by Leaflet, select any location in the world to generate your route.
+- **GPX Export**: Download your generated route as a GPX file compatible with Strava, Garmin, and other fitness apps.
+- **Privacy Focused**: All processing happens in your browser (client-side) or securely.
+- **Completely Free**: No paywalls or subscriptions. Supported by coffee! ☕
+
+## How It Works 🛠️
+
+1.  **Select Area**: Choose where you want to run or cycle.
+2.  **Input Shape**: Upload an image or draw a shape.
+3.  **Generate**: The algorithm processes the shape and snaps it to real-world streets using routing algorithms.
+4.  **Export**: Get your GPX file and go!
+
+## Tech Stack 💻
+
+Built with modern web technologies:
+
+-   **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
+-   **UI Library**: [React 19](https://react.dev/)
+-   **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+-   **Maps**: [Leaflet](https://leafletjs.com/) & [React-Leaflet](https://react-leaflet.js.org/)
+-   **Testing**: [Vitest](https://vitest.dev/)
+-   **Deployment**: [Firebase Hosting](https://firebase.google.com/)
+
+## Getting Started 🚀
+
+### Prerequisites
+
+-   Node.js (v18+)
+-   npm
+
+### Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Clone the repository
+git clone https://github.com/yourusername/routista.antigravity.git
+
+# Install dependencies
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Run the development server
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-## Learn More
+### Testing
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Run automated tests
+npm test
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Contributing 🤝
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Contributions are welcome! Feel free to open issues or submit pull requests.
 
-## Deploy on Vercel
+## Support ❤️
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+If you enjoy using Routista, consider [buying me a coffee](https://buymeacoffee.com/jakubanderwald)!
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+*Built with ❤️ by Jakub Anderwald*

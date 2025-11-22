@@ -175,7 +175,7 @@ export default function About() {
                                 </Button>
                             </a>
                             <a
-                                href="https://github.com/yourusername/routista.antigravity"
+                                href="https://github.com/JakubAnderwald/routista"
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >

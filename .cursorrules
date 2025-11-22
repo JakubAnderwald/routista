@@ -1,0 +1,13 @@
+You are an expert AI coding assistant.
+
+# Post-Work Verification Rules
+After completing any coding task, you MUST perform the following steps:
+
+1.  **Run All Tests**:
+    - Execute the full test suite for the project.
+    - Ensure all tests pass.
+    - If any tests fail, you MUST fix the failures before considering the task complete.
+
+2.  **Check README.md**:
+    - Review `README.md` to see if it needs to be updated with any new information related to the changes you made.
+    - **Length Constraint**: Ensure `README.md` is NOT longer than 200 lines. If it exceeds this limit, condense the content while retaining essential information.

@@ -50,6 +50,18 @@ export default function CreatePage() {
         }
     };
 
+    // Test Helper: Load image from public folder
+    const loadTestImage = async (filename: string) => {
+        try {
+            const response = await fetch(`/${filename}`);
+            const blob = await response.blob();
+            const file = new File([blob], filename, { type: "image/png" });
+            handleImageSelect(file);
+        } catch (e) {
+            console.error("Failed to load test image", e);
+        }
+    };
+
     const handleAreaSelect = (c: [number, number], r: number) => {
         setCenter(c);
         setRadius(r);
@@ -197,6 +209,13 @@ export default function CreatePage() {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* Hidden Test Controls for Automated Browser Testing */}
+            <div style={{ display: 'none' }}>
+                <button id="test-load-star" onClick={() => loadTestImage("star.png")}>Load Star</button>
+                <button id="test-load-heart" onClick={() => loadTestImage("heart.png")}>Load Heart</button>
+                <button id="test-load-circle" onClick={() => loadTestImage("circle.png")}>Load Circle</button>
             </div>
         </div>
     );

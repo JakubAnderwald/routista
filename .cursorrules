@@ -11,3 +11,22 @@ After completing any coding task, you MUST perform the following steps:
 2.  **Check README.md**:
     - Review `README.md` to see if it needs to be updated with any new information related to the changes you made.
     - **Length Constraint**: Ensure `README.md` is NOT longer than 200 lines. If it exceeds this limit, condense the content while retaining essential information.
+
+3.  **Update Documentation & Comments**:
+    - **Architecture**: If you changed data flow or core components, update `docs/ARCHITECTURE.md`.
+    - **Debugging**: If you added new external dependencies or complex logic, update `docs/DEBUGGING.md`.
+    - **JSDoc**: Ensure all new or modified exported functions in `src/lib` have accurate JSDoc comments.
+
+# Tech Stack & Constraints
+- **Framework**: Next.js 16 (App Router)
+- **Styling**: Tailwind CSS 4
+- **Maps**: React-Leaflet / Leaflet
+- **Testing**: Vitest
+- **Deployment**: Firebase Hosting
+
+# Coding Style
+- **Components**: Use functional components with hooks. Prefer small, focused components.
+- **Icons**: Use `lucide-react` for icons.
+- **Logic**: Ensure all geometric calculations in `src/lib` have unit tests.
+- **State**: Keep state local where possible, lift up only when necessary.
+- **Type Safety**: Use TypeScript strictly. Avoid `any`.

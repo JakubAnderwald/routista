@@ -1,3 +1,11 @@
+/**
+ * Scales normalized shape points (0-1) to real-world geographic coordinates.
+ * 
+ * @param points - Array of [x, y] coordinates where x and y are between 0 and 1.
+ * @param center - The center point [lat, lng] of the target area.
+ * @param radius - The radius in meters of the target area.
+ * @returns Array of [lat, lng] coordinates.
+ */
 export function scalePointsToGeo(
     points: [number, number][], // [x, y] normalized 0-1
     center: [number, number],   // [lat, lng]
@@ -34,6 +42,13 @@ export function scalePointsToGeo(
     });
 }
 
+/**
+ * Calculates the great-circle distance between two points using the Haversine formula.
+ * 
+ * @param p1 - First point [lat, lng].
+ * @param p2 - Second point [lat, lng].
+ * @returns Distance in meters.
+ */
 export function calculateDistance(p1: [number, number], p2: [number, number]): number {
     const R = 6371e3; // metres
     const φ1 = p1[0] * Math.PI / 180; // φ, λ in radians
@@ -49,6 +64,12 @@ export function calculateDistance(p1: [number, number], p2: [number, number]): n
     return R * c;
 }
 
+/**
+ * Calculates the total length of a route from a GeoJSON object.
+ * 
+ * @param geoJson - The GeoJSON object containing the route features.
+ * @returns Total length in meters.
+ */
 export function calculateRouteLength(geoJson: any): number {
     if (!geoJson || !geoJson.features) return 0;
     let totalDistance = 0;
@@ -66,6 +87,14 @@ export function calculateRouteLength(geoJson: any): number {
     return totalDistance;
 }
 
+/**
+ * Simplifies a path of points using the Ramer-Douglas-Peucker algorithm.
+ * This reduces the number of points while preserving the overall shape, which is crucial for API performance.
+ * 
+ * @param points - Array of [lat, lng] points.
+ * @param tolerance - The maximum distance (in degrees) a point can be from the line between its neighbors to be removed.
+ * @returns Simplified array of [lat, lng] points.
+ */
 export function simplifyPoints(points: [number, number][], tolerance: number): [number, number][] {
     if (points.length <= 2) return points;
 
@@ -185,6 +214,17 @@ function distanceToSegment(p: [number, number], v: [number, number], w: [number,
     return Math.sqrt(dx * dx + dy * dy);
 }
 
+/**
+ * Calculates a score (0-100) representing how well the generated route matches the original shape.
+ * Uses a bidirectional error metric:
+ * 1. Forward Error: Average distance from Original Shape -> Nearest Route Segment.
+ * 2. Backward Error: Average distance from Route -> Nearest Original Point.
+ * 
+ * @param originalPoints - The target shape points [lat, lng].
+ * @param geoJson - The generated route GeoJSON.
+ * @param radius - The radius of the area in meters (used for normalization).
+ * @returns Accuracy score from 0 to 100.
+ */
 export function calculateRouteAccuracy(
     originalPoints: [number, number][], // [lat, lng]
     geoJson: any,

@@ -3,10 +3,25 @@ import { simplifyPoints } from "./geoUtils";
 const ORS_API_KEY = process.env.NEXT_PUBLIC_ORS_API_KEY;
 
 export interface RouteGenerationOptions {
+    /** Array of [lat, lng] coordinates representing the shape to route. */
     coordinates: [number, number][];
+    /** Transportation mode: "driving-car", "cycling-regular", "foot-walking". */
     mode: string;
 }
 
+/**
+ * Generates a navigable route that follows the shape of the provided coordinates.
+ * 
+ * This function:
+ * 1. Simplifies the input coordinates to reduce API load.
+ * 2. Batches the coordinates into chunks to respect API limits.
+ * 3. Calls the OpenRouteService (ORS) API for each chunk.
+ * 4. Stitches the resulting route segments into a single continuous path.
+ * 
+ * @param options - Configuration options for route generation.
+ * @returns A GeoJSON FeatureCollection containing the route LineString.
+ * @throws Error if the API call fails or input is invalid.
+ */
 export async function generateRoute(options: RouteGenerationOptions) {
     const { coordinates, mode } = options;
 

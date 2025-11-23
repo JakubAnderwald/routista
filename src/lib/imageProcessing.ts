@@ -1,11 +1,11 @@
-export async function extractShapeFromImage(file: File, numPoints: number = 150): Promise<[number, number][]> {
+export async function extractShapeFromImage(file: File, numPoints: number = 1000): Promise<[number, number][]> {
     return new Promise((resolve, reject) => {
         const img = new Image();
         const url = URL.createObjectURL(file);
 
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            const size = 200; // Resize for easier processing
+            const size = 800; // Resize for easier processing
             canvas.width = size;
             canvas.height = size;
             const ctx = canvas.getContext('2d');

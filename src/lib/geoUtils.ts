@@ -129,12 +129,72 @@ function perpendicularDistance(p: [number, number], p1: [number, number], p2: [n
     return Math.sqrt(dx * dx + dy * dy);
 }
 
+function distanceToSegment(p: [number, number], v: [number, number], w: [number, number]): number {
+    const R = 6371e3; // metres
+    // Convert to Cartesian (approximation for small distances) or use Haversine with projection
+    // Since we are dealing with small distances (meters), we can treat lat/lng as planar locally
+    // But for correctness on globe, it's complex.
+    // Let's use the existing perpendicularDistance logic but adapted for lat/lng degrees to meters?
+    // No, perpendicularDistance above is for 2D plane (x,y).
+    // Let's use cross-track distance?
+    // Or simply: project p onto line segment vw, find closest point q, calculate distance(p, q).
+
+    // Simple approach:
+    // 1. Convert p, v, w to meters (relative to v)
+    // 2. Use 2D point-segment distance
+    // 3. Result is in meters
+
+    const latRad = (v[0] * Math.PI) / 180;
+    const metersPerLat = 111320; // Approx
+    const metersPerLng = 40075000 * Math.cos(latRad) / 360;
+
+    const x = (p[1] - v[1]) * metersPerLng;
+    const y = (p[0] - v[0]) * metersPerLat;
+    const x2 = (w[1] - v[1]) * metersPerLng;
+    const y2 = (w[0] - v[0]) * metersPerLat;
+
+    const A = x - 0;
+    const B = y - 0;
+    const C = x2 - 0;
+    const D = y2 - 0;
+
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+
+    if (lenSq !== 0) {
+        param = dot / lenSq;
+    }
+
+    let xx, yy;
+
+    if (param < 0) {
+        xx = 0;
+        yy = 0;
+    } else if (param > 1) {
+        xx = x2;
+        yy = y2;
+    } else {
+        xx = 0 + param * C;
+        yy = 0 + param * D;
+    }
+
+    const dx = x - xx;
+    const dy = y - yy;
+
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
 export function calculateRouteAccuracy(
     originalPoints: [number, number][], // [lat, lng]
     geoJson: any,
     radius: number // meters
 ): number {
     if (!geoJson || !geoJson.features || originalPoints.length === 0) return 0;
+
+    const lats = originalPoints.map(p => p[0]);
+    const lngs = originalPoints.map(p => p[1]);
+    // console.log(`Original Points Bounds: Lat [${Math.min(...lats)}, ${Math.max(...lats)}], Lng [${Math.min(...lngs)}, ${Math.max(...lngs)}]`);
 
     // Flatten all route points
     const routePoints: [number, number][] = [];
@@ -148,12 +208,14 @@ export function calculateRouteAccuracy(
 
     if (routePoints.length === 0) return 0;
 
-    // 1. Forward Error: Average distance from Original -> Closest Route Point
+    // 1. Forward Error: Average distance from Original -> Closest Route Segment
     let totalForwardError = 0;
     for (const p1 of originalPoints) {
         let minDist = Infinity;
-        for (const p2 of routePoints) {
-            const dist = calculateDistance(p1, p2);
+        for (let i = 0; i < routePoints.length - 1; i++) {
+            const p2 = routePoints[i];
+            const p3 = routePoints[i + 1];
+            const dist = distanceToSegment(p1, p2, p3);
             if (dist < minDist) minDist = dist;
         }
         totalForwardError += minDist;
@@ -161,35 +223,51 @@ export function calculateRouteAccuracy(
     const avgForwardError = totalForwardError / originalPoints.length;
 
     // 2. Backward Error: Average distance from Route -> Closest Original Point
-    // We sample the route points to avoid checking every single point if there are thousands,
-    // but for typical routes (hundreds of points), it's fine.
+    // We sample the route segments
     let totalBackwardError = 0;
-    const step = Math.max(1, Math.floor(routePoints.length / 100)); // Limit checks for performance
     let checkedPoints = 0;
 
-    for (let i = 0; i < routePoints.length; i += step) {
-        const p1 = routePoints[i];
-        let minDist = Infinity;
-        for (const p2 of originalPoints) {
-            const dist = calculateDistance(p1, p2);
-            if (dist < minDist) minDist = dist;
+    // Sample points along the route segments
+    for (let i = 0; i < routePoints.length - 1; i++) {
+        const pStart = routePoints[i];
+        const pEnd = routePoints[i + 1];
+        const segmentDist = calculateDistance(pStart, pEnd);
+        const numSamples = Math.max(1, Math.floor(segmentDist / 10)); // Sample every 10 meters
+
+        for (let j = 0; j <= numSamples; j++) {
+            const t = j / numSamples;
+            const lat = pStart[0] + (pEnd[0] - pStart[0]) * t;
+            const lng = pStart[1] + (pEnd[1] - pStart[1]) * t;
+            const pSample: [number, number] = [lat, lng];
+
+            let minDist = Infinity;
+            for (const p2 of originalPoints) {
+                const dist = calculateDistance(pSample, p2);
+                if (dist < minDist) minDist = dist;
+            }
+            totalBackwardError += minDist;
+            checkedPoints++;
+
+            if (minDist > 100) {
+                // console.log(`High Backward Error: ${minDist.toFixed(2)}m at [${lat}, ${lng}]`);
+                // console.log(`Segment: [${pStart}] -> [${pEnd}], Length: ${segmentDist.toFixed(2)}m`);
+            }
         }
-        totalBackwardError += minDist;
-        checkedPoints++;
     }
-    const avgBackwardError = totalBackwardError / checkedPoints;
+    const avgBackwardError = checkedPoints > 0 ? totalBackwardError / checkedPoints : 0;
 
     // Combine errors. We weight them equally.
     const totalAvgError = (avgForwardError + avgBackwardError) / 2;
+    // console.log(`Avg Forward Error: ${avgForwardError.toFixed(2)}m`);
+    // console.log(`Avg Backward Error: ${avgBackwardError.toFixed(2)}m`);
 
     // Normalize score.
-    // Stricter tolerance: 10% of radius.
-    const maxToleratedError = radius * 0.1;
+    // We want a score that reflects "perceived" accuracy.
+    // A deviation of 10% of the radius is actually quite visible but still "recognizable".
+    // Let's say 25% deviation is where the shape is lost (0%).
+    const maxToleratedError = radius * 0.25;
 
-    // Use a non-linear falloff so small errors don't punish too much, but large ones do.
-    // Score = 100 * e^(-k * error)
-    // Let's stick to linear for predictability but stricter.
-
+    // Linear falloff
     let score = 100 * (1 - totalAvgError / maxToleratedError);
 
     return Math.max(0, Math.min(100, score));

@@ -32,7 +32,7 @@ export default function Home() {
               </div>
               <h3 className="text-lg font-bold mb-2">Any Shape, Anywhere</h3>
               <p className="text-sm text-gray-600">
-                Upload a heart, a star, or your logo. We'll find the best matching roads in your chosen area.
+                Upload a heart, a star, or your logo. We&apos;ll find the best matching roads in your chosen area.
               </p>
             </div>
             <div className="flex flex-col items-center text-center">

@@ -150,7 +150,7 @@ export default function About() {
                             Built with ❤️ by <span className="font-semibold">Jakub Anderwald</span>
                         </p>
                         <p className="text-gray-600 mb-6">
-                            Routista is a passion project designed to bring creativity to fitness activities. Whether you're planning a heart-shaped run for Valentine's Day or want to spell out your initials across your city, Routista makes GPS art accessible to everyone.
+                            Routista is a passion project designed to bring creativity to fitness activities. Whether you&apos;re planning a heart-shaped run for Valentine&apos;s Day or want to spell out your initials across your city, Routista makes GPS art accessible to everyone.
                         </p>
                     </div>
 

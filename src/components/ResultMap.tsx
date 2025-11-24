@@ -7,10 +7,12 @@ import "leaflet-defaulticon-compatibility";
 import { useEffect } from "react";
 import L from "leaflet";
 
+import { GeoJsonObject } from "geojson";
+
 interface ResultMapProps {
     center: [number, number];
     zoom: number;
-    routeData: any; // GeoJSON
+    routeData: GeoJsonObject | null; // GeoJSON
 }
 
 function MapUpdater({ center, zoom, routeData }: ResultMapProps) {

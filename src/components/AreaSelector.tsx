@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useMap, useMapEvents, Circle } from "react-leaflet";
-import { Button } from "@/components/ui/Button";
 import dynamic from "next/dynamic";
 
 import { Search } from "lucide-react";
@@ -17,6 +16,12 @@ interface AreaSelectorProps {
     onAreaSelect: (center: [number, number], radius: number) => void;
     initialCenter?: [number, number];
     initialRadius?: number;
+}
+
+interface NominatimResult {
+    lat: string;
+    lon: string;
+    display_name: string;
 }
 
 function MapController({ onCenterChange }: { onCenterChange: (center: [number, number]) => void }) {
@@ -47,7 +52,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
     const [radius, setRadius] = useState(initialRadius);
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearching, setIsSearching] = useState(false);
-    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     useEffect(() => {
@@ -81,7 +86,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    const handleSuggestionClick = (suggestion: any) => {
+    const handleSuggestionClick = (suggestion: NominatimResult) => {
         const { lat, lon, display_name } = suggestion;
         setCenter([parseFloat(lat), parseFloat(lon)]);
         setSearchQuery(display_name);

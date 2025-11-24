@@ -22,7 +22,9 @@ export interface RouteGenerationOptions {
  * @returns A GeoJSON FeatureCollection containing the route LineString.
  * @throws Error if the API call fails or input is invalid.
  */
-export async function generateRoute(options: RouteGenerationOptions) {
+import { FeatureCollection } from "geojson";
+
+export async function generateRoute(options: RouteGenerationOptions): Promise<FeatureCollection> {
     const { coordinates, mode } = options;
 
     if (!coordinates || coordinates.length < 2) {

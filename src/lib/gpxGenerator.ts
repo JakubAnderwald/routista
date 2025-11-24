@@ -1,4 +1,6 @@
-export function generateGPX(geoJson: any): string {
+import { FeatureCollection } from "geojson";
+
+export function generateGPX(geoJson: FeatureCollection): string {
     if (!geoJson || !geoJson.features) return "";
 
     let gpx = `<?xml version="1.0" encoding="UTF-8"?>

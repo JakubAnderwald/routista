@@ -29,13 +29,15 @@ const Map = dynamic(() => import("@/components/Map"), {
     loading: () => <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">Loading Map...</div>
 });
 
+import { FeatureCollection } from "geojson";
+
 export default function CreatePage() {
     const [step, setStep] = useState<"upload" | "area" | "mode" | "processing" | "result">("upload");
     const [image, setImage] = useState<File | null>(null);
     const [center, setCenter] = useState<[number, number]>([51.505, -0.09]);
     const [radius, setRadius] = useState(1000);
     const [mode, setMode] = useState<TransportMode | null>(null);
-    const [routeData, setRouteData] = useState<any>(null);
+    const [routeData, setRouteData] = useState<FeatureCollection | null>(null);
     const [shapePoints, setShapePoints] = useState<[number, number][] | null>(null);
     const [stats, setStats] = useState<{ length: number; accuracy: number } | null>(null);
 

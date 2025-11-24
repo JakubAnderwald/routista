@@ -37,6 +37,7 @@
     "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
+    "eslint-plugin-security": "^3.0.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.13"

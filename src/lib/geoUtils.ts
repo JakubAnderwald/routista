@@ -1,3 +1,5 @@
+import { FeatureCollection } from "geojson";
+
 /**
  * Scales normalized shape points (0-1) to real-world geographic coordinates.
  * 
@@ -70,7 +72,7 @@ export function calculateDistance(p1: [number, number], p2: [number, number]): n
  * @param geoJson - The GeoJSON object containing the route features.
  * @returns Total length in meters.
  */
-export function calculateRouteLength(geoJson: any): number {
+export function calculateRouteLength(geoJson: FeatureCollection): number {
     if (!geoJson || !geoJson.features) return 0;
     let totalDistance = 0;
     for (const feature of geoJson.features) {
@@ -159,7 +161,7 @@ function perpendicularDistance(p: [number, number], p1: [number, number], p2: [n
 }
 
 function distanceToSegment(p: [number, number], v: [number, number], w: [number, number]): number {
-    const R = 6371e3; // metres
+    // const R = 6371e3; // metres
     // Convert to Cartesian (approximation for small distances) or use Haversine with projection
     // Since we are dealing with small distances (meters), we can treat lat/lng as planar locally
     // But for correctness on globe, it's complex.
@@ -227,13 +229,13 @@ function distanceToSegment(p: [number, number], v: [number, number], w: [number,
  */
 export function calculateRouteAccuracy(
     originalPoints: [number, number][], // [lat, lng]
-    geoJson: any,
+    geoJson: FeatureCollection,
     radius: number // meters
 ): number {
     if (!geoJson || !geoJson.features || originalPoints.length === 0) return 0;
 
-    const lats = originalPoints.map(p => p[0]);
-    const lngs = originalPoints.map(p => p[1]);
+    // const lats = originalPoints.map(p => p[0]);
+    // const lngs = originalPoints.map(p => p[1]);
     // console.log(`Original Points Bounds: Lat [${Math.min(...lats)}, ${Math.max(...lats)}], Lng [${Math.min(...lngs)}, ${Math.max(...lngs)}]`);
 
     // Flatten all route points
@@ -308,7 +310,7 @@ export function calculateRouteAccuracy(
     const maxToleratedError = radius * 0.25;
 
     // Linear falloff
-    let score = 100 * (1 - totalAvgError / maxToleratedError);
+    const score = 100 * (1 - totalAvgError / maxToleratedError);
 
     return Math.max(0, Math.min(100, score));
 }

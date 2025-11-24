@@ -22,7 +22,7 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
             // const data = imageData.data;
 
             // Find edge points
-            const threshold = 128;
+            // Find edge points
 
             // Simple edge detection: check if pixel is dark and has a light neighbor
             const { width, height } = canvas;
@@ -79,7 +79,7 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
                 let foundNext = false;
 
                 // Find index of backtrack direction
-                let startDir = 0;
+                // Find index of backtrack direction
                 // Optimization: check if backtrack is valid neighbor
                 let backtrackIdx = -1;
                 for (let k = 0; k < 8; k++) {

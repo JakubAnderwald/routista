@@ -7,7 +7,7 @@ export async function extractShapeFromImageNode(filePath: string, numPoints: num
         .raw()
         .toBuffer({ resolveWithObject: true });
 
-    const { width, height, channels } = info;
+    const { width, height } = info;
     // console.log(`Image Info: ${width}x${height}, channels: ${channels}, data length: ${data.length}`);
 
     const threshold = 128;

@@ -23,11 +23,7 @@ const ResultMap = dynamic(() => import("@/components/ResultMap"), {
     loading: () => <div className="w-full h-full bg-gray-100 animate-pulse" />
 });
 
-// Dynamic import for Map to avoid SSR issues
-const Map = dynamic(() => import("@/components/Map"), {
-    ssr: false,
-    loading: () => <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">Loading Map...</div>
-});
+
 
 import { FeatureCollection } from "geojson";
 

@@ -156,5 +156,9 @@
     },
     "ReportIssueButton": {
         "text": "Report Issue"
+    },
+    "metadata": {
+        "title": "Routista - Turn Shapes into Routes",
+        "description": "Generate real-world GPS routes from any shape or image."
     }
 }

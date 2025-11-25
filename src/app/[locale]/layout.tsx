@@ -17,10 +17,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Routista - Turn Shapes into Routes",
-  description: "Generate real-world GPS routes from any shape or image.",
-};
+import { getTranslations } from 'next-intl/server';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'metadata' });
+
+  return {
+    title: t('title'),
+    description: t('description'),
+  };
+}
 
 import { routing } from '@/i18n/routing';
 

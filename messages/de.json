@@ -156,5 +156,9 @@
     },
     "ReportIssueButton": {
         "text": "Problem melden"
+    },
+    "metadata": {
+        "title": "Routista - Formen in Routen verwandeln",
+        "description": "Generiere echte GPS-Routen aus jeder Form oder jedem Bild."
     }
 }

@@ -8,6 +8,8 @@ import dynamic from "next/dynamic";
 import { extractShapeFromImage } from "@/lib/imageProcessing";
 import { scalePointsToGeo, calculateRouteLength, calculateRouteAccuracy } from "@/lib/geoUtils";
 import { generateGPX, downloadGPX } from "@/lib/gpxGenerator";
+import { useTranslations } from 'next-intl';
+
 // Actually, react-leaflet components can be imported directly, but they must be rendered inside MapContainer.
 // Since Map is dynamic, we might need to pass a component that renders GeoJSON.
 
@@ -27,7 +29,8 @@ const ResultMap = dynamic(() => import("@/components/ResultMap"), {
 
 import { FeatureCollection } from "geojson";
 
-export default function CreatePage() {
+export default function CreateClient() {
+    const t = useTranslations('CreatePage');
     const [step, setStep] = useState<"upload" | "area" | "mode" | "processing" | "result">("upload");
     const [image, setImage] = useState<File | null>(null);
     const [center, setCenter] = useState<[number, number]>([51.505, -0.09]);
@@ -44,7 +47,7 @@ export default function CreatePage() {
             setShapePoints(points);
         } catch (e) {
             console.error("Failed to extract shape", e);
-            alert("Could not extract shape from image. Please try another image.");
+            alert(t('upload.error'));
         }
     };
 
@@ -88,7 +91,7 @@ export default function CreatePage() {
 
         } catch (error) {
             console.error(error);
-            alert("Error generating route. Please try again.");
+            alert(t('mode.error'));
             setStep("mode");
         }
     };
@@ -100,13 +103,15 @@ export default function CreatePage() {
         }
     };
 
+    const steps = ["upload", "area", "mode", "result"];
+
     return (
         <div className="container mx-auto px-4 py-8 min-h-[calc(100vh-64px)]">
             <div className="max-w-4xl mx-auto">
                 {/* Progress Steps */}
                 <div className="flex items-center justify-between mb-12 px-4">
-                    {["Upload", "Area", "Mode", "Result"].map((s, i) => {
-                        const stepIndex = ["upload", "area", "mode", "result"].indexOf(s.toLowerCase());
+                    {steps.map((s, i) => {
+                        const stepIndex = steps.indexOf(s);
                         const currentStepIndex = ["upload", "area", "mode", "processing", "result"].indexOf(step);
                         const active = currentStepIndex >= stepIndex;
 
@@ -115,7 +120,7 @@ export default function CreatePage() {
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 transition-colors ${active ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"}`}>
                                     {i + 1}
                                 </div>
-                                <span className={`text-sm font-medium ${active ? "text-blue-600" : "text-gray-500"}`}>{s}</span>
+                                <span className={`text-sm font-medium ${active ? "text-blue-600" : "text-gray-500"}`}>{t(`steps.${s}`)}</span>
                             </div>
                         );
                     })}
@@ -124,9 +129,9 @@ export default function CreatePage() {
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8">
                     {step === "upload" && (
                         <div className="flex flex-col items-center">
-                            <h2 className="text-2xl font-bold mb-2">Upload Your Shape</h2>
+                            <h2 className="text-2xl font-bold mb-2">{t('upload.title')}</h2>
                             <p className="text-gray-500 mb-8 text-center">
-                                Choose an image with a clear shape (e.g., a heart, star, or logo).
+                                {t('upload.description')}
                             </p>
                             <ImageUpload onImageSelect={handleImageSelect} className="max-w-xl mb-8" />
                             <div className="flex justify-end w-full max-w-xl">
@@ -134,7 +139,7 @@ export default function CreatePage() {
                                     disabled={!image || !shapePoints}
                                     onClick={() => setStep("area")}
                                 >
-                                    Next: Select Area
+                                    {t('upload.next')}
                                 </Button>
                             </div>
                         </div>
@@ -142,7 +147,7 @@ export default function CreatePage() {
 
                     {step === "area" && (
                         <div className="flex flex-col h-[600px]">
-                            <h2 className="text-2xl font-bold mb-4">Select Area</h2>
+                            <h2 className="text-2xl font-bold mb-4">{t('area.title')}</h2>
                             <div className="flex-1 bg-gray-100 rounded-xl overflow-hidden relative border border-gray-200">
                                 <AreaSelector
                                     onAreaSelect={handleAreaSelect}
@@ -151,19 +156,19 @@ export default function CreatePage() {
                                 />
                             </div>
                             <div className="flex justify-between mt-6">
-                                <Button variant="outline" onClick={() => setStep("upload")}>Back</Button>
-                                <Button onClick={() => setStep("mode")}>Next: Choose Mode</Button>
+                                <Button variant="outline" onClick={() => setStep("upload")}>{t('area.back')}</Button>
+                                <Button onClick={() => setStep("mode")}>{t('area.next')}</Button>
                             </div>
                         </div>
                     )}
 
                     {step === "mode" && (
                         <div className="flex flex-col items-center">
-                            <h2 className="text-2xl font-bold mb-8">Choose Transportation Mode</h2>
+                            <h2 className="text-2xl font-bold mb-8">{t('mode.title')}</h2>
                             <ModeSelector selectedMode={mode} onSelect={setMode} />
                             <div className="flex justify-between w-full mt-8 max-w-3xl">
-                                <Button variant="outline" onClick={() => setStep("area")}>Back</Button>
-                                <Button disabled={!mode} onClick={handleGenerate}>Generate Route</Button>
+                                <Button variant="outline" onClick={() => setStep("area")}>{t('mode.back')}</Button>
+                                <Button disabled={!mode} onClick={handleGenerate}>{t('mode.generate')}</Button>
                             </div>
                         </div>
                     )}
@@ -171,25 +176,25 @@ export default function CreatePage() {
                     {step === "processing" && (
                         <div className="flex flex-col items-center py-20">
                             <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-6"></div>
-                            <h2 className="text-xl font-semibold mb-2">Crunching the numbers...</h2>
-                            <p className="text-gray-500">Matching your shape to the road network.</p>
+                            <h2 className="text-xl font-semibold mb-2">{t('processing.title')}</h2>
+                            <p className="text-gray-500">{t('processing.description')}</p>
                         </div>
                     )}
 
                     {step === "result" && (
                         <div className="flex flex-col h-[600px]">
-                            <h2 className="text-2xl font-bold mb-4">Your Route</h2>
+                            <h2 className="text-2xl font-bold mb-4">{t('result.title')}</h2>
 
                             {stats && (
                                 <div className="grid grid-cols-2 gap-4 mb-4">
                                     <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                        <div className="text-sm text-blue-600 font-medium mb-1">Route Length</div>
+                                        <div className="text-sm text-blue-600 font-medium mb-1">{t('result.stats.length')}</div>
                                         <div className="text-2xl font-bold text-blue-900">
                                             {(stats.length / 1000).toFixed(2)} <span className="text-base font-normal text-blue-700">km</span>
                                         </div>
                                     </div>
                                     <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                                        <div className="text-sm text-green-600 font-medium mb-1">Shape Accuracy</div>
+                                        <div className="text-sm text-green-600 font-medium mb-1">{t('result.stats.accuracy')}</div>
                                         <div className="text-2xl font-bold text-green-900">
                                             {stats.accuracy.toFixed(0)}<span className="text-base font-normal text-green-700">%</span>
                                         </div>
@@ -201,8 +206,8 @@ export default function CreatePage() {
                                 {routeData && <ResultMap center={center} zoom={13} routeData={routeData} />}
                             </div>
                             <div className="flex justify-between mt-6">
-                                <Button variant="outline" onClick={() => setStep("mode")}>Back</Button>
-                                <Button onClick={handleDownload}>Download GPX</Button>
+                                <Button variant="outline" onClick={() => setStep("mode")}>{t('result.back')}</Button>
+                                <Button onClick={handleDownload}>{t('result.download')}</Button>
                             </div>
                         </div>
                     )}

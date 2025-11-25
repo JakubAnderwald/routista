@@ -5,6 +5,7 @@ import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useTranslations } from 'next-intl';
 
 interface ImageUploadProps {
     onImageSelect: (file: File) => void;
@@ -12,6 +13,7 @@ interface ImageUploadProps {
 }
 
 export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
+    const t = useTranslations('ImageUpload');
     const [preview, setPreview] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,12 +78,12 @@ export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
                     <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4">
                         <Upload className="w-8 h-8" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-2">Upload your shape</h3>
+                    <h3 className="text-lg font-semibold mb-2">{t('title')}</h3>
                     <p className="text-gray-500 mb-6 max-w-xs">
-                        Drag and drop an image here, or click to select a file.
+                        {t('description')}
                     </p>
                     <Button variant="outline" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
-                        Select Image
+                        {t('button')}
                     </Button>
                     <input
                         ref={fileInputRef}
@@ -108,7 +110,7 @@ export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
                     </button>
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm text-sm font-medium text-gray-700 flex items-center gap-2">
                         <ImageIcon className="w-4 h-4" />
-                        Image Selected
+                        {t('selected')}
                     </div>
                 </div>
             )}

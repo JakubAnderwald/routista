@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import "../globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ReportIssueButton } from "@/components/ReportIssueButton";
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, setRequestLocale } from 'next-intl/server';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,20 +22,34 @@ export const metadata: Metadata = {
   description: "Generate real-world GPS routes from any shape or image.",
 };
 
-export default function RootLayout({
+import { routing } from '@/i18n/routing';
+
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
+
+export default async function RootLayout({
   children,
+  params
 }: Readonly<{
   children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }>) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const messages = await getMessages();
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <ReportIssueButton />
+        <NextIntlClientProvider messages={messages}>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+          <ReportIssueButton />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

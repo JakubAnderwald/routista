@@ -1,0 +1,160 @@
+{
+    "HomePage": {
+        "title": "Turn Shapes into <span class=\"text-blue-600\">Routes</span>",
+        "description": "Upload an image or draw a shape, and Routista will generate a real-world GPS route that matches it. Perfect for running, cycling, or just exploring.",
+        "cta": "Create Your Route",
+        "features": {
+            "anyShape": {
+                "title": "Any Shape, Anywhere",
+                "description": "Upload a heart, a star, or your logo. We'll find the best matching roads in your chosen area."
+            },
+            "export": {
+                "title": "Export to GPX",
+                "description": "Download your route as a GPX file and use it with your favorite fitness app or GPS device."
+            },
+            "share": {
+                "title": "Share the Fun",
+                "description": "Create unique GPS art for birthdays, events, or just to spice up your daily workout."
+            }
+        },
+        "support": {
+            "title": "Enjoying Routista?",
+            "description": "This service is completely free! If it helped you create an amazing route, consider supporting development with a coffee ☕",
+            "button": "Buy Me a Coffee",
+            "footer": "Every coffee fuels new features! 🚀"
+        }
+    },
+    "AboutPage": {
+        "title": "About <span class=\"text-blue-600\">Routista</span>",
+        "subtitle": "Turn any shape into a real-world GPS route! 🏃‍♂️🎨",
+        "whatIs": {
+            "title": "What is Routista?",
+            "description": "Routista is a fun, free tool for runners, cyclists, and explorers who want to create GPS art or just spice up their training. Upload an image (logo, symbol, drawing) or draw directly on the map, and Routista will find the best matching roads in your chosen area."
+        },
+        "howItWorks": {
+            "title": "How It Works",
+            "steps": {
+                "1": {
+                    "title": "Select Area",
+                    "description": "Choose where you want to run or cycle"
+                },
+                "2": {
+                    "title": "Input Shape",
+                    "description": "Upload an image or draw a shape"
+                },
+                "3": {
+                    "title": "Generate",
+                    "description": "The algorithm snaps your shape to real-world streets"
+                },
+                "4": {
+                    "title": "Export",
+                    "description": "Get your GPX file and go!"
+                }
+            }
+        },
+        "techStack": {
+            "title": "Tech Stack",
+            "description": "Built with modern web technologies:",
+            "items": {
+                "framework": "Framework:",
+                "uiLibrary": "UI Library:",
+                "styling": "Styling:",
+                "maps": "Maps:",
+                "testing": "Testing:",
+                "deployment": "Deployment:"
+            }
+        },
+        "features": {
+            "title": "Features",
+            "items": {
+                "magic": {
+                    "title": "Shape-to-Route Magic:",
+                    "description": " Upload an image or draw directly on the map"
+                },
+                "mapping": {
+                    "title": "Interactive Mapping:",
+                    "description": " Powered by Leaflet, select any location in the world"
+                },
+                "export": {
+                    "title": "GPX Export:",
+                    "description": " Compatible with Strava, Garmin, and other fitness apps"
+                },
+                "privacy": {
+                    "title": "Privacy Focused:",
+                    "description": " All processing happens in your browser"
+                },
+                "free": {
+                    "title": "Completely Free:",
+                    "description": " No paywalls or subscriptions"
+                }
+            }
+        },
+        "creator": {
+            "title": "Created By",
+            "by": "Built with ❤️ by <span class=\"font-semibold\">Jakub Anderwald</span>",
+            "description": "Routista is a passion project designed to bring creativity to fitness activities. Whether you're planning a heart-shaped run for Valentine's Day or want to spell out your initials across your city, Routista makes GPS art accessible to everyone."
+        },
+        "support": {
+            "title": "Support the Project",
+            "description": "If you enjoy using Routista, consider buying me a coffee! Your support helps keep the service free and fuels new features.",
+            "button": "Buy Me a Coffee",
+            "github": "View on GitHub",
+            "contribute": "Contributions are welcome! Feel free to open issues or submit pull requests."
+        },
+        "cta": "Start Creating Routes"
+    },
+    "CreatePage": {
+        "steps": {
+            "upload": "Upload",
+            "area": "Area",
+            "mode": "Mode",
+            "result": "Result"
+        },
+        "upload": {
+            "title": "Upload Your Shape",
+            "description": "Choose an image with a clear shape (e.g., a heart, star, or logo).",
+            "next": "Next: Select Area",
+            "error": "Could not extract shape from image. Please try another image."
+        },
+        "area": {
+            "title": "Select Area",
+            "back": "Back",
+            "next": "Next: Choose Mode"
+        },
+        "mode": {
+            "title": "Choose Transportation Mode",
+            "back": "Back",
+            "generate": "Generate Route",
+            "error": "Error generating route. Please try again."
+        },
+        "processing": {
+            "title": "Crunching the numbers...",
+            "description": "Matching your shape to the road network."
+        },
+        "result": {
+            "title": "Your Route",
+            "stats": {
+                "length": "Route Length",
+                "accuracy": "Shape Accuracy"
+            },
+            "back": "Back",
+            "download": "Download GPX"
+        }
+    },
+    "ImageUpload": {
+        "title": "Upload your shape",
+        "description": "Drag and drop an image here, or click to select a file.",
+        "button": "Select Image",
+        "selected": "Image Selected"
+    },
+    "Header": {
+        "home": "Home",
+        "about": "About"
+    },
+    "Footer": {
+        "rights": "All rights reserved."
+    },
+    "ReportIssueButton": {
+        "text": "Report Issue"
+    }
+}

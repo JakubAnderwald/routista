@@ -1,0 +1,160 @@
+{
+    "HomePage": {
+        "title": "Verwandle Formen in <span class=\"text-blue-600\">Routen</span>",
+        "description": "Lade ein Bild hoch oder zeichne eine Form, und Routista generiert eine echte GPS-Route, die dazu passt. Perfekt zum Laufen, Radfahren oder einfach zum Erkunden.",
+        "cta": "Erstelle deine Route",
+        "features": {
+            "anyShape": {
+                "title": "Jede Form, Überall",
+                "description": "Lade ein Herz, einen Stern oder dein Logo hoch. Wir finden die besten passenden Straßen in deinem gewählten Gebiet."
+            },
+            "export": {
+                "title": "Export als GPX",
+                "description": "Lade deine Route als GPX-Datei herunter und verwende sie mit deiner Lieblings-Fitness-App oder deinem GPS-Gerät."
+            },
+            "share": {
+                "title": "Teile den Spaß",
+                "description": "Erstelle einzigartige GPS-Kunst für Geburtstage, Events oder einfach, um dein tägliches Training aufzupeppen."
+            }
+        },
+        "support": {
+            "title": "Gefällt dir Routista?",
+            "description": "Dieser Service ist komplett kostenlos! Wenn er dir geholfen hat, eine tolle Route zu erstellen, unterstütze die Entwicklung mit einem Kaffee ☕",
+            "button": "Kauf mir einen Kaffee",
+            "footer": "Jeder Kaffee treibt neue Funktionen an! 🚀"
+        }
+    },
+    "AboutPage": {
+        "title": "Über <span class=\"text-blue-600\">Routista</span>",
+        "subtitle": "Verwandle jede Form in eine echte GPS-Route! 🏃‍♂️🎨",
+        "whatIs": {
+            "title": "Was ist Routista?",
+            "description": "Routista ist ein lustiges, kostenloses Tool für Läufer, Radfahrer und Entdecker, die GPS-Kunst erstellen oder einfach ihr Training aufpeppen wollen. Lade ein Bild hoch (Logo, Symbol, Zeichnung) oder zeichne direkt auf der Karte, und Routista findet die besten passenden Straßen in deinem gewählten Gebiet."
+        },
+        "howItWorks": {
+            "title": "Wie es funktioniert",
+            "steps": {
+                "1": {
+                    "title": "Gebiet wählen",
+                    "description": "Wähle, wo du laufen oder radfahren möchtest"
+                },
+                "2": {
+                    "title": "Form eingeben",
+                    "description": "Lade ein Bild hoch oder zeichne eine Form"
+                },
+                "3": {
+                    "title": "Generieren",
+                    "description": "Der Algorithmus passt deine Form an echte Straßen an"
+                },
+                "4": {
+                    "title": "Exportieren",
+                    "description": "Hol dir deine GPX-Datei und los geht's!"
+                }
+            }
+        },
+        "techStack": {
+            "title": "Tech Stack",
+            "description": "Erstellt mit modernen Web-Technologien:",
+            "items": {
+                "framework": "Framework:",
+                "uiLibrary": "UI-Bibliothek:",
+                "styling": "Styling:",
+                "maps": "Karten:",
+                "testing": "Testing:",
+                "deployment": "Deployment:"
+            }
+        },
+        "features": {
+            "title": "Funktionen",
+            "items": {
+                "magic": {
+                    "title": "Form-zu-Route Magie:",
+                    "description": " Lade ein Bild hoch oder zeichne direkt auf der Karte"
+                },
+                "mapping": {
+                    "title": "Interaktive Karten:",
+                    "description": " Powered by Leaflet, wähle jeden Ort der Welt"
+                },
+                "export": {
+                    "title": "GPX Export:",
+                    "description": " Kompatibel mit Strava, Garmin und anderen Fitness-Apps"
+                },
+                "privacy": {
+                    "title": "Privatsphäre im Fokus:",
+                    "description": " Die gesamte Verarbeitung findet in deinem Browser statt"
+                },
+                "free": {
+                    "title": "Komplett Kostenlos:",
+                    "description": " Keine Paywalls oder Abos"
+                }
+            }
+        },
+        "creator": {
+            "title": "Erstellt von",
+            "by": "Erstellt mit ❤️ von <span class=\"font-semibold\">Jakub Anderwald</span>",
+            "description": "Routista ist ein Herzensprojekt, das Kreativität in Fitnessaktivitäten bringen soll. Egal, ob du einen herzförmigen Lauf zum Valentinstag planst oder deine Initialen durch deine Stadt schreiben möchtest, Routista macht GPS-Kunst für jeden zugänglich."
+        },
+        "support": {
+            "title": "Unterstütze das Projekt",
+            "description": "Wenn dir Routista gefällt, kauf mir einen Kaffee! Deine Unterstützung hilft, den Service kostenlos zu halten und neue Funktionen zu entwickeln.",
+            "button": "Kauf mir einen Kaffee",
+            "github": "Auf GitHub ansehen",
+            "contribute": "Beiträge sind willkommen! Fühle dich frei, Issues zu öffnen oder Pull Requests einzureichen."
+        },
+        "cta": "Route erstellen"
+    },
+    "CreatePage": {
+        "steps": {
+            "upload": "Hochladen",
+            "area": "Gebiet",
+            "mode": "Modus",
+            "result": "Ergebnis"
+        },
+        "upload": {
+            "title": "Lade deine Form hoch",
+            "description": "Wähle ein Bild mit einer klaren Form (z.B. Herz, Stern oder Logo).",
+            "next": "Weiter: Gebiet wählen",
+            "error": "Konnte Form nicht aus dem Bild extrahieren. Bitte versuche ein anderes Bild."
+        },
+        "area": {
+            "title": "Gebiet wählen",
+            "back": "Zurück",
+            "next": "Weiter: Modus wählen"
+        },
+        "mode": {
+            "title": "Transportmodus wählen",
+            "back": "Zurück",
+            "generate": "Route generieren",
+            "error": "Fehler beim Generieren der Route. Bitte versuche es erneut."
+        },
+        "processing": {
+            "title": "Berechne...",
+            "description": "Passe deine Form an das Straßennetz an."
+        },
+        "result": {
+            "title": "Deine Route",
+            "stats": {
+                "length": "Routenlänge",
+                "accuracy": "Formgenauigkeit"
+            },
+            "back": "Zurück",
+            "download": "GPX herunterladen"
+        }
+    },
+    "ImageUpload": {
+        "title": "Lade deine Form hoch",
+        "description": "Ziehe ein Bild hierher oder klicke, um eine Datei auszuwählen.",
+        "button": "Bild auswählen",
+        "selected": "Bild ausgewählt"
+    },
+    "Header": {
+        "home": "Startseite",
+        "about": "Über uns"
+    },
+    "Footer": {
+        "rights": "Alle Rechte vorbehalten."
+    },
+    "ReportIssueButton": {
+        "text": "Problem melden"
+    }
+}

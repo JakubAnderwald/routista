@@ -8,8 +8,24 @@
         ],
         "rewrites": [
             {
-                "source": "**",
-                "destination": "/index.html"
+                "source": "/",
+                "destination": "/en.html"
+            },
+            {
+                "source": "/en",
+                "destination": "/en.html"
+            },
+            {
+                "source": "/de",
+                "destination": "/de.html"
+            },
+            {
+                "source": "/en/**",
+                "destination": "/en/**"
+            },
+            {
+                "source": "/de/**",
+                "destination": "/de/**"
             }
         ],
         "headers": [

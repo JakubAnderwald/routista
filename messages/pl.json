@@ -1,50 +1,50 @@
 {
     "HomePage": {
-        "title": "Zamień Kształty na <span class=\"text-blue-600\">Trasy</span>",
-        "description": "Prześlij obraz lub narysuj kształt, a Routista wygeneruje rzeczywistą trasę GPS, która do niego pasuje. Idealne do biegania, jazdy na rowerze lub po prostu zwiedzania.",
-        "cta": "Stwórz Swoją Trasę",
+        "title": "Twórz trasy z <span class=\"text-blue-600\">kształtów</span>",
+        "description": "Wgraj obraz lub narysuj kształt, a Routista wygeneruje prawdziwą trasę GPS, która do niego pasuje. Idealne do biegania, jazdy na rowerze lub po prostu zwiedzania.",
+        "cta": "Stwórz własną trasę",
         "features": {
             "anyShape": {
-                "title": "Dowolny Kształt, Wszędzie",
-                "description": "Prześlij serce, gwiazdę lub swoje logo. Znajdziemy najlepiej pasujące drogi w wybranym przez Ciebie obszarze."
+                "title": "Dowolny kształt, wszędzie",
+                "description": "Wgraj serce, gwiazdę lub swoje logo. Znajdziemy najlepiej pasujące drogi w wybranym przez Ciebie obszarze."
             },
             "export": {
                 "title": "Eksport do GPX",
                 "description": "Pobierz trasę jako plik GPX i użyj jej w swojej ulubionej aplikacji fitness lub urządzeniu GPS."
             },
             "share": {
-                "title": "Podziel się Zabawą",
-                "description": "Twórz unikalne sztuki GPS na urodziny, wydarzenia lub po prostu aby urozmaicić codzienne treningi."
+                "title": "Podziel się zabawą",
+                "description": "Twórz wyjątkowe GPS art na urodziny, wydarzenia lub po prostu aby urozmaicić codzienne treningi."
             }
         },
         "support": {
             "title": "Podoba Ci się Routista?",
             "description": "Ta usługa jest całkowicie darmowa! Jeśli pomogła Ci stworzyć niesamowitą trasę, rozważ wsparcie rozwoju kawą ☕",
-            "button": "Postaw Mi Kawę",
+            "button": "Postaw mi kawę",
             "footer": "Każda kawa napędza nowe funkcje! 🚀"
         }
     },
     "AboutPage": {
         "title": "O <span class=\"text-blue-600\">Routista</span>",
-        "subtitle": "Zamień dowolny kształt w rzeczywistą trasę GPS! 🏃‍♂️🎨",
+        "subtitle": "Zamień dowolny kształt w prawdziwą trasę GPS! 🏃‍♂️🎨",
         "whatIs": {
-            "title": "Co to jest Routista?",
-            "description": "Routista to zabawne, darmowe narzędzie dla biegaczy, rowerzystów i odkrywców, którzy chcą tworzyć sztukę GPS lub po prostu urozmaicić swoje treningi. Prześlij obraz (logo, symbol, rysunek) lub rysuj bezpośrednio na mapie, a Routista znajdzie najlepiej pasujące drogi w wybranym przez Ciebie obszarze."
+            "title": "Czym jest Routista?",
+            "description": "Routista to kreatywne, darmowe narzędzie dla biegaczy, rowerzystów i odkrywców, którzy chcą tworzyć GPS art lub po prostu urozmaicić swoje treningi. Wgraj obraz (logo, symbol, rysunek) lub rysuj bezpośrednio na mapie, a Routista znajdzie najlepiej pasujące drogi w wybranym przez Ciebie obszarze."
         },
         "howItWorks": {
-            "title": "Jak to Działa",
+            "title": "Jak to działa",
             "steps": {
                 "1": {
-                    "title": "Wybierz Obszar",
+                    "title": "Wybierz obszar",
                     "description": "Wybierz, gdzie chcesz biegać lub jeździć na rowerze"
                 },
                 "2": {
-                    "title": "Wprowadź Kształt",
-                    "description": "Prześlij obraz lub narysuj kształt"
+                    "title": "Wprowadź kształt",
+                    "description": "Wgraj obraz lub narysuj kształt"
                 },
                 "3": {
                     "title": "Generuj",
-                    "description": "Algorytm dopasowuje Twój kształt do rzeczywistych ulic"
+                    "description": "Algorytm dopasowuje Twój kształt do prawdziwych ulic"
                 },
                 "4": {
                     "title": "Eksportuj",
@@ -68,11 +68,11 @@
             "title": "Funkcje",
             "items": {
                 "magic": {
-                    "title": "Magia Kształt-na-Trasę:",
-                    "description": " Prześlij obraz lub rysuj bezpośrednio na mapie"
+                    "title": "Magiczna zamiana kształtów:",
+                    "description": " Wgraj obraz lub rysuj bezpośrednio na mapie"
                 },
                 "mapping": {
-                    "title": "Interaktywne Mapy:",
+                    "title": "Interaktywne mapy:",
                     "description": " Napędzane przez Leaflet, wybierz dowolną lokalizację na świecie"
                 },
                 "export": {
@@ -80,51 +80,51 @@
                     "description": " Kompatybilne ze Strava, Garmin i innymi aplikacjami fitness"
                 },
                 "privacy": {
-                    "title": "Skupienie na Prywatności:",
+                    "title": "Prywatność to podstawa:",
                     "description": " Całe przetwarzanie odbywa się w Twojej przeglądarce"
                 },
                 "free": {
-                    "title": "Całkowicie Darmowe:",
+                    "title": "Całkowicie darmowe:",
                     "description": " Bez płatnych treści lub subskrypcji"
                 }
             }
         },
         "creator": {
-            "title": "Stworzony Przez",
-            "by": "Zbudowane z ❤️ przez <span class=\"font-semibold\">Jakub Anderwald</span>",
-            "description": "Routista to projekt pasji zaprojektowany, aby wnieść kreatywność w aktywności fitness. Bez względu na to, czy planujesz sercowaty bieg na Walentynki, czy chcesz wypisać swoje inicjały przez całe miasto, Routista sprawia, że sztuka GPS jest dostępna dla wszystkich."
+            "title": "Twórca",
+            "by": "Zbudowane z ❤️ przez <span class=\"font-semibold\">Jakuba Anderwalda</span>",
+            "description": "Routista to projekt z pasji, stworzony, aby wnieść kreatywność w aktywności fitness. Bez względu na to, czy planujesz trasę w kształcie serca na Walentynki, czy chcesz wypisać swoje inicjały przez całe miasto, Routista sprawia, że GPS art jest dostępny dla wszystkich."
         },
         "support": {
-            "title": "Wesprzyj Projekt",
+            "title": "Wesprzyj projekt",
             "description": "Jeśli lubisz używać Routista, rozważ postawienie mi kawy! Twoje wsparcie pomaga utrzymać usługę darmową i napędza nowe funkcje.",
-            "button": "Postaw Mi Kawę",
+            "button": "Postaw mi kawę",
             "github": "Zobacz na GitHub",
             "contribute": "Wkłady są mile widziane! Możesz otworzyć zgłoszenie lub przesłać pull request."
         },
-        "cta": "Zacznij Tworzyć Trasy"
+        "cta": "Zacznij tworzyć trasy"
     },
     "CreatePage": {
         "steps": {
-            "upload": "Prześlij",
+            "upload": "Wgraj",
             "area": "Obszar",
             "mode": "Tryb",
             "result": "Wynik"
         },
         "upload": {
-            "title": "Prześlij Swój Kształt",
+            "title": "Wgraj swój kształt",
             "description": "Wybierz obraz z wyraźnym kształtem (np. serce, gwiazda lub logo).",
-            "next": "Dalej: Wybierz Obszar",
+            "next": "Dalej: Wybierz obszar",
             "error": "Nie udało się wyodrębnić kształtu z obrazu. Spróbuj innego obrazu."
         },
         "area": {
-            "title": "Wybierz Obszar",
+            "title": "Wybierz obszar",
             "back": "Wstecz",
-            "next": "Dalej: Wybierz Tryb"
+            "next": "Dalej: Wybierz tryb"
         },
         "mode": {
-            "title": "Wybierz Tryb Transportu",
+            "title": "Wybierz tryb transportu",
             "back": "Wstecz",
-            "generate": "Generuj Trasę",
+            "generate": "Generuj trasę",
             "error": "Błąd podczas generowania trasy. Spróbuj ponownie."
         },
         "processing": {
@@ -132,33 +132,33 @@
             "description": "Dopasowywanie kształtu do sieci dróg."
         },
         "result": {
-            "title": "Twoja Trasa",
+            "title": "Twoja trasa",
             "stats": {
-                "length": "Długość Trasy",
-                "accuracy": "Dokładność Kształtu"
+                "length": "Długość trasy",
+                "accuracy": "Dokładność kształtu"
             },
             "back": "Wstecz",
             "download": "Pobierz GPX"
         }
     },
     "ImageUpload": {
-        "title": "Prześlij swój kształt",
+        "title": "Wgraj swój kształt",
         "description": "Przeciągnij i upuść obraz tutaj lub kliknij, aby wybrać plik.",
-        "button": "Wybierz Obraz",
-        "selected": "Obraz Wybrany"
+        "button": "Wybierz obraz",
+        "selected": "Obraz wybrany"
     },
     "Header": {
-        "home": "Strona Główna",
-        "about": "O Nas"
+        "home": "Strona główna",
+        "about": "O nas"
     },
     "Footer": {
         "rights": "Wszelkie prawa zastrzeżone."
     },
     "ReportIssueButton": {
-        "text": "Zgłoś Problem"
+        "text": "Zgłoś problem"
     },
     "metadata": {
-        "title": "Routista - Zamień Kształty na Trasy",
-        "description": "Generuj rzeczywiste trasy GPS z dowolnego kształtu lub obrazu."
+        "title": "Routista - Zamień kształty w trasy",
+        "description": "Generuj prawdziwe trasy GPS z dowolnego kształtu lub obrazu."
     }
 }

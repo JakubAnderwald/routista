@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
+    "prebuild": "npm audit --audit-level=high && npm run lint && npm test",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

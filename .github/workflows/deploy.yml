@@ -1,12 +1,15 @@
-name: Deploy to Firebase Hosting
+name: Deploy to Vercel
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build_and_deploy:
+  deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -22,19 +25,22 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Run Security Audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Run Linting
+        run: npm run lint
+
       - name: Run Tests
         run: npm test
-
-      - name: Build Next.js static export
-        run: npm run export
         env:
-          NEXT_PUBLIC_ORS_API_KEY: ${{ secrets.ORS_API_KEY }}
+          ORS_API_KEY: ${{ secrets.ORS_API_KEY }}
       
-
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          channelId: live
-          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: ${{ github.event_name == 'push' && '--prod' || '' }}

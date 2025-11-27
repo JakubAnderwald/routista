@@ -54,10 +54,20 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
     const [isSearching, setIsSearching] = useState(false);
     const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [blurTimeoutId, setBlurTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         onAreaSelect(center, radius);
     }, [center, radius, onAreaSelect]);
+
+    // Cleanup blur timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (blurTimeoutId) {
+                clearTimeout(blurTimeoutId);
+            }
+        };
+    }, [blurTimeoutId]);
 
     // Live search for suggestions
     useEffect(() => {
@@ -87,10 +97,24 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
     }, [searchQuery]);
 
     const handleSuggestionClick = (suggestion: NominatimResult) => {
+        // Clear any pending blur timeout
+        if (blurTimeoutId) {
+            clearTimeout(blurTimeoutId);
+            setBlurTimeoutId(null);
+        }
+
         const { lat, lon, display_name } = suggestion;
         setCenter([parseFloat(lat), parseFloat(lon)]);
         setSearchQuery(display_name);
         setShowSuggestions(false);
+    };
+
+    const handleInputBlur = () => {
+        // Delay hiding suggestions to allow click events to fire on mobile
+        const timeoutId = setTimeout(() => {
+            setShowSuggestions(false);
+        }, 200);
+        setBlurTimeoutId(timeoutId);
     };
 
     return (
@@ -109,7 +133,17 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                         placeholder="Search location (e.g. New York)"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                        onFocus={() => {
+                            // Clear any pending blur timeout when refocusing
+                            if (blurTimeoutId) {
+                                clearTimeout(blurTimeoutId);
+                                setBlurTimeoutId(null);
+                            }
+                            if (suggestions.length > 0) {
+                                setShowSuggestions(true);
+                            }
+                        }}
+                        onBlur={handleInputBlur}
                         className="w-full pl-10 pr-4 py-3 rounded-xl shadow-lg border-none focus:ring-2 focus:ring-blue-500 outline-none bg-white/90 backdrop-blur-sm"
                     />
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -126,7 +160,16 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                                 <button
                                     key={index}
                                     type="button"
-                                    onClick={() => handleSuggestionClick(suggestion)}
+                                    onMouseDown={(e) => {
+                                        // Prevent blur event from firing before click
+                                        e.preventDefault();
+                                        handleSuggestionClick(suggestion);
+                                    }}
+                                    onTouchStart={(e) => {
+                                        // For mobile touch events
+                                        e.preventDefault();
+                                        handleSuggestionClick(suggestion);
+                                    }}
                                     className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0 first:rounded-t-xl last:rounded-b-xl"
                                 >
                                     <p className="text-sm font-medium text-gray-900">{suggestion.display_name}</p>

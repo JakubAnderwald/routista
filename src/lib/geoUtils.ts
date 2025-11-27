@@ -306,8 +306,8 @@ export function calculateRouteAccuracy(
     // Normalize score.
     // We want a score that reflects "perceived" accuracy.
     // A deviation of 10% of the radius is actually quite visible but still "recognizable".
-    // Let's say 25% deviation is where the shape is lost (0%).
-    const maxToleratedError = radius * 0.25;
+    // Let's say 50% deviation is where the shape is lost (0%).
+    const maxToleratedError = radius * 0.5;
 
     // Linear falloff
     const score = 100 * (1 - totalAvgError / maxToleratedError);

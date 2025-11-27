@@ -1,6 +1,6 @@
 import { simplifyPoints } from "./geoUtils";
 
-const ORS_API_KEY = process.env.NEXT_PUBLIC_ORS_API_KEY;
+
 
 export interface RouteGenerationOptions {
     /** Array of [lat, lng] coordinates representing the shape to route. */
@@ -33,13 +33,15 @@ export async function generateRoute(options: RouteGenerationOptions): Promise<Fe
 
     // Use a fixed, low tolerance to preserve shape details
     // We no longer need to aggressively simplify to < 50 points
-    const tolerance = 0.0001;
+    const tolerance = 0.00001;
     const simplifiedCoordinates = simplifyPoints(coordinates, tolerance);
 
     console.log(`Simplified from ${coordinates.length} to ${simplifiedCoordinates.length} points (tolerance: ${tolerance})`);
 
     // ORS expects [lng, lat]
     const orsCoordinates = simplifiedCoordinates.map((c: number[]) => [c[1], c[0]]);
+
+    const ORS_API_KEY = process.env.NEXT_PUBLIC_ORS_API_KEY;
 
     // If no API key, return a mock response
     if (!ORS_API_KEY) {
@@ -111,6 +113,9 @@ export async function generateRoute(options: RouteGenerationOptions): Promise<Fe
                 totalDuration += feature.properties.summary.duration;
             }
         }
+
+        // Add a small delay to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     // Stitch features into a single LineString if possible, or return MultiLineString

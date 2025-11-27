@@ -1,5 +1,6 @@
 import { Car, Footprints, Bike } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from 'next-intl';
 
 export type TransportMode = "foot-walking" | "cycling-regular" | "driving-car";
 
@@ -9,24 +10,26 @@ interface ModeSelectorProps {
 }
 
 export function ModeSelector({ selectedMode, onSelect }: ModeSelectorProps) {
+    const t = useTranslations('ModeSelector');
+
     const modes = [
         {
             id: "foot-walking",
-            label: "Walking",
+            label: t('walking'),
             icon: Footprints,
-            description: "Best for parks and city centers.",
+            description: t('walkingDesc'),
         },
         {
             id: "cycling-regular",
-            label: "Cycling",
+            label: t('cycling'),
             icon: Bike,
-            description: "Good for larger shapes and roads.",
+            description: t('cyclingDesc'),
         },
         {
             id: "driving-car",
-            label: "Driving",
+            label: t('driving'),
             icon: Car,
-            description: "For massive shapes across cities.",
+            description: t('drivingDesc'),
         },
     ] as const;
 

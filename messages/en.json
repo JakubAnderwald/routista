@@ -141,6 +141,14 @@
             "download": "Download GPX"
         }
     },
+    "ModeSelector": {
+        "walking": "Walking",
+        "walkingDesc": "Best for parks and city centers.",
+        "cycling": "Cycling",
+        "cyclingDesc": "Good for larger shapes and roads.",
+        "driving": "Driving",
+        "drivingDesc": "For massive shapes across cities."
+    },
     "ImageUpload": {
         "title": "Upload your shape",
         "description": "Drag and drop an image here, or click to select a file.",

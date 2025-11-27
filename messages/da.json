@@ -1,8 +1,8 @@
 {
     "HomePage": {
-        "title": "Lav former om til <span class=\"text-blue-600\">Ruter</span>",
-        "description": "Upload et billede eller tegn en form, og Routista genererer en GPS-rute i den virkelige verden, der matcher den. Perfekt til løb, cykling eller bare udforskning.",
-        "cta": "Opret Din Rute",
+        "title": "Forvandl former til <span class=\"text-blue-600\">Ruter</span>",
+        "description": "Upload et billede eller tegn en form, og Routista skaber en GPS-rute i den virkelige verden, der matcher den. Perfekt til løb, cykling eller bare udforskning.",
+        "cta": "Lav din rute",
         "features": {
             "anyShape": {
                 "title": "Enhver Form, Hvor Som Helst",
@@ -14,19 +14,19 @@
             },
             "share": {
                 "title": "Del det Sjove",
-                "description": "Opret unik GPS-kunst til fødselsdage, begivenheder eller bare for at krydre din daglige træning."
+                "description": "Opret unik GPS-kunst til fødselsdage, begivenheder eller bare for at pifte din daglige træning op."
             }
         },
         "support": {
             "title": "Nyder du Routista?",
             "description": "Denne service er helt gratis! Hvis den hjalp dig med at skabe en fantastisk rute, så overvej at støtte udviklingen med en kop kaffe ☕",
-            "button": "Køb mig en kaffe",
+            "button": "Giv en kop kaffe",
             "footer": "Hver kop kaffe giver energi til nye funktioner! 🚀"
         }
     },
     "AboutPage": {
         "title": "Om <span class=\"text-blue-600\">Routista</span>",
-        "subtitle": "Lav enhver form om til en GPS-rute i den virkelige verden! 🏃‍♂️🎨",
+        "subtitle": "Forvandl enhver form til en GPS-rute i den virkelige verden! 🏃‍♂️🎨",
         "whatIs": {
             "title": "Hvad er Routista?",
             "description": "Routista er et sjovt, gratis værktøj til løbere, cyklister og eventyrere, der ønsker at skabe GPS-kunst eller bare krydre deres træning. Upload et billede (logo, symbol, tegning) eller tegn direkte på kortet, og Routista finder de bedst matchende veje i dit valgte område."
@@ -43,7 +43,7 @@
                     "description": "Upload et billede eller tegn en form"
                 },
                 "3": {
-                    "title": "Generer",
+                    "title": "Generér",
                     "description": "Algoritmen tilpasser din form til virkelige gader"
                 },
                 "4": {
@@ -53,7 +53,7 @@
             }
         },
         "techStack": {
-            "title": "Teknologi Stack",
+            "title": "Teknologistak",
             "description": "Bygget med moderne webteknologier:",
             "items": {
                 "framework": "Framework:",
@@ -97,7 +97,7 @@
         "support": {
             "title": "Støt Projektet",
             "description": "Hvis du nyder at bruge Routista, så overvej at købe mig en kop kaffe! Din støtte hjælper med at holde tjenesten gratis og giver energi til nye funktioner.",
-            "button": "Køb mig en kaffe",
+            "button": "Giv en kop kaffe",
             "github": "Se på GitHub",
             "contribute": "Bidrag er velkomne! Du er velkommen til at åbne issues eller indsende pull requests."
         },
@@ -107,7 +107,7 @@
         "steps": {
             "upload": "Upload",
             "area": "Område",
-            "mode": "Tilstand",
+            "mode": "Transport",
             "result": "Resultat"
         },
         "upload": {
@@ -122,20 +122,20 @@
             "next": "Næste: Vælg Tilstand"
         },
         "mode": {
-            "title": "Vælg Transportform",
+            "title": "Vælg transportmiddel",
             "back": "Tilbage",
             "generate": "Generer Rute",
             "error": "Fejl ved generering af rute. Prøv venligst igen."
         },
         "processing": {
-            "title": "Knuser tallene...",
+            "title": "Regner på det...",
             "description": "Matcher din form til vejnettet."
         },
         "result": {
             "title": "Din Rute",
             "stats": {
                 "length": "Rute Længde",
-                "accuracy": "Form Nøjagtighed"
+                "accuracy": "Formnøjagtighed"
             },
             "back": "Tilbage",
             "download": "Download GPX"

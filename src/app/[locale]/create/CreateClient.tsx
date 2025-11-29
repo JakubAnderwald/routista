@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { ModeSelector, TransportMode } from "@/components/ModeSelector";
 import { Button } from "@/components/ui/Button";
@@ -62,6 +62,34 @@ export default function CreateClient() {
             console.error("Failed to load test image", e);
         }
     };
+
+    // Test Helper: Load image from base64 data URL or blob URL
+    // This allows uploading arbitrary images for bug reproduction
+    const loadImageFromDataURL = async (dataURL: string, filename: string = "test-image.png") => {
+        try {
+            const response = await fetch(dataURL);
+            const blob = await response.blob();
+            const mimeType = blob.type || "image/png";
+            const file = new File([blob], filename, { type: mimeType });
+            handleImageSelect(file);
+        } catch (e) {
+            console.error("Failed to load image from data URL", e);
+        }
+    };
+
+
+    // Expose helper functions globally for browser automation
+    // Uses useEffect to avoid Next.js hydration issues
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            // @ts-ignore - window augmentation for testing
+            window.__routistaTestHelpers = {
+                loadTestImage,
+                loadImageFromDataURL,
+            };
+        }
+    }, []);
+
 
     const handleAreaSelect = (c: [number, number], r: number) => {
         setCenter(c);
@@ -141,9 +169,10 @@ export default function CreateClient() {
                             <p className="text-gray-500 mb-8 text-center">
                                 {t('upload.description')}
                             </p>
-                            <ImageUpload onImageSelect={handleImageSelect} className="max-w-xl mb-8" />
+                            <ImageUpload onImageSelect={handleImageSelect} className="max-w-xl mb-8" testId="create-image-upload" />
                             <div className="flex justify-end w-full max-w-xl">
                                 <Button
+                                    data-testid="upload-next-button"
                                     disabled={!image || !shapePoints}
                                     onClick={() => setStep("area")}
                                 >
@@ -164,8 +193,8 @@ export default function CreateClient() {
                                 />
                             </div>
                             <div className="flex justify-between mt-6">
-                                <Button variant="outline" onClick={() => setStep("upload")}>{t('area.back')}</Button>
-                                <Button onClick={() => setStep("mode")}>{t('area.next')}</Button>
+                                <Button data-testid="area-back-button" variant="outline" onClick={() => setStep("upload")}>{t('area.back')}</Button>
+                                <Button data-testid="area-next-button" onClick={() => setStep("mode")}>{t('area.next')}</Button>
                             </div>
                         </div>
                     )}
@@ -175,8 +204,8 @@ export default function CreateClient() {
                             <h2 className="text-2xl font-bold mb-8">{t('mode.title')}</h2>
                             <ModeSelector selectedMode={mode} onSelect={setMode} />
                             <div className="flex justify-between w-full mt-8 max-w-3xl">
-                                <Button variant="outline" onClick={() => setStep("area")}>{t('mode.back')}</Button>
-                                <Button disabled={!mode} onClick={handleGenerate}>{t('mode.generate')}</Button>
+                                <Button data-testid="mode-back-button" variant="outline" onClick={() => setStep("area")}>{t('mode.back')}</Button>
+                                <Button data-testid="mode-generate-button" disabled={!mode} onClick={handleGenerate}>{t('mode.generate')}</Button>
                             </div>
                         </div>
                     )}
@@ -214,8 +243,8 @@ export default function CreateClient() {
                                 {routeData && <ResultMap center={center} zoom={13} routeData={routeData} />}
                             </div>
                             <div className="flex justify-between mt-6">
-                                <Button variant="outline" onClick={() => setStep("mode")}>{t('result.back')}</Button>
-                                <Button onClick={handleDownload}>{t('result.download')}</Button>
+                                <Button data-testid="result-back-button" variant="outline" onClick={() => setStep("mode")}>{t('result.back')}</Button>
+                                <Button data-testid="result-download-button" onClick={handleDownload}>{t('result.download')}</Button>
                             </div>
                         </div>
                     )}
@@ -223,10 +252,20 @@ export default function CreateClient() {
             </div>
 
             {/* Hidden Test Controls for Automated Browser Testing */}
-            <div style={{ display: 'none' }}>
-                <button id="test-load-star" onClick={() => loadTestImage("star.png")}>Load Star</button>
-                <button id="test-load-heart" onClick={() => loadTestImage("heart.png")}>Load Heart</button>
-                <button id="test-load-circle" onClick={() => loadTestImage("circle.png")}>Load Circle</button>
+            {/* These elements are invisible but accessible to browser automation tools */}
+            {/* They allow programmatic image loading without OS file picker dialogs */}
+            <div style={{ display: 'none' }} data-testid="test-controls">
+                {/* Test image loaders - images from public folder */}
+                <button id="test-load-star" data-testid="test-load-star" onClick={() => loadTestImage("star.png")}>Load Star</button>
+                <button id="test-load-heart" data-testid="test-load-heart" onClick={() => loadTestImage("heart.png")}>Load Heart</button>
+                <button id="test-load-circle" data-testid="test-load-circle" onClick={() => loadTestImage("circle.png")}>Load Circle</button>
+
+                {/* Status indicators for test automation */}
+                <span data-testid="current-step" data-value={step}>{step}</span>
+                <span data-testid="has-image" data-value={!!image}>{String(!!image)}</span>
+                <span data-testid="has-shape-points" data-value={!!shapePoints}>{String(!!shapePoints)}</span>
+                <span data-testid="selected-mode" data-value={mode || ""}>{mode || "none"}</span>
+                <span data-testid="has-route" data-value={!!routeData}>{String(!!routeData)}</span>
             </div>
         </div>
     );

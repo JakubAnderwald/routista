@@ -10,9 +10,10 @@ import { useTranslations } from 'next-intl';
 interface ImageUploadProps {
     onImageSelect: (file: File) => void;
     className?: string;
+    testId?: string;
 }
 
-export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
+export function ImageUpload({ onImageSelect, className, testId = "image-upload" }: ImageUploadProps) {
     const t = useTranslations('ImageUpload');
     const [preview, setPreview] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -64,6 +65,7 @@ export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
         <div className={cn("w-full", className)}>
             {!preview ? (
                 <div
+                    data-testid={`${testId}-dropzone`}
                     className={cn(
                         "border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors cursor-pointer min-h-[300px]",
                         isDragging
@@ -82,11 +84,12 @@ export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
                     <p className="text-gray-500 mb-6 max-w-xs">
                         {t('description')}
                     </p>
-                    <Button variant="outline" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
+                    <Button data-testid={`${testId}-button`} variant="outline" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
                         {t('button')}
                     </Button>
                     <input
                         ref={fileInputRef}
+                        data-testid={`${testId}-input`}
                         type="file"
                         accept="image/*"
                         className="hidden"
@@ -94,7 +97,7 @@ export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
                     />
                 </div>
             ) : (
-                <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50 min-h-[300px] flex items-center justify-center">
+                <div data-testid={`${testId}-preview`} className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50 min-h-[300px] flex items-center justify-center">
                     <Image
                         src={preview}
                         alt="Preview"
@@ -103,6 +106,7 @@ export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
                         className="max-w-full max-h-[400px] object-contain"
                     />
                     <button
+                        data-testid={`${testId}-clear`}
                         onClick={clearImage}
                         className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors"
                     >

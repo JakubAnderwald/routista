@@ -52,3 +52,28 @@ This prevents "cheating" where a route could just be a single point (low forward
 
 ## State Management
 State is primarily managed in the parent page (`src/app/create/page.tsx` or similar) and passed down via props. There is no global state management library (Redux/Zustand) as the application flow is linear and simple.
+
+## Automated Browser Testing
+
+Routista includes infrastructure to support automated end-to-end testing with browser automation tools (Puppeteer, Playwright, Antigravity). Since traditional image upload requires OS file picker dialogs that cannot be automated, the application provides:
+
+### Programmatic Image Upload
+- Hidden test controls in `CreateClient.tsx` allow loading test images from the `public/` folder without file picker interaction
+- The `loadTestImage` helper function fetches images and processes them through the normal upload flow
+- Test images available: `star.png`, `heart.png`, `circle.png`
+
+### Test Identifiers
+- All interactive UI elements have `data-testid` attributes for reliable selection
+- Status indicators expose application state (current step, image loaded, route generated, etc.)
+- These elements are hidden (`display: none`) but accessible to automation tools
+
+### Documentation
+For complete details on automated testing, including:
+- Available test controls and their usage
+- Complete list of `data-testid` attributes
+- Full E2E test example code
+- Best practices and debugging tips
+
+See [`AUTOMATED_TESTING.md`](file:///Users/jakubanderwald/code/routista.antigravity/docs/AUTOMATED_TESTING.md)
+
+**Note:** Test controls are present in all builds (including production) to enable agent-based testing workflows.

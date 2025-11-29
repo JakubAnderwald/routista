@@ -30,3 +30,18 @@ After completing any coding task, you MUST perform the following steps:
 - **Logic**: Ensure all geometric calculations in `src/lib` have unit tests.
 - **State**: Keep state local where possible, lift up only when necessary.
 - **Type Safety**: Use TypeScript strictly. Avoid `any`.
+
+# Critical Context for Agents
+
+## 🧪 Testing & Automation
+- **NO FILE PICKERS**: You cannot interact with OS file dialogs.
+- **USE HELPERS**: For image upload tests, use `window.__routistaTestHelpers.loadTestImage("star.png")` or `loadImageFromDataURL()`.
+- **CONTROLS**: Interact with hidden test elements using `data-testid` (e.g., `test-load-star`, `upload-next-button`).
+- **REFERENCE**: See `docs/AUTOMATED_TESTING.md` for the complete automation protocol.
+
+## 🗺️ Codebase Navigation
+- **MAP**: Read `docs/CONTEXT_MAP.md` FIRST to find the right files for your task.
+- **LOGIC**:
+  - Routing -> `src/lib/routeGenerator.ts`
+  - Geometry -> `src/lib/geoUtils.ts`
+  - Image Proc -> `src/lib/imageProcessing.ts`

@@ -141,6 +141,14 @@
             "download": "Pobierz GPX"
         }
     },
+    "ModeSelector": {
+        "walking": "Pieszo",
+        "walkingDesc": "Najlepsze do parków i centrów miast.",
+        "cycling": "Rower",
+        "cyclingDesc": "Dobre dla większych kształtów i dróg.",
+        "driving": "Samochód",
+        "drivingDesc": "Dla ogromnych kształtów w całych miastach."
+    },
     "ImageUpload": {
         "title": "Wgraj swój kształt",
         "description": "Przeciągnij i upuść obraz tutaj lub kliknij, aby wybrać plik.",

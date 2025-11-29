@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMap, useMapEvents, Circle } from "react-leaflet";
 import dynamic from "next/dynamic";
 
@@ -18,32 +18,38 @@ interface AreaSelectorProps {
     initialRadius?: number;
 }
 
-interface NominatimResult {
-    lat: string;
-    lon: string;
-    display_name: string;
+interface RadarAddress {
+    latitude: number;
+    longitude: number;
+    formattedAddress: string;
 }
 
-function MapController({ onCenterChange }: { onCenterChange: (center: [number, number]) => void }) {
+function MapController({ onCenterChange, isProgrammaticMoveRef }: { onCenterChange: (center: [number, number]) => void, isProgrammaticMoveRef: React.MutableRefObject<boolean> }) {
     const map = useMapEvents({
         moveend: () => {
-            const center = map.getCenter();
-            onCenterChange([center.lat, center.lng]);
+            // Only update if this wasn't a programmatic move
+            if (!isProgrammaticMoveRef.current) {
+                const center = map.getCenter();
+                onCenterChange([center.lat, center.lng]);
+            }
+            isProgrammaticMoveRef.current = false;
         },
     });
     return null;
 }
 
-function RecenterMap({ center, radius }: { center: [number, number], radius: number }) {
+function RecenterMap({ center, radius, isProgrammaticMoveRef }: { center: [number, number], radius: number, isProgrammaticMoveRef: React.MutableRefObject<boolean> }) {
     const map = useMap();
     useEffect(() => {
         // Calculate appropriate zoom level based on radius
         // Larger radius = smaller zoom level
         const zoom = Math.max(10, Math.min(18, Math.round(14 - Math.log2(radius / 1000))));
 
+        // Mark this as a programmatic move
+        isProgrammaticMoveRef.current = true;
         // Use setView instead of flyTo to remove animation
         map.setView(center, zoom);
-    }, [center, radius, map]);
+    }, [center, radius, map, isProgrammaticMoveRef]);
     return null;
 }
 
@@ -52,15 +58,17 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
     const [radius, setRadius] = useState(initialRadius);
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearching, setIsSearching] = useState(false);
-    const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
+    const [suggestions, setSuggestions] = useState<RadarAddress[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [blurTimeoutId, setBlurTimeoutId] = useState<NodeJS.Timeout | null>(null);
+    const isProgrammaticMoveRef = useRef(false);
 
     useEffect(() => {
         onAreaSelect(center, radius);
-    }, [center, radius, onAreaSelect]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [center, radius]);
 
-    // Cleanup blur timeout on unmount
+    //Cleanup blur timeout on unmount
     useEffect(() => {
         return () => {
             if (blurTimeoutId) {
@@ -80,9 +88,10 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
 
             setIsSearching(true);
             try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`);
+                const radarKey = process.env.NEXT_PUBLIC_RADAR_LIVE_PK || process.env.NEXT_PUBLIC_RADAR_TEST_PK;
+                const response = await fetch(`https://api.radar.io/v1/search/autocomplete?query=${encodeURIComponent(searchQuery)}&limit=5&publishableKey=${radarKey}`);
                 const data = await response.json();
-                setSuggestions(data || []);
+                setSuggestions(data.addresses || []);
                 setShowSuggestions(true);
             } catch (error) {
                 console.error("Search failed", error);
@@ -96,16 +105,16 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    const handleSuggestionClick = (suggestion: NominatimResult) => {
+    const handleSuggestionClick = (suggestion: RadarAddress) => {
         // Clear any pending blur timeout
         if (blurTimeoutId) {
             clearTimeout(blurTimeoutId);
             setBlurTimeoutId(null);
         }
 
-        const { lat, lon, display_name } = suggestion;
-        setCenter([parseFloat(lat), parseFloat(lon)]);
-        setSearchQuery(display_name);
+        const { latitude, longitude, formattedAddress } = suggestion;
+        setCenter([latitude, longitude]);
+        setSearchQuery(formattedAddress);
         setShowSuggestions(false);
     };
 
@@ -120,8 +129,8 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
     return (
         <div className="relative w-full h-full">
             <Map center={center} zoom={13} className="w-full h-full">
-                <MapController onCenterChange={setCenter} />
-                <RecenterMap center={center} radius={radius} />
+                <MapController onCenterChange={setCenter} isProgrammaticMoveRef={isProgrammaticMoveRef} />
+                <RecenterMap center={center} radius={radius} isProgrammaticMoveRef={isProgrammaticMoveRef} />
                 <Circle center={center} radius={radius} pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }} />
             </Map>
 
@@ -172,7 +181,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                                     }}
                                     className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0 first:rounded-t-xl last:rounded-b-xl"
                                 >
-                                    <p className="text-sm font-medium text-gray-900">{suggestion.display_name}</p>
+                                    <p className="text-sm font-medium text-gray-900">{suggestion.formattedAddress}</p>
                                 </button>
                             ))}
                         </div>

@@ -15,7 +15,7 @@ export interface RouteGenerationOptions {
  * This function:
  * 1. Simplifies the input coordinates to reduce API load.
  * 2. Batches the coordinates into chunks to respect API limits.
- * 3. Calls the OpenRouteService (ORS) API for each chunk.
+ * 3. Calls the Radar Directions API for each chunk.
  * 4. Stitches the resulting route segments into a single continuous path.
  * 
  * @param options - Configuration options for route generation.
@@ -31,21 +31,25 @@ export async function generateRoute(options: RouteGenerationOptions): Promise<Fe
         throw new Error("Invalid coordinates");
     }
 
-    // Use a fixed, low tolerance to preserve shape details
-    // We no longer need to aggressively simplify to < 50 points
-    const tolerance = 0.00001;
+    // Use mode-specific tolerance - car routing is stricter, so we need fewer waypoints
+    // Higher tolerance = fewer points = better chance all points are on roads
+    const toleranceMap: Record<string, number> = {
+        "driving-car": 0.002,    // 20x higher - car routing is very strict about roads
+        "cycling-regular": 0.0005, // 5x higher - bike can use more paths
+        "foot-walking": 0.0002     // 2x higher - foot is most flexible
+    };
+    const tolerance = toleranceMap[mode] || 0.0001;
     const simplifiedCoordinates = simplifyPoints(coordinates, tolerance);
 
-    console.log(`Simplified from ${coordinates.length} to ${simplifiedCoordinates.length} points (tolerance: ${tolerance})`);
+    console.log(`Simplified from ${coordinates.length} to ${simplifiedCoordinates.length} points (mode: ${mode}, tolerance: ${tolerance})`);
 
-    // ORS expects [lng, lat]
-    const orsCoordinates = simplifiedCoordinates.map((c: number[]) => [c[1], c[0]]);
-
-    const ORS_API_KEY = process.env.NEXT_PUBLIC_ORS_API_KEY;
+    const RADAR_API_KEY = process.env.NEXT_PUBLIC_RADAR_LIVE_PK || process.env.NEXT_PUBLIC_RADAR_TEST_PK;
 
     // If no API key, return a mock response
-    if (!ORS_API_KEY) {
-        console.warn("No ORS_API_KEY provided, using mock response");
+    if (!RADAR_API_KEY) {
+        console.warn("No Radar API key provided, using mock response");
+        // Radar expects [lat, lng], keep as is for mock
+        const mockCoordinates = simplifiedCoordinates.map((c: number[]) => [c[1], c[0]]); // Convert to [lng, lat] for GeoJSON
         return {
             type: "FeatureCollection",
             features: [
@@ -59,19 +63,27 @@ export async function generateRoute(options: RouteGenerationOptions): Promise<Fe
                     },
                     geometry: {
                         type: "LineString",
-                        coordinates: orsCoordinates
+                        coordinates: mockCoordinates
                     }
                 }
             ]
         };
     }
 
-    // Batching logic
-    const MAX_POINTS_PER_REQUEST = 40; // Safe limit below 50
+    // Map transportation modes from app format to Radar format
+    const modeMap: Record<string, string> = {
+        "driving-car": "car",
+        "cycling-regular": "bike",
+        "foot-walking": "foot"
+    };
+    const radarMode = modeMap[mode] || "car";
+
+    // Batching logic - Radar supports up to 25 coordinates per request
+    const MAX_POINTS_PER_REQUEST = 24; // Safe limit below 25
     const chunks = [];
 
-    for (let i = 0; i < orsCoordinates.length - 1; i += MAX_POINTS_PER_REQUEST - 1) {
-        const chunk = orsCoordinates.slice(i, i + MAX_POINTS_PER_REQUEST);
+    for (let i = 0; i < simplifiedCoordinates.length - 1; i += MAX_POINTS_PER_REQUEST - 1) {
+        const chunk = simplifiedCoordinates.slice(i, i + MAX_POINTS_PER_REQUEST);
         chunks.push(chunk);
     }
 
@@ -82,35 +94,48 @@ export async function generateRoute(options: RouteGenerationOptions): Promise<Fe
     let totalDuration = 0;
 
     for (const chunk of chunks) {
-        const response = await fetch(`https://api.openrouteservice.org/v2/directions/${mode}/geojson`, {
-            method: "POST",
+        // Format coordinates as pipe-delimited lat,lng pairs
+        const locationsParam = chunk.map((c: number[]) => `${c[0]},${c[1]}`).join('|');
+
+        const url = new URL('https://api.radar.io/v1/route/directions');
+        url.searchParams.append('locations', locationsParam);
+        url.searchParams.append('mode', radarMode);
+        url.searchParams.append('geometry', 'linestring'); // Get GeoJSON LineString
+        url.searchParams.append('units', 'metric');
+
+        const response = await fetch(url.toString(), {
+            method: "GET",
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": ORS_API_KEY
-            },
-            body: JSON.stringify({
-                coordinates: chunk,
-                elevation: false,
-                instructions: false,
-                preference: "shortest"
-            })
+                "Authorization": RADAR_API_KEY
+            }
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("ORS Error:", errorText);
-            throw new Error(`Failed to generate route chunk: ${response.status} ${response.statusText}`);
+            console.error("Radar Error:", errorText);
+            throw new Error(`Radar API Error: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
         const data = await response.json();
 
-        if (data.features && data.features.length > 0) {
-            const feature = data.features[0];
-            features.push(feature);
+        if (data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
 
-            if (feature.properties && feature.properties.summary) {
-                totalDistance += feature.properties.summary.distance;
-                totalDuration += feature.properties.summary.duration;
+            // Extract geometry - Radar returns GeoJSON LineString in geometry.coordinates
+            if (route.geometry && route.geometry.coordinates) {
+                features.push({
+                    type: "Feature",
+                    properties: {
+                        summary: {
+                            distance: route.distance?.value || 0,
+                            duration: route.duration?.value || 0
+                        }
+                    },
+                    geometry: route.geometry
+                });
+
+                totalDistance += route.distance?.value || 0;
+                totalDuration += route.duration?.value || 0;
             }
         }
 
@@ -118,8 +143,7 @@ export async function generateRoute(options: RouteGenerationOptions): Promise<Fe
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    // Stitch features into a single LineString if possible, or return MultiLineString
-    // For simplicity, we'll merge the coordinates into a single LineString
+    // Stitch features into a single LineString
     const mergedCoordinates: number[][] = [];
 
     for (let i = 0; i < features.length; i++) {

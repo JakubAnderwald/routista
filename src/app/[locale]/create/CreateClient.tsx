@@ -91,7 +91,15 @@ export default function CreateClient() {
 
         } catch (error) {
             console.error(error);
-            alert(t('mode.error'));
+            let message = t('mode.error');
+            if (error instanceof Error) {
+                if (error.message.includes("Route not found")) {
+                    message = "Could not find a valid route for this shape with the selected mode. Try:\n• Using a simpler shape\n• Selecting a different transportation mode\n• Choosing a smaller area";
+                } else {
+                    message = error.message;
+                }
+            }
+            alert(message);
             setStep("mode");
         }
     };

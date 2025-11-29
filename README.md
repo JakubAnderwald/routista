@@ -25,8 +25,9 @@ Built with modern web technologies:
 -   **UI Library**: [React 19](https://react.dev/)
 -   **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
 -   **Maps**: [Leaflet](https://leafletjs.com/) & [React-Leaflet](https://react-leaflet.js.org/)
--   **Testing**: [Vitest](https://vitest.dev/)
--   **Deployment**: [Firebase Hosting](https://firebase.google.com/)
+-   **Testing**: [Vitest](https://vitest.dev/) & [Puppeteer](https://pptr.dev/) (E2E)
+-   **Deployment**: [Vercel](https://vercel.com/)
+-   **Internationalization**: [next-intl](https://next-intl-docs.vercel.app/)
 
 ## Getting Started 🚀
 
@@ -59,6 +60,9 @@ Open [http://localhost:3000](http://localhost:3000) with your browser.
 ```bash
 # Run automated tests
 npm test
+
+# Run browser automation tests (see docs/AUTOMATED_TESTING.md)
+npm run test:e2e
 ```
 
 ## Contributing 🤝

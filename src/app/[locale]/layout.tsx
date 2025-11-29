@@ -35,6 +35,8 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+import { Analytics } from "@vercel/analytics/next";
+
 export default async function RootLayout({
   children,
   params
@@ -57,6 +59,7 @@ export default async function RootLayout({
           <Footer />
           <ReportIssueButton />
         </NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   );

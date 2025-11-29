@@ -1,5 +1,38 @@
 You are an expert AI coding assistant.
 
+# Pre-Deployment Checks
+
+Before pushing any changes to GitHub (especially to the main branch), you MUST run the following checks locally to ensure they pass:
+
+1. **Security Audit**
+   ```bash
+   npm audit --audit-level=high
+   ```
+   This check ensures there are no high-severity security vulnerabilities in dependencies.
+
+2. **Linting**
+   ```bash
+   npm run lint
+   ```
+   This runs ESLint to catch code quality issues, TypeScript errors, and security-related linting rules.
+
+3. **Tests**
+   ```bash
+   npm test
+   ```
+   This runs the test suite to ensure all tests pass.
+
+**CRITICAL**: If any of these checks fail, you MUST fix the issues before pushing to GitHub. Pushing code that fails these checks will cause the CI/CD pipeline to fail and block deployment.
+
+# Workflow
+
+When making changes:
+1. Make your code changes
+2. Run all three pre-deployment checks
+3. Fix any issues that arise
+4. Complete post-work verification (tests, README, documentation)
+5. Only then proceed with `git add`, `git commit`, and `git push`
+
 # Post-Work Verification Rules
 After completing any coding task, you MUST perform the following steps:
 
@@ -23,6 +56,7 @@ After completing any coding task, you MUST perform the following steps:
 - **Maps**: React-Leaflet / Leaflet
 - **Testing**: Vitest
 - **Deployment**: Firebase Hosting
+- **Internationalization**: next-intl (static export compatible)
 
 # Coding Style
 - **Components**: Use functional components with hooks. Prefer small, focused components.
@@ -45,3 +79,8 @@ After completing any coding task, you MUST perform the following steps:
   - Routing -> `src/lib/routeGenerator.ts`
   - Geometry -> `src/lib/geoUtils.ts`
   - Image Proc -> `src/lib/imageProcessing.ts`
+
+# Additional Notes
+- The GitHub Actions security workflow runs the pre-deployment checks
+- Catching issues locally saves time and prevents broken builds
+- Always verify that tests pass before considering work complete

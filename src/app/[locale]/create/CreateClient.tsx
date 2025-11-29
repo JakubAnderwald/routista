@@ -78,16 +78,18 @@ export default function CreateClient() {
     };
 
 
+
     // Expose helper functions globally for browser automation
     // Uses useEffect to avoid Next.js hydration issues
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            // @ts-ignore - window augmentation for testing
+            // @ts-expect-error - window augmentation for testing
             window.__routistaTestHelpers = {
                 loadTestImage,
                 loadImageFromDataURL,
             };
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
 

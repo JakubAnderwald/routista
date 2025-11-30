@@ -185,7 +185,7 @@ export default function CreateClient() {
                     )}
 
                     {step === "area" && (
-                        <div className="flex flex-col h-[600px]">
+                        <div className="flex flex-col h-[60vh] md:h-[600px]">
                             <h2 className="text-2xl font-bold mb-4">{t('area.title')}</h2>
                             <div className="flex-1 bg-gray-100 rounded-xl overflow-hidden relative border border-gray-200">
                                 <AreaSelector
@@ -221,7 +221,7 @@ export default function CreateClient() {
                     )}
 
                     {step === "result" && (
-                        <div className="flex flex-col h-[600px]">
+                        <div className="flex flex-col h-[60vh] md:h-[600px]">
                             <h2 className="text-2xl font-bold mb-4">{t('result.title')}</h2>
 
                             {stats && (

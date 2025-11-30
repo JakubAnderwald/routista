@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 import { Header } from "@/components/Header";
@@ -28,6 +28,13 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     description: t('description'),
   };
 }
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 import { routing } from '@/i18n/routing';
 

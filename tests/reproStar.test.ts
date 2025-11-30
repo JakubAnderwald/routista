@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import path from 'path';
 import { extractShapeFromImageNode } from './utils/nodeImageProcessing';
-import { generateRoute } from '../src/lib/routeGenerator';
+import { getRadarRoute } from '../src/lib/radarService';
 import { scalePointsToGeo, calculateRouteAccuracy } from '../src/lib/geoUtils';
 import dotenv from 'dotenv';
 
@@ -28,7 +28,7 @@ describe('Reproduction: Warsaw Star', () => {
         const geoPoints = scalePointsToGeo(shapePoints, WARSAW_CENTER, RADIUS);
 
         // 3. Generate route
-        const routeData = await generateRoute({ coordinates: geoPoints, mode: MODE });
+        const routeData = await getRadarRoute({ coordinates: geoPoints, mode: MODE });
 
         // 4. Calculate accuracy
         const accuracy = calculateRouteAccuracy(geoPoints, routeData, RADIUS);

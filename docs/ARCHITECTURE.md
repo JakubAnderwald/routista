@@ -16,8 +16,9 @@ Routista is a client-side heavy Next.js application that leverages external APIs
 
 3.  **Route Generation** (`routeGenerator.ts`)
     *   The scaled points are simplified (Ramer-Douglas-Peucker) to reduce API load.
-    *   Points are sent to the OpenRouteService (ORS) API in chunks.
-    *   ORS returns navigable paths between the points.
+    *   Points are sent to the internal API route (`/api/radar/directions`).
+    *   The API route proxies the request to the Radar API in chunks to respect limits and avoid CORS.
+    *   Radar returns navigable paths between the points.
     *   Segments are stitched together to form a continuous `LineString`.
 
 4.  **Visualization** (`ResultMap.tsx`)

@@ -52,18 +52,6 @@
                 }
             }
         },
-        "techStack": {
-            "title": "Technologie",
-            "description": "Zbudowane z wykorzystaniem nowoczesnych technologii webowych:",
-            "items": {
-                "framework": "Framework:",
-                "uiLibrary": "Biblioteka UI:",
-                "styling": "Stylizacja:",
-                "maps": "Mapy:",
-                "testing": "Testowanie:",
-                "deployment": "Wdrożenie:"
-            }
-        },
         "features": {
             "title": "Funkcje",
             "items": {

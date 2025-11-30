@@ -1,6 +1,6 @@
 import { Link } from '@/i18n/routing';
 import { Button } from "@/components/ui/Button";
-import { Heart, Coffee, Github, Code2 } from "lucide-react";
+import { Heart, Coffee, Github } from "lucide-react";
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 export default async function About({ params }: { params: Promise<{ locale: string }> }) {
@@ -62,41 +62,6 @@ export default async function About({ params }: { params: Promise<{ locale: stri
                                     <h3 className="text-xl font-bold text-gray-900">{t('howItWorks.steps.4.title')}</h3>
                                 </div>
                                 <p className="text-gray-700">{t('howItWorks.steps.4.description')}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Tech Stack */}
-                    <div className="mb-12">
-                        <h2 className="text-3xl font-bold mb-4 text-gray-900 flex items-center gap-2">
-                            <Code2 className="w-8 h-8 text-blue-600" />
-                            {t('techStack.title')}
-                        </h2>
-                        <p className="text-lg text-gray-600 mb-6">{t('techStack.description')}</p>
-                        <div className="grid sm:grid-cols-2 gap-3">
-                            <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
-                                <span className="text-gray-700">{t('techStack.items.framework')}</span>
-                                <span className="font-semibold text-gray-900">Next.js 16</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
-                                <span className="text-gray-700">{t('techStack.items.uiLibrary')}</span>
-                                <span className="font-semibold text-gray-900">React 19</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
-                                <span className="text-gray-700">{t('techStack.items.styling')}</span>
-                                <span className="font-semibold text-gray-900">Tailwind CSS 4</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
-                                <span className="text-gray-700">{t('techStack.items.maps')}</span>
-                                <span className="font-semibold text-gray-900">Leaflet</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
-                                <span className="text-gray-700">{t('techStack.items.testing')}</span>
-                                <span className="font-semibold text-gray-900">Vitest</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
-                                <span className="text-gray-700">{t('techStack.items.deployment')}</span>
-                                <span className="font-semibold text-gray-900">Firebase Hosting</span>
                             </div>
                         </div>
                     </div>

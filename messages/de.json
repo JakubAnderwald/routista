@@ -52,18 +52,6 @@
                 }
             }
         },
-        "techStack": {
-            "title": "Tech Stack",
-            "description": "Erstellt mit modernen Web-Technologien:",
-            "items": {
-                "framework": "Framework:",
-                "uiLibrary": "UI-Bibliothek:",
-                "styling": "Styling:",
-                "maps": "Karten:",
-                "testing": "Testing:",
-                "deployment": "Deployment:"
-            }
-        },
         "features": {
             "title": "Funktionen",
             "items": {

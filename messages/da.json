@@ -52,18 +52,6 @@
                 }
             }
         },
-        "techStack": {
-            "title": "Teknologistak",
-            "description": "Bygget med moderne webteknologier:",
-            "items": {
-                "framework": "Framework:",
-                "uiLibrary": "UI Bibliotek:",
-                "styling": "Styling:",
-                "maps": "Kort:",
-                "testing": "Test:",
-                "deployment": "Udrulning:"
-            }
-        },
         "features": {
             "title": "Funktioner",
             "items": {

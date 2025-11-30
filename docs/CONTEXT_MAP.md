@@ -22,7 +22,8 @@ This file maps concepts and features to their source of truth in the codebase. U
 ## 📂 File Tree & Purpose
 
 ### Core Logic (`src/lib/`)
-*   `routeGenerator.ts`: **CRITICAL**. The "brain" that finds the route.
+*   `routeGenerator.ts`: **CRITICAL**. The "brain" that finds the route (client-side wrapper).
+*   `radarService.ts`: **CRITICAL**. Server-side service that proxies Radar API calls.
 *   `geoUtils.ts`: **CRITICAL**. Math heavy. Handles coordinate geometry.
 *   `imageProcessing.ts`: **CRITICAL**. Computer vision lite.
 *   `gpxGenerator.ts`: Utility for file export.

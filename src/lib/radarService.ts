@@ -6,6 +6,13 @@ export interface RouteGenerationOptions {
     mode: string;
 }
 
+/**
+ * Generates a route by calling the Radar API.
+ * This function is designed to be used server-side to keep API keys secure.
+ * 
+ * @param options - Configuration options including coordinates and mode.
+ * @returns A GeoJSON FeatureCollection containing the route.
+ */
 export async function getRadarRoute(options: RouteGenerationOptions): Promise<FeatureCollection> {
     const { coordinates, mode } = options;
 

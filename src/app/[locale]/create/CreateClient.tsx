@@ -155,20 +155,20 @@ export default function CreateClient() {
 
                         return (
                             <div key={s} className="flex flex-col items-center relative z-10">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 transition-colors ${active ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 transition-colors ${active ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400"}`}>
                                     {i + 1}
                                 </div>
-                                <span className={`text-sm font-medium ${active ? "text-blue-600" : "text-gray-500"}`}>{t(`steps.${s}`)}</span>
+                                <span className={`text-sm font-medium ${active ? "text-blue-600 dark:text-blue-500" : "text-gray-500 dark:text-gray-400"}`}>{t(`steps.${s}`)}</span>
                             </div>
                         );
                     })}
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 md:p-8 transition-colors">
                     {step === "upload" && (
                         <div className="flex flex-col items-center">
-                            <h2 className="text-2xl font-bold mb-2">{t('upload.title')}</h2>
-                            <p className="text-gray-500 mb-8 text-center">
+                            <h2 className="text-2xl font-bold mb-2 dark:text-white">{t('upload.title')}</h2>
+                            <p className="text-gray-500 dark:text-gray-400 mb-8 text-center">
                                 {t('upload.description')}
                             </p>
                             <ImageUpload onImageSelect={handleImageSelect} className="max-w-xl mb-8" testId="create-image-upload" />
@@ -186,8 +186,8 @@ export default function CreateClient() {
 
                     {step === "area" && (
                         <div className="flex flex-col h-[60vh] md:h-[600px]">
-                            <h2 className="text-2xl font-bold mb-4">{t('area.title')}</h2>
-                            <div className="flex-1 bg-gray-100 rounded-xl overflow-hidden relative border border-gray-200">
+                            <h2 className="text-2xl font-bold mb-4 dark:text-white">{t('area.title')}</h2>
+                            <div className="flex-1 bg-gray-100 dark:bg-gray-950 rounded-xl overflow-hidden relative border border-gray-200 dark:border-gray-800">
                                 <AreaSelector
                                     onAreaSelect={handleAreaSelect}
                                     initialCenter={center}
@@ -203,7 +203,7 @@ export default function CreateClient() {
 
                     {step === "mode" && (
                         <div className="flex flex-col items-center">
-                            <h2 className="text-2xl font-bold mb-8">{t('mode.title')}</h2>
+                            <h2 className="text-2xl font-bold mb-8 dark:text-white">{t('mode.title')}</h2>
                             <ModeSelector selectedMode={mode} onSelect={setMode} />
                             <div className="flex justify-between w-full mt-8 max-w-3xl">
                                 <Button data-testid="mode-back-button" variant="outline" onClick={() => setStep("area")}>{t('mode.back')}</Button>
@@ -214,34 +214,34 @@ export default function CreateClient() {
 
                     {step === "processing" && (
                         <div className="flex flex-col items-center py-20">
-                            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-6"></div>
-                            <h2 className="text-xl font-semibold mb-2">{t('processing.title')}</h2>
-                            <p className="text-gray-500">{t('processing.description')}</p>
+                            <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-900 border-t-blue-600 dark:border-t-blue-500 rounded-full animate-spin mb-6"></div>
+                            <h2 className="text-xl font-semibold mb-2 dark:text-white">{t('processing.title')}</h2>
+                            <p className="text-gray-500 dark:text-gray-400">{t('processing.description')}</p>
                         </div>
                     )}
 
                     {step === "result" && (
                         <div className="flex flex-col h-[60vh] md:h-[600px]">
-                            <h2 className="text-2xl font-bold mb-4">{t('result.title')}</h2>
+                            <h2 className="text-2xl font-bold mb-4 dark:text-white">{t('result.title')}</h2>
 
                             {stats && (
                                 <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                        <div className="text-sm text-blue-600 font-medium mb-1">{t('result.stats.length')}</div>
-                                        <div className="text-2xl font-bold text-blue-900">
-                                            {(stats.length / 1000).toFixed(2)} <span className="text-base font-normal text-blue-700">km</span>
+                                    <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-xl border border-blue-100 dark:border-blue-900">
+                                        <div className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">{t('result.stats.length')}</div>
+                                        <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                                            {(stats.length / 1000).toFixed(2)} <span className="text-base font-normal text-blue-700 dark:text-blue-300">km</span>
                                         </div>
                                     </div>
-                                    <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                                        <div className="text-sm text-green-600 font-medium mb-1">{t('result.stats.accuracy')}</div>
-                                        <div className="text-2xl font-bold text-green-900">
-                                            {stats.accuracy.toFixed(0)}<span className="text-base font-normal text-green-700">%</span>
+                                    <div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-xl border border-green-100 dark:border-green-900">
+                                        <div className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">{t('result.stats.accuracy')}</div>
+                                        <div className="text-2xl font-bold text-green-900 dark:text-green-100">
+                                            {stats.accuracy.toFixed(0)}<span className="text-base font-normal text-green-700 dark:text-green-300">%</span>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            <div className="flex-1 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
+                            <div className="flex-1 bg-gray-100 dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
                                 {routeData && <ResultMap center={center} zoom={13} routeData={routeData} />}
                             </div>
                             <div className="flex justify-between mt-6">

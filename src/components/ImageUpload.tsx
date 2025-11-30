@@ -69,19 +69,19 @@ export function ImageUpload({ onImageSelect, className, testId = "image-upload" 
                     className={cn(
                         "border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors cursor-pointer min-h-[300px]",
                         isDragging
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
+                            : "border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
                     )}
                     onDragOver={onDragOver}
                     onDragLeave={onDragLeave}
                     onDrop={onDrop}
                     onClick={() => fileInputRef.current?.click()}
                 >
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4">
+                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-950/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4">
                         <Upload className="w-8 h-8" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-2">{t('title')}</h3>
-                    <p className="text-gray-500 mb-6 max-w-xs">
+                    <h3 className="text-lg font-semibold mb-2 dark:text-white">{t('title')}</h3>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-xs">
                         {t('description')}
                     </p>
                     <Button data-testid={`${testId}-button`} variant="outline" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
@@ -97,7 +97,7 @@ export function ImageUpload({ onImageSelect, className, testId = "image-upload" 
                     />
                 </div>
             ) : (
-                <div data-testid={`${testId}-preview`} className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50 min-h-[300px] flex items-center justify-center">
+                <div data-testid={`${testId}-preview`} className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 min-h-[300px] flex items-center justify-center">
                     <Image
                         src={preview}
                         alt="Preview"
@@ -108,11 +108,11 @@ export function ImageUpload({ onImageSelect, className, testId = "image-upload" 
                     <button
                         data-testid={`${testId}-clear`}
                         onClick={clearImage}
-                        className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors"
+                        className="absolute top-4 right-4 p-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-white dark:hover:bg-gray-800 transition-colors"
                     >
-                        <X className="w-5 h-5 text-gray-600" />
+                        <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                     </button>
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2">
                         <ImageIcon className="w-4 h-4" />
                         {t('selected')}
                     </div>

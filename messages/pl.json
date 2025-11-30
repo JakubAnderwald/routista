@@ -153,6 +153,12 @@
     "ReportIssueButton": {
         "text": "Zgłoś problem"
     },
+    "ThemeToggle": {
+        "light": "Jasny",
+        "dark": "Ciemny",
+        "system": "System",
+        "toggle_theme": "Przełącz motyw"
+    },
     "metadata": {
         "title": "Routista - Zamień kształty w trasy",
         "description": "Generuj prawdziwe trasy GPS z dowolnego kształtu lub obrazu."

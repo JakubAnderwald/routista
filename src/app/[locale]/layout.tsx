@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ReportIssueButton } from "@/components/ReportIssueButton";
 import { NextIntlClientProvider } from 'next-intl';
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { getMessages, setRequestLocale } from 'next-intl/server';
 
 const geistSans = Geist({
@@ -57,16 +58,23 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
-        <NextIntlClientProvider messages={messages}>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <ReportIssueButton />
-        </NextIntlClientProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <NextIntlClientProvider messages={messages}>
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <ReportIssueButton />
+          </NextIntlClientProvider>
+        </ThemeProvider>
         <Analytics />
         <SpeedInsights />
       </body>

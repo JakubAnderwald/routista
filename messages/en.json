@@ -153,6 +153,12 @@
     "ReportIssueButton": {
         "text": "Report Issue"
     },
+    "ThemeToggle": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System",
+        "toggle_theme": "Toggle theme"
+    },
     "metadata": {
         "title": "Routista - Turn Shapes into Routes",
         "description": "Generate real-world GPS routes from any shape or image."

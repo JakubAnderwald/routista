@@ -153,9 +153,9 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                             }
                         }}
                         onBlur={handleInputBlur}
-                        className="w-full pl-10 pr-4 py-3 rounded-xl shadow-lg border-none focus:ring-2 focus:ring-blue-500 outline-none bg-white/90 backdrop-blur-sm"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl shadow-lg border-none focus:ring-2 focus:ring-blue-500 outline-none bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     />
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                     {isSearching && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
                             <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -164,7 +164,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
 
                     {/* Suggestions dropdown */}
                     {showSuggestions && suggestions.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg max-h-60 overflow-y-auto">
                             {suggestions.map((suggestion, index) => (
                                 <button
                                     key={index}
@@ -179,9 +179,9 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                                         e.preventDefault();
                                         handleSuggestionClick(suggestion);
                                     }}
-                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0 first:rounded-t-xl last:rounded-b-xl"
+                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0 first:rounded-t-xl last:rounded-b-xl"
                                 >
-                                    <p className="text-sm font-medium text-gray-900">{suggestion.formattedAddress}</p>
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{suggestion.formattedAddress}</p>
                                 </button>
                             ))}
                         </div>
@@ -189,8 +189,8 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                 </div>
             </div>
 
-            <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg z-[1000]">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="absolute bottom-6 left-6 right-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md p-4 rounded-xl shadow-lg z-[1000]">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                     Area Size: {Math.round(radius)} meters
                 </label>
                 <input
@@ -200,9 +200,9 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                     step="100"
                     value={radius}
                     onChange={(e) => setRadius(Number(e.target.value))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
                 />
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                     Drag the map to position the center. Adjust the slider to change the area size.
                 </p>
             </div>

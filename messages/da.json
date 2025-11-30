@@ -145,6 +145,12 @@
     "ReportIssueButton": {
         "text": "Rapporter Problem"
     },
+    "ThemeToggle": {
+        "light": "Lys",
+        "dark": "Mørk",
+        "system": "System",
+        "toggle_theme": "Skift tema"
+    },
     "metadata": {
         "title": "Routista - Lav Former om til Ruter",
         "description": "Generer GPS-ruter i den virkelige verden fra enhver form eller billede."

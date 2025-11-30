@@ -15,6 +15,9 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Area Selection** | `src/components/AreaSelector.tsx` | Map interface for choosing center point and radius. |
 | **GPX Export** | `src/lib/gpxGenerator.ts` | Converts Route data to GPX XML format. |
 | **Testing Hooks** | `src/app/[locale]/create/CreateClient.tsx` | Contains hidden `data-testid` controls and `window.__routistaTestHelpers`. |
+| **Translations** | `messages/[locale].json` | i18n strings for all pages. Supported locales: `en` (English), `de` (German), `pl` (Polish), `da` (Danish). |
+| **Page Structure** | `src/app/[locale]/[page]/page.tsx` | All pages support dynamic locale routing via Next.js App Router with next-intl. |
+| **Page Layouts** | `src/app/[locale]/layout.tsx` | Root layout that sets up i18n providers and metadata. |
 
 ## 📂 File Tree & Purpose
 

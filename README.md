@@ -10,6 +10,16 @@ Turn any shape into a real-world GPS route! Routista is a fun, free tool for run
 - **Privacy Focused**: All processing happens in your browser (client-side) or securely.
 - **Completely Free**: No paywalls or subscriptions. Supported by coffee! ☕
 
+## 📚 For Developers & AI Agents
+
+**🚨 START HERE before working on this codebase:**
+
+1. **Read [`docs/CONTEXT_MAP.md`](docs/CONTEXT_MAP.md)** - Maps all concepts to their source files
+2. **Read [`rules.md`](rules.md)** - Development rules and conventions
+3. **Check [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** - System architecture overview
+
+These documents will save you significant time by showing exactly where to find what you need.
+
 ## How It Works 🛠️
 
 1.  **Select Area**: Choose where you want to run or cycle.

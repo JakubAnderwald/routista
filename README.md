@@ -15,10 +15,11 @@ Turn any shape into a real-world GPS route! Routista is a fun, free tool for run
 **🚨 START HERE before working on this codebase:**
 
 1. **Read [`docs/CONTEXT_MAP.md`](docs/CONTEXT_MAP.md)** - Maps all concepts to their source files
-2. **Read [`.cursorrules`](.cursorrules)** - Development rules and conventions
-3. **Check [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** - System architecture overview
+2. **Check [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** - System architecture overview
 
 These documents will save you significant time by showing exactly where to find what you need.
+
+> **Note for AI Agents**: Development rules are automatically loaded from the Antigravity configuration.
 
 ## How It Works 🛠️
 

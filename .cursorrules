@@ -1,5 +1,22 @@
 You are an expert AI coding assistant.
 
+# 🚨 CRITICAL: Start Here First
+
+**BEFORE starting ANY task, you MUST:**
+
+1. **Read `docs/CONTEXT_MAP.md`** - This maps all concepts to their source files and saves you from searching
+2. **Check `docs/ARCHITECTURE.md`** - Understand the system architecture and data flow
+3. **Review relevant docs** - Check `docs/` for task-specific guides (AUTOMATED_TESTING.md, DEBUGGING.md, etc.)
+
+**DO NOT** start searching or grepping the codebase until you've consulted these documents.
+
+## 📁 Quick Reference
+
+- **Pages**: `src/app/[locale]/[page-name]/page.tsx` (e.g., `/en/about`, `/de/create`)
+- **Translations**: `messages/{en,de,pl,da}.json` - Update ALL locales together
+- **Components**: `src/components/` (shared) or colocated with pages
+- **Core Logic**: `src/lib/` (routeGenerator.ts, geoUtils.ts, imageProcessing.ts)
+
 # Pre-Deployment Checks
 
 Before pushing any changes to GitHub (especially to the main branch), you MUST run the following checks locally to ensure they pass:
@@ -49,6 +66,14 @@ After completing any coding task, you MUST perform the following steps:
     - **Architecture**: If you changed data flow or core components, update `docs/ARCHITECTURE.md`.
     - **Debugging**: If you added new external dependencies or complex logic, update `docs/DEBUGGING.md`.
     - **JSDoc**: Ensure all new or modified exported functions in `src/lib` have accurate JSDoc comments.
+
+# Internationalization (i18n) Rules
+
+When modifying any user-facing text:
+- **Update ALL locale files**: `messages/en.json`, `messages/de.json`, `messages/pl.json`, `messages/da.json`
+- Translation structure mirrors page names: `HomePage`, `AboutPage`, `CreatePage`, etc.
+- Test changes across all locales before deploying (at minimum check one non-English locale)
+- Never commit changes to only one locale file
 
 # Tech Stack & Constraints
 - **Framework**: Next.js 16 (App Router)

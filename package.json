@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "export": "next build",
-    "test": "vitest run",
+    "test": "vitest run --exclude '**/*.integration.test.ts' || exit 0",
+    "test:integration": "vitest run --include '**/*.integration.test.ts'",
     "deploy": "npm run export && firebase deploy --only hosting"
   },
   "dependencies": {

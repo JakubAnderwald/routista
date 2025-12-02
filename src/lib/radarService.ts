@@ -193,12 +193,6 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
                     coordinates: mergedCoordinates
                 }
             }
-        ],
-        properties: {
-            summary: {
-                distance: totalDistance,
-                duration: totalDuration
-            }
-        }
+        ]
     };
 }

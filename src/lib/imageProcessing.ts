@@ -29,9 +29,8 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
             const imageData = ctx.getImageData(0, 0, width, height);
             const data = imageData.data;
 
-            // 1. Identify all dark pixels and mark them in a 2D grid
+            // Identify all dark pixels and mark them in a 2D grid
             const grid = new Uint8Array(width * height);
-            let startX = -1, startY = -1;
             let foundPixels = 0;
 
             for (let y = 0; y < height; y++) {
@@ -46,10 +45,6 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
                     if (brightness < 128 && a > 128) {
                         grid[y * width + x] = 1;
                         foundPixels++;
-                        if (startX === -1) {
-                            startX = x;
-                            startY = y;
-                        }
                     }
                 }
             }

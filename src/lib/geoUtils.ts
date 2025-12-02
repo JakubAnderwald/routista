@@ -98,6 +98,30 @@ export function calculateRouteLength(geoJson: FeatureCollection): number {
  * @returns Simplified array of [lat, lng] points.
  */
 export function simplifyPoints(points: [number, number][], tolerance: number): [number, number][] {
+    if (points.length <= 2) {
+        return points;
+    }
+
+    const start = points[0];
+    const end = points[points.length - 1];
+
+    // Check if this is a closed loop (first and last points are very close)
+    const dist = calculateDistance(start, end);
+
+    // If it's a closed loop (points are within 100 meters - increased from 10m), we need special handling
+    // to avoid over-simplification
+    if (dist < 100) {
+        // For closed loops, don't use the direct line from start to end
+        // Instead, break the loop and process it differently
+        // Simple approach: ensure we keep more points for closed shapes
+        const adjustedTolerance = tolerance / 20; // Much stricter for closed loops
+        return simplifyPointsRecursive(points, adjustedTolerance);
+    }
+
+    return simplifyPointsRecursive(points, tolerance);
+}
+
+function simplifyPointsRecursive(points: [number, number][], tolerance: number): [number, number][] {
     if (points.length <= 2) return points;
 
     let maxDist = 0;
@@ -115,8 +139,8 @@ export function simplifyPoints(points: [number, number][], tolerance: number): [
     }
 
     if (maxDist > tolerance) {
-        const left = simplifyPoints(points.slice(0, index + 1), tolerance);
-        const right = simplifyPoints(points.slice(index), tolerance);
+        const left = simplifyPointsRecursive(points.slice(0, index + 1), tolerance);
+        const right = simplifyPointsRecursive(points.slice(index), tolerance);
         return [...left.slice(0, -1), ...right];
     } else {
         return [start, end];

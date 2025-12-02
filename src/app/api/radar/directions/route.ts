@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
         const { coordinates, mode } = body;
 
         const result = await getRadarRoute({ coordinates, mode });
+
         return NextResponse.json(result);
 
     } catch (error: unknown) {

@@ -1,5 +1,5 @@
 import { simplifyPoints } from "./geoUtils";
-import { FeatureCollection } from "geojson";
+import { FeatureCollection, Feature } from "geojson";
 
 export interface RouteGenerationOptions {
     coordinates: [number, number][];
@@ -29,8 +29,6 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     };
     const tolerance = toleranceMap[mode] || 0.0001;
     const simplifiedCoordinates = simplifyPoints(coordinates, tolerance);
-
-    console.log(`[RadarService] Simplified from ${coordinates.length} to ${simplifiedCoordinates.length} points (mode: ${mode}, tolerance: ${tolerance})`);
 
     const RADAR_API_KEY = process.env.NEXT_PUBLIC_RADAR_LIVE_PK || process.env.NEXT_PUBLIC_RADAR_TEST_PK;
 
@@ -67,17 +65,19 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     const radarMode = modeMap[mode] || "car";
 
     // Batching logic - Radar supports up to 25 coordinates per request
-    const MAX_POINTS_PER_REQUEST = 24; // Safe limit below 25
+    const chunkSize = 10;
     const chunks = [];
-
-    for (let i = 0; i < simplifiedCoordinates.length - 1; i += MAX_POINTS_PER_REQUEST - 1) {
-        const chunk = simplifiedCoordinates.slice(i, i + MAX_POINTS_PER_REQUEST);
+    for (let i = 0; i < simplifiedCoordinates.length; i += chunkSize) {
+        // Ensure overlap so segments connect
+        const chunk = simplifiedCoordinates.slice(i, i + chunkSize + 1);
         chunks.push(chunk);
+        // Adjust index to overlap the last point of this chunk with first of next
+        if (i + chunkSize < simplifiedCoordinates.length) {
+            i--;
+        }
     }
 
-    console.log(`[RadarService] Split route into ${chunks.length} chunks`);
-
-    const features = [];
+    const features: Feature[] = []; // Explicitly type features as Feature[]
     let totalDistance = 0;
     let totalDuration = 0;
 
@@ -91,57 +91,90 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
         url.searchParams.append('geometry', 'linestring'); // Get GeoJSON LineString
         url.searchParams.append('units', 'metric');
 
-        const response = await fetch(url.toString(), {
-            method: "GET",
-            headers: {
-                "Authorization": RADAR_API_KEY
+        try {
+            const response = await fetch(url.toString(), {
+                method: "GET",
+                headers: {
+                    "Authorization": RADAR_API_KEY
+                }
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`[RadarService] Radar API Error: ${response.status} ${response.statusText} - ${errorText}`);
+                // Continue to next chunk or handle as a full failure
+                // For now, we'll throw, but a more robust solution might try to recover or skip
+                throw new Error(`Radar API Error: ${response.status} ${response.statusText} - ${errorText}`);
             }
-        });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("[RadarService] Radar Error:", errorText);
-            throw new Error(`Radar API Error: ${response.status} ${response.statusText} - ${errorText}`);
-        }
+            const data = await response.json();
 
-        const data = await response.json();
+            if (data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
 
-        if (data.routes && data.routes.length > 0) {
-            const route = data.routes[0];
+                // Extract geometry - Radar returns GeoJSON LineString in geometry.coordinates
+                if (route.geometry && route.geometry.coordinates) {
+                    features.push({
+                        type: "Feature",
+                        properties: {
+                            summary: {
+                                distance: route.distance?.value || 0,
+                                duration: route.duration?.value || 0
+                            }
+                        },
+                        geometry: route.geometry
+                    });
 
-            // Extract geometry - Radar returns GeoJSON LineString in geometry.coordinates
-            if (route.geometry && route.geometry.coordinates) {
-                features.push({
-                    type: "Feature",
-                    properties: {
-                        summary: {
-                            distance: route.distance?.value || 0,
-                            duration: route.duration?.value || 0
-                        }
-                    },
-                    geometry: route.geometry
-                });
-
-                totalDistance += route.distance?.value || 0;
-                totalDuration += route.duration?.value || 0;
+                    totalDistance += route.distance?.value || 0;
+                    totalDuration += route.duration?.value || 0;
+                }
             }
-        }
 
-        // Add a small delay to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 200));
+            // Add a small delay to avoid rate limits
+            await new Promise(resolve => setTimeout(resolve, 200));
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (e: any) {
+            console.error(`[RadarService] Fetch error for chunk: ${e.message || e}`);
+            // Depending on desired behavior, you might want to re-throw or push a "failed chunk" feature
+            throw e; // Re-throw to indicate a failure in route generation
+        }
     }
 
     // Stitch features into a single LineString
     const mergedCoordinates: number[][] = [];
 
     for (let i = 0; i < features.length; i++) {
-        const coords = features[i].geometry.coordinates;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const coords = (features[i].geometry as any).coordinates as number[][]; // Cast to any then number[][]
         // If not the first chunk, skip the first point as it overlaps with the last point of previous chunk
         if (i > 0) {
             mergedCoordinates.push(...coords.slice(1));
         } else {
             mergedCoordinates.push(...coords);
         }
+    }
+
+    // If no features were generated (e.g. API errors for all chunks), fallback to straight line
+    if (features.length === 0) {
+        console.warn('[RadarService] No features generated, falling back to straight line');
+        return {
+            type: "FeatureCollection",
+            features: [
+                {
+                    type: "Feature",
+                    properties: {
+                        summary: {
+                            distance: 0, // Cannot calculate without route
+                            duration: 0  // Cannot calculate without route
+                        }
+                    },
+                    geometry: {
+                        type: "LineString",
+                        coordinates: simplifiedCoordinates.map(p => [p[1], p[0]]) // GeoJSON is [lng, lat]
+                    }
+                }
+            ]
+        };
     }
 
     return {
@@ -160,6 +193,12 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
                     coordinates: mergedCoordinates
                 }
             }
-        ]
+        ],
+        properties: {
+            summary: {
+                distance: totalDistance,
+                duration: totalDuration
+            }
+        }
     };
 }

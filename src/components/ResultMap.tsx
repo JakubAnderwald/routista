@@ -36,8 +36,17 @@ function MapUpdater({ center, zoom, routeData }: ResultMapProps) {
 }
 
 export default function ResultMap({ center, zoom, routeData }: ResultMapProps) {
+    // Force re-mount when center changes to avoid some Leaflet synchronization issues
+    const mapKey = `${center[0]}-${center[1]}-${zoom}`;
+
     return (
-        <MapContainer center={center} zoom={zoom} scrollWheelZoom={true} className="h-full w-full dark:invert dark:hue-rotate-180 dark:brightness-95 dark:contrast-90">
+        <MapContainer
+            key={mapKey}
+            center={center}
+            zoom={zoom}
+            scrollWheelZoom={true}
+            className="h-full w-full dark:invert dark:hue-rotate-180 dark:brightness-95 dark:contrast-90"
+        >
             <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

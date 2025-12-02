@@ -120,7 +120,7 @@ export default function CreateClient() {
             setStep("result");
 
         } catch (error) {
-            console.error(error);
+            console.error("Route generation failed:", error);
             let message = t('mode.error');
             if (error instanceof Error) {
                 if (error.message.includes("Route not found")) {

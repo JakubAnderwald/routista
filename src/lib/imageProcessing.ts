@@ -60,60 +60,95 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
             }
 
             // 2. Trace the boundary (Moore-Neighbor Tracing)
-            const boundaryPoints: { x: number, y: number }[] = [];
-            let cx = startX;
-            let cy = startY;
-            let backtrackX = startX - 1;
-            let backtrackY = startY;
+            // We scan for a starting point and try to trace. If the trace is too short (noise), we continue looking.
+            let boundaryPoints: { x: number, y: number }[] = [];
 
-            // Directions: N, NE, E, SE, S, SW, W, NW
-            const dx = [0, 1, 1, 1, 0, -1, -1, -1];
-            const dy = [-1, -1, 0, 1, 1, 1, 0, -1];
+            // Keep track of visited starting pixels to avoid re-tracing the same noise
+            const visitedStart = new Uint8Array(width * height);
 
-            boundaryPoints.push({ x: cx, y: cy });
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    if (grid[y * width + x] === 1 && visitedStart[y * width + x] === 0) {
+                        // Found a potential start point
+                        const points: { x: number, y: number }[] = [];
+                        let cx = x;
+                        let cy = y;
+                        let backtrackX = x - 1;
+                        let backtrackY = y;
 
-            let loops = 0;
-            const maxLoops = width * height;
+                        points.push({ x: cx, y: cy });
 
-            while (loops < maxLoops) {
-                let foundNext = false;
+                        let loops = 0;
+                        // Limit loops to prevent infinite loop, but allow enough for large shapes
+                        const maxLoops = width * height * 2;
 
-                // Find index of backtrack direction
-                // Find index of backtrack direction
-                // Optimization: check if backtrack is valid neighbor
-                let backtrackIdx = -1;
-                for (let k = 0; k < 8; k++) {
-                    if (cx + dx[k] === backtrackX && cy + dy[k] === backtrackY) {
-                        backtrackIdx = k;
-                        break;
+                        // Directions: N, NE, E, SE, S, SW, W, NW
+                        const dx = [0, 1, 1, 1, 0, -1, -1, -1];
+                        const dy = [-1, -1, 0, 1, 1, 1, 0, -1];
+
+                        while (loops < maxLoops) {
+                            let foundNext = false;
+
+                            // Find index of backtrack direction
+                            let backtrackIdx = -1;
+                            for (let k = 0; k < 8; k++) {
+                                if (cx + dx[k] === backtrackX && cy + dy[k] === backtrackY) {
+                                    backtrackIdx = k;
+                                    break;
+                                }
+                            }
+                            if (backtrackIdx === -1) backtrackIdx = 6; // Default West
+
+                            // Scan clockwise from backtrack
+                            for (let j = 0; j < 8; j++) {
+                                const scanIdx = (backtrackIdx + j) % 8;
+                                const sx = cx + dx[scanIdx];
+                                const sy = cy + dy[scanIdx];
+
+                                if (sx >= 0 && sx < width && sy >= 0 && sy < height && grid[sy * width + sx] === 1) {
+                                    // Found next P
+                                    const prevIdx = (scanIdx + 7) % 8;
+                                    backtrackX = cx + dx[prevIdx];
+                                    backtrackY = cy + dy[prevIdx];
+
+                                    cx = sx;
+                                    cy = sy;
+                                    foundNext = true;
+                                    break;
+                                }
+                            }
+
+                            if (!foundNext) break;
+                            if (cx === x && cy === y) break; // Closed the loop
+
+                            points.push({ x: cx, y: cy });
+                            loops++;
+                        }
+
+                        // If this shape is significant, use it
+                        if (points.length > 50) { // Threshold for "valid shape"
+                            boundaryPoints = points;
+                            console.log(`[extractShapeFromImage] Found valid shape with ${points.length} points at ${x},${y}`);
+                            break;
+                        } else {
+                            console.log(`[extractShapeFromImage] Ignored noise/small shape with ${points.length} points at ${x},${y}`);
+                            // Mark these points as visited so we don't try them again? 
+                            // Actually, just marking the start is enough for the outer loop, 
+                            // but ideally we'd mark all. For now, simple scan is fine.
+                        }
                     }
                 }
-                if (backtrackIdx === -1) backtrackIdx = 6; // Default West
+                if (boundaryPoints.length > 0) break;
+            }
 
-                // Scan clockwise from backtrack
-                for (let j = 0; j < 8; j++) {
-                    const scanIdx = (backtrackIdx + j) % 8;
-                    const sx = cx + dx[scanIdx];
-                    const sy = cy + dy[scanIdx];
-
-                    if (sx >= 0 && sx < width && sy >= 0 && sy < height && grid[sy * width + sx] === 1) {
-                        // Found next P
-                        const prevIdx = (scanIdx + 7) % 8;
-                        backtrackX = cx + dx[prevIdx];
-                        backtrackY = cy + dy[prevIdx];
-
-                        cx = sx;
-                        cy = sy;
-                        foundNext = true;
-                        break;
-                    }
-                }
-
-                if (!foundNext) break;
-                if (cx === startX && cy === startY) break;
-
-                boundaryPoints.push({ x: cx, y: cy });
-                loops++;
+            if (boundaryPoints.length === 0) {
+                console.warn("[extractShapeFromImage] No significant shape found, using fallback (first pixel)");
+                // Fallback: if we found *any* pixels but no "valid" shape, maybe the shape is just small?
+                // Re-run simple trace from first pixel found?
+                // Or just reject?
+                // Let's reject to be safe, or user will get 0km route.
+                reject(new Error("No significant shape found in image (noise only?)"));
+                return;
             }
 
             // 3. Sample points evenly

@@ -6,6 +6,16 @@ export interface RouteGenerationOptions {
     mode: string;
 }
 
+export interface RadarAddress {
+    latitude: number;
+    longitude: number;
+    formattedAddress: string;
+}
+
+export interface AutocompleteResponse {
+    addresses: RadarAddress[];
+}
+
 /**
  * Generates a route by calling the Radar API.
  * This function is designed to be used server-side to keep API keys secure.
@@ -195,4 +205,49 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
             }
         ]
     };
+}
+
+/**
+ * Searches for location autocomplete suggestions using Radar API.
+ * This function is designed to be used server-side to keep API keys secure.
+ * 
+ * @param query - Search query string.
+ * @returns Autocomplete response with address suggestions.
+ */
+export async function getRadarAutocomplete(query: string): Promise<AutocompleteResponse> {
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+        return { addresses: [] };
+    }
+
+    const RADAR_API_KEY = process.env.NEXT_PUBLIC_RADAR_LIVE_PK || process.env.NEXT_PUBLIC_RADAR_TEST_PK;
+
+    if (!RADAR_API_KEY) {
+        console.warn("[RadarService] No Radar API key provided for autocomplete");
+        return { addresses: [] };
+    }
+
+    const url = new URL('https://api.radar.io/v1/search/autocomplete');
+    url.searchParams.append('query', query);
+    url.searchParams.append('limit', '5');
+
+    try {
+        const response = await fetch(url.toString(), {
+            method: "GET",
+            headers: {
+                "Authorization": RADAR_API_KEY
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[RadarService] Autocomplete API Error: ${response.status} ${response.statusText} - ${errorText}`);
+            return { addresses: [] };
+        }
+
+        const data = await response.json();
+        return { addresses: data.addresses || [] };
+    } catch (error: unknown) {
+        console.error("[RadarService] Autocomplete fetch error:", error);
+        return { addresses: [] };
+    }
 }

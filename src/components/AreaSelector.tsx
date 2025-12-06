@@ -88,8 +88,13 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
 
             setIsSearching(true);
             try {
-                const radarKey = process.env.NEXT_PUBLIC_RADAR_LIVE_PK || process.env.NEXT_PUBLIC_RADAR_TEST_PK;
-                const response = await fetch(`https://api.radar.io/v1/search/autocomplete?query=${encodeURIComponent(searchQuery)}&limit=5&publishableKey=${radarKey}`);
+                const response = await fetch('/api/radar/autocomplete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: searchQuery }),
+                });
                 const data = await response.json();
                 setSuggestions(data.addresses || []);
                 setShowSuggestions(true);

@@ -134,6 +134,7 @@
     "ImageUpload": {
         "title": "Upload din form",
         "description": "Træk og slip et billede her, eller klik for at vælge en fil.",
+        "instruction": "For de bedste resultater brug billeder med høj kontrast, stregtegninger eller simple former.",
         "button": "Vælg Billede",
         "selected": "Billede Valgt"
     },

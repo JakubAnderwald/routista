@@ -141,7 +141,8 @@
     },
     "ImageUpload": {
         "title": "Lade deine Form hoch",
-        "description": "Ziehe ein Bild hierher oder klicke, um eine Datei auszuwählen.",
+        "description": "Ziehen Sie ein Bild hierher oder klicken Sie, um eine Datei auszuwählen.",
+        "instruction": "Für beste Ergebnisse verwenden Sie kontrastreiche Bilder, Strichzeichnungen oder einfache Formen.",
         "button": "Bild auswählen",
         "selected": "Bild ausgewählt"
     },

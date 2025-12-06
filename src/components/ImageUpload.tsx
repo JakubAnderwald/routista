@@ -84,6 +84,9 @@ export function ImageUpload({ onImageSelect, className, testId = "image-upload" 
                     <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-xs">
                         {t('description')}
                     </p>
+                    <p className="text-gray-400 dark:text-gray-500 text-sm mb-6 max-w-xs">
+                        {t('instruction')}
+                    </p>
                     <Button data-testid={`${testId}-button`} variant="outline" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
                         {t('button')}
                     </Button>

@@ -142,6 +142,7 @@
     "ImageUpload": {
         "title": "Upload your shape",
         "description": "Drag and drop an image here, or click to select a file.",
+        "instruction": "For best results use high contrast images, line drawings or simple shapes.",
         "button": "Select Image",
         "selected": "Image Selected"
     },

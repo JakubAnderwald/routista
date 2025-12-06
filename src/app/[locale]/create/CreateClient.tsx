@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { ModeSelector, TransportMode } from "@/components/ModeSelector";
 import { Button } from "@/components/ui/Button";
+import { ExampleSelector } from "@/components/ExampleSelector";
 import dynamic from "next/dynamic";
 import { extractShapeFromImage } from "@/lib/imageProcessing";
 import { scalePointsToGeo, calculateRouteLength, calculateRouteAccuracy } from "@/lib/geoUtils";
@@ -78,8 +79,21 @@ export default function CreateClient() {
             const mimeType = blob.type || "image/png";
             const file = new File([blob], filename, { type: mimeType });
             handleImageSelect(file);
+            handleImageSelect(file);
         } catch (e) {
             console.error("Failed to load image from data URL", e);
+        }
+    };
+
+    const handleExampleSelect = async (filename: string) => {
+        try {
+            const response = await fetch(filename);
+            const blob = await response.blob();
+            const file = new File([blob], filename.split('/').pop() || "example.png", { type: "image/png" });
+            handleImageSelect(file);
+        } catch (e) {
+            console.error("Failed to load example image", e);
+            alert(t('upload.error'));
         }
     };
 
@@ -180,7 +194,11 @@ export default function CreateClient() {
                                     <p className="text-gray-500 dark:text-gray-400 mb-8 text-center">
                                         {t('upload.description')}
                                     </p>
-                                    <ImageUpload onImageSelect={handleImageSelect} className="max-w-xl mb-4" testId="create-image-upload" />
+                                    <ImageUpload onImageSelect={handleImageSelect} className="max-w-xl mb-8" testId="create-image-upload" />
+
+                                    <div className="mb-10 w-full flex justify-center">
+                                        <ExampleSelector onSelect={handleExampleSelect} />
+                                    </div>
 
                                     <div className="flex gap-4 w-full max-w-xl mb-8 justify-center">
                                         <Button
@@ -293,7 +311,7 @@ export default function CreateClient() {
             <div style={{ display: 'none' }} data-testid="test-controls">
                 {/* Test image loaders - images from public folder */}
                 <button id="test-load-star" data-testid="test-load-star" onClick={() => loadTestImage("star.png")}>Load Star</button>
-                <button id="test-load-heart" data-testid="test-load-heart" onClick={() => loadTestImage("heart.png")}>Load Heart</button>
+                <button id="test-load-heart" data-testid="test-load-heart" onClick={() => loadTestImage("heart-v2.png")}>Load Heart</button>
                 <button id="test-load-circle" data-testid="test-load-circle" onClick={() => loadTestImage("circle.png")}>Load Circle</button>
 
                 {/* Status indicators for test automation */}

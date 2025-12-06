@@ -57,7 +57,7 @@
             "items": {
                 "magic": {
                     "title": "Shape-to-Route Magic:",
-                    "description": " Upload an image, fine-tune points manually, or draw from scratch"
+                    "description": " Choose from ready-made examples, upload an image, fine-tune points manually, or draw from scratch"
                 },
                 "mapping": {
                     "title": "Interactive Mapping:",
@@ -164,6 +164,16 @@
     },
     "ReportIssueButton": {
         "text": "Report Issue"
+    },
+    "ExampleSelector": {
+        "title": "Or choose an example",
+        "star": "Star",
+        "heart": "Heart",
+        "lightning": "Lightning",
+        "note": "Music Note",
+        "anchor": "Anchor",
+        "dino": "Dino",
+        "paw": "Paw"
     },
     "ThemeToggle": {
         "light": "Light",

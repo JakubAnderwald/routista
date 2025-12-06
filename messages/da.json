@@ -56,8 +56,8 @@
             "title": "Funktioner",
             "items": {
                 "magic": {
-                    "title": "Form-til-Rute Magi:",
-                    "description": " Upload et billede, finjuster punkter manuelt eller tegn fra bunden"
+                    "title": "Magiske Ruter:",
+                    "description": " Vælg blandt færdige eksempler, upload et billede, finjuster punkter manuelt, eller tegn fra bunden"
                 },
                 "mapping": {
                     "title": "Interaktiv Kortlægning:",
@@ -156,6 +156,16 @@
     },
     "ReportIssueButton": {
         "text": "Rapporter Problem"
+    },
+    "ExampleSelector": {
+        "title": "Eller vælg et eksempel",
+        "star": "Stjerne",
+        "heart": "Hjerte",
+        "lightning": "Lyn",
+        "note": "Musiknote",
+        "anchor": "Anker",
+        "dino": "Dino",
+        "paw": "Pote"
     },
     "ThemeToggle": {
         "light": "Lys",

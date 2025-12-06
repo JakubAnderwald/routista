@@ -17,7 +17,7 @@ Routista's create flow involves uploading an image, which traditionally requires
 Instead of simulating OS file picker interactions, the application provides hidden test controls that programmatically load images from the `public/` folder. This is implemented via the `loadTestImage` helper function in `CreateClient.tsx`.
 
 **How it works:**
-1. Test images are stored in `public/` directory (star.png, heart.png, circle.png)
+1. Test images are stored in `public/` directory (star.png, heart-v2.png, circle.png)
 2. Hidden buttons trigger the `loadTestImage` function
 3. The function fetches the image, converts it to a File object, and processes it through the normal upload flow
 4. The UI updates as if the user had uploaded the file manually
@@ -102,7 +102,7 @@ Use these buttons to programmatically load test images:
 | Test ID | Element ID | Purpose | Image |
 |---------|------------|---------|-------|
 | `test-load-star` | `test-load-star` | Load star.png | Star shape |
-| `test-load-heart` | `test-load-heart` | Load heart.png | Heart shape |
+| `test-load-heart` | `test-load-heart` | Load heart-v2.png | Heart shape |
 | `test-load-circle` | `test-load-circle` | Load circle.png | Circle shape |
 
 **Usage Example:**
@@ -299,16 +299,19 @@ Test images are available in two locations:
 ### Public Folder (`public/`)
 These images are used by the test controls:
 - `star.png`
-- `heart.png`
+- `heart-v2.png`
 - `circle.png`
 
 ### Test Images Folder (`docs/test images/`)
 Additional test images for unit testing:
 - `circle.png`
-- `heart.png`
-- `square.png`
+- `heart-v2.png`
 - `star.png`
-- `triangle.png`
+- `lightning.png`
+- `note.png`
+- `anchor.png`
+- `dino.png`
+- `paw.png`
 
 The public folder images are used for browser automation, while the test images folder is used for Node.js-based unit tests.
 

@@ -34,6 +34,7 @@ When modifying any user-facing text:
 - Translation structure mirrors page names: `HomePage`, `AboutPage`, `CreatePage`, etc.
 - Test changes across all locales before deploying (at minimum check one non-English locale)
 - Never commit changes to only one locale file
+- **NEVER use hardcoded strings** in components. Always use `useTranslations` or similar i18n hooks immediately when adding new text.
 
 ## ✅ Pre-Deployment Checks
 

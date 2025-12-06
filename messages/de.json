@@ -57,7 +57,7 @@
             "items": {
                 "magic": {
                     "title": "Magische Routenerstellung:",
-                    "description": " Bild hochladen, Punkte manuell anpassen oder frei zeichnen."
+                    "description": " Wähle aus vorgefertigten Beispielen, lade ein Bild hoch, passe Punkte manuell an oder zeichne von Grund auf neu"
                 },
                 "mapping": {
                     "title": "Interaktive Karten:",
@@ -164,6 +164,16 @@
     },
     "ReportIssueButton": {
         "text": "Problem melden"
+    },
+    "ExampleSelector": {
+        "title": "Oder wähle ein Beispiel",
+        "star": "Stern",
+        "heart": "Herz",
+        "lightning": "Blitz",
+        "note": "Musiknote",
+        "anchor": "Anker",
+        "dino": "Dino",
+        "paw": "Pfote"
     },
     "ThemeToggle": {
         "light": "Hell",

@@ -13,9 +13,9 @@ const RADIUS = 4000;
 const MODE = 'foot-walking';
 
 describe('Reproduction: Warsaw Heart', () => {
-    it('should generate accurate route for heart.png in Warsaw', async () => {
-        const imagePath = path.join(TEST_IMAGES_DIR, 'heart.png');
-        console.log(`Testing image: heart.png in Warsaw`);
+    it('should generate accurate route for heart-v2.png in Warsaw', async () => {
+        const imagePath = path.join(TEST_IMAGES_DIR, 'heart-v2.png');
+        console.log(`Testing image: heart-v2.png in Warsaw`);
 
         // 1. Extract shape
         const shapePoints = await extractShapeFromImageNode(imagePath);
@@ -28,7 +28,7 @@ describe('Reproduction: Warsaw Heart', () => {
 
         // 4. Calculate accuracy
         const accuracy = calculateRouteAccuracy(geoPoints, routeData, RADIUS);
-        console.log(`Accuracy for heart.png in Warsaw: ${accuracy.toFixed(2)}%`);
+        console.log(`Accuracy for heart-v2.png in Warsaw: ${accuracy.toFixed(2)}%`);
 
         // 5. Assert accuracy
         expect(accuracy).toBeGreaterThan(80);

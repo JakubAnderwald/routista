@@ -57,7 +57,7 @@
             "items": {
                 "magic": {
                     "title": "Magiczna zamiana kształtów:",
-                    "description": " Wgraj obraz, dostosuj punkty ręcznie lub rysuj dowolnie"
+                    "description": " Wybierz z gotowych przykładów, prześlij obraz, dostosuj punkty ręcznie lub rysuj od podstaw"
                 },
                 "mapping": {
                     "title": "Interaktywne mapy:",
@@ -163,7 +163,17 @@
         "rights": "Wszelkie prawa zastrzeżone."
     },
     "ReportIssueButton": {
-        "text": "Zgłoś problem"
+        "text": "Zgłoś Problem"
+    },
+    "ExampleSelector": {
+        "title": "Lub wybierz przykład",
+        "star": "Gwiazda",
+        "heart": "Serce",
+        "lightning": "Błyskawica",
+        "note": "Nutka",
+        "anchor": "Kotwica",
+        "dino": "Dinozaur",
+        "paw": "Łapa"
     },
     "ThemeToggle": {
         "light": "Jasny",

@@ -29,7 +29,7 @@
         "subtitle": "Zamień dowolny kształt w prawdziwą trasę GPS! 🏃‍♂️🎨",
         "whatIs": {
             "title": "Czym jest Routista?",
-            "description": "Routista to kreatywne, darmowe narzędzie dla biegaczy, rowerzystów i odkrywców, którzy chcą tworzyć GPS art lub po prostu urozmaicić swoje treningi. Wgraj obraz (logo, symbol, rysunek) lub rysuj bezpośrednio na mapie, a Routista znajdzie najlepiej pasujące drogi w wybranym przez Ciebie obszarze."
+            "description": "Routista to kreatywne, darmowe narzędzie dla biegaczy i rowerzystów. Wgraj obrazek, edytuj kształt ręcznie lub narysuj go od zera – Routista znajdzie najlepiej pasujące drogi."
         },
         "howItWorks": {
             "title": "Jak to działa",
@@ -40,7 +40,7 @@
                 },
                 "2": {
                     "title": "Wprowadź kształt",
-                    "description": "Wgraj obraz lub narysuj kształt"
+                    "description": "Wgraj obraz, edytuj punkty lub narysuj kształt"
                 },
                 "3": {
                     "title": "Generuj",
@@ -57,7 +57,7 @@
             "items": {
                 "magic": {
                     "title": "Magiczna zamiana kształtów:",
-                    "description": " Wgraj obraz lub rysuj bezpośrednio na mapie"
+                    "description": " Wgraj obraz, dostosuj punkty ręcznie lub rysuj dowolnie"
                 },
                 "mapping": {
                     "title": "Interaktywne mapy:",

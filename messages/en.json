@@ -29,7 +29,7 @@
         "subtitle": "Turn any shape into a real-world GPS route! 🏃‍♂️🎨",
         "whatIs": {
             "title": "What is Routista?",
-            "description": "Routista is a fun, free tool for runners, cyclists, and explorers who want to create GPS art or just spice up their training. Upload an image (logo, symbol, drawing) or draw directly on the map, and Routista will find the best matching roads in your chosen area."
+            "description": "Routista is a fun, free tool for runners, cyclists, and explorers who want to create GPS art or just spice up their training. Upload an image, edit the shape manually, or draw from scratch – Routista will find the best matching roads."
         },
         "howItWorks": {
             "title": "How It Works",
@@ -40,7 +40,7 @@
                 },
                 "2": {
                     "title": "Input Shape",
-                    "description": "Upload an image or draw a shape"
+                    "description": "Upload an image, edit points, or draw standard shapes"
                 },
                 "3": {
                     "title": "Generate",
@@ -57,7 +57,7 @@
             "items": {
                 "magic": {
                     "title": "Shape-to-Route Magic:",
-                    "description": " Upload an image or draw directly on the map"
+                    "description": " Upload an image, fine-tune points manually, or draw from scratch"
                 },
                 "mapping": {
                     "title": "Interactive Mapping:",

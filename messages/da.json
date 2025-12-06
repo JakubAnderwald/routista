@@ -29,7 +29,7 @@
         "subtitle": "Forvandl enhver form til en GPS-rute i den virkelige verden! 🏃‍♂️🎨",
         "whatIs": {
             "title": "Hvad er Routista?",
-            "description": "Routista er et sjovt, gratis værktøj til løbere, cyklister og eventyrere, der ønsker at skabe GPS-kunst eller bare krydre deres træning. Upload et billede (logo, symbol, tegning) eller tegn direkte på kortet, og Routista finder de bedst matchende veje i dit valgte område."
+            "description": "Routista er et sjovt, gratis værktøj til løbere og cyklister. Upload et billede, rediger formen manuelt eller tegn fra bunden – Routista finder de bedst matchende veje."
         },
         "howItWorks": {
             "title": "Sådan fungerer det",
@@ -40,7 +40,7 @@
                 },
                 "2": {
                     "title": "Indtast Form",
-                    "description": "Upload et billede eller tegn en form"
+                    "description": "Upload billede, rediger punkter eller tegn form"
                 },
                 "3": {
                     "title": "Generér",
@@ -57,7 +57,7 @@
             "items": {
                 "magic": {
                     "title": "Form-til-Rute Magi:",
-                    "description": " Upload et billede eller tegn direkte på kortet"
+                    "description": " Upload et billede, finjuster punkter manuelt eller tegn fra bunden"
                 },
                 "mapping": {
                     "title": "Interaktiv Kortlægning:",

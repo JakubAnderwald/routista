@@ -4,7 +4,7 @@ Turn any shape into a real-world GPS route! Routista is a fun, free tool for run
 
 ## Features ✨
 
-- **Shape-to-Route Magic**: Upload an image (logo, symbol, drawing) or draw directly on the map, and Routista will find the best matching roads in your chosen area.
+- **Shape-to-Route Magic**: Upload an image (logo, symbol) or draw shapes manually on an SVG canvas. Routista finds the best matching roads.
 - **Interactive Mapping**: Powered by Leaflet, select any location in the world to generate your route.
 - **GPX Export**: Download your generated route as a GPX file compatible with Strava, Garmin, and other fitness apps.
 - **Privacy Focused**: All processing happens in your browser (client-side) or securely.
@@ -24,8 +24,8 @@ These documents will save you significant time by showing exactly where to find 
 ## How It Works 🛠️
 
 1.  **Select Area**: Choose where you want to run or cycle.
-2.  **Input Shape**: Upload an image or draw a shape.
-3.  **Generate**: The algorithm processes the shape and snaps it to real-world streets using routing algorithms.
+2.  **Input Shape**: Upload an image, edit the extracted shape manually, or draw directly on the canvas.
+3.  **Generate**: The algorithm processes the shape (simplifying points for better routes) and snaps it to real-world streets.
 4.  **Export**: Get your GPX file and go!
 
 ## Tech Stack 💻

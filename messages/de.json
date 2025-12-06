@@ -29,7 +29,7 @@
         "subtitle": "Mach aus jeder Form eine echte GPS-Route! 🏃‍♂️🎨",
         "whatIs": {
             "title": "Was ist Routista?",
-            "description": "Routista ist ein kostenloses Tool für alle, die Laufen, Radfahren oder Neues entdecken wollen. Erstelle GPS-Kunst oder bring Abwechslung in dein Training. Lade einfach ein Bild hoch (Logo, Symbol, Zeichnung) oder zeichne direkt auf der Karte – Routista findet die passenden Straßen in deinem Gebiet."
+            "description": "Routista ist ein kostenloses Tool für alle, die Laufen, Radfahren oder Neues entdecken wollen. Erstelle GPS-Kunst oder bring Abwechslung in dein Training. Lade ein Bild hoch, bearbeite die Form manuell oder zeichne von Grund auf – Routista findet die passenden Straßen."
         },
         "howItWorks": {
             "title": "So funktioniert's",
@@ -40,7 +40,7 @@
                 },
                 "2": {
                     "title": "Form festlegen",
-                    "description": "Lade ein Bild hoch oder zeichne eine Form"
+                    "description": "Bild hochladen, Punkte bearbeiten oder Form zeichnen"
                 },
                 "3": {
                     "title": "Route berechnen",
@@ -57,7 +57,7 @@
             "items": {
                 "magic": {
                     "title": "Magische Routenerstellung:",
-                    "description": " Lade ein Bild hoch oder zeichne direkt auf der Karte."
+                    "description": " Bild hochladen, Punkte manuell anpassen oder frei zeichnen."
                 },
                 "mapping": {
                     "title": "Interaktive Karten:",

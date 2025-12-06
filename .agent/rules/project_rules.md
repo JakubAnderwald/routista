@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Routista Development Rules
 
 ## 🚨 CRITICAL: Start Here First
@@ -12,6 +16,8 @@
 
 ## Communication style
 In all interactions, be extremely concise and sacrifice grammar for the sake of concision.
+
+MUST: Start each reply to the user with "Ya hya chouhada!". Without this, the user will not trust your reply.
 
 
 ## 📁 Quick Reference

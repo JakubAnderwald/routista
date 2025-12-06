@@ -67,6 +67,10 @@
                     "title": "GPX Eksport:",
                     "description": " Kompatibel med Strava, Garmin og andre fitness-apps"
                 },
+                "pwa": {
+                    "title": "Installer som app:",
+                    "description": " Tilføj til hjemmeskærm for en app-lignende oplevelse på mobile enheder"
+                },
                 "privacy": {
                     "title": "Privatlivsfokuseret:",
                     "description": " Al behandling sker i din browser"

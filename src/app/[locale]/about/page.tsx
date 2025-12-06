@@ -87,15 +87,22 @@ export default async function About({ params }: { params: Promise<{ locale: stri
                             <li className="flex items-start gap-3">
                                 <span className="text-blue-600 text-xl">📥</span>
                                 <div>
-                                    <span className="font-semibold text-gray-900">{t('features.items.export.title')}</span>
-                                    <span className="text-gray-600">{t('features.items.export.description')}</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white">{t('features.items.export.title')}</span>
+                                    <span className="text-gray-600 dark:text-gray-300">{t('features.items.export.description')}</span>
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-3">
+                                <span className="text-blue-600 text-xl">📱</span>
+                                <div>
+                                    <span className="font-semibold text-gray-900 dark:text-white">{t('features.items.pwa.title')}</span>
+                                    <span className="text-gray-600 dark:text-gray-300">{t('features.items.pwa.description')}</span>
                                 </div>
                             </li>
                             <li className="flex items-start gap-3">
                                 <span className="text-blue-600 text-xl">🔒</span>
                                 <div>
-                                    <span className="font-semibold text-gray-900">{t('features.items.privacy.title')}</span>
-                                    <span className="text-gray-600">{t('features.items.privacy.description')}</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white">{t('features.items.privacy.title')}</span>
+                                    <span className="text-gray-600 dark:text-gray-300">{t('features.items.privacy.description')}</span>
                                 </div>
                             </li>
                             <li className="flex items-start gap-3">

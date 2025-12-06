@@ -67,6 +67,10 @@
                     "title": "GPX-Export:",
                     "description": " Kompatibel mit Strava, Garmin und anderen Apps."
                 },
+                "pwa": {
+                    "title": "Als App installieren:",
+                    "description": " Füge zum Homescreen hinzu für ein app-ähnliches Erlebnis auf Mobilgeräten"
+                },
                 "privacy": {
                     "title": "Privatsphäre:",
                     "description": " Die gesamte Verarbeitung läuft direkt in deinem Browser."

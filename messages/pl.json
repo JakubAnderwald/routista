@@ -67,6 +67,10 @@
                     "title": "Eksport GPX:",
                     "description": " Kompatybilne ze Strava, Garmin i innymi aplikacjami fitness"
                 },
+                "pwa": {
+                    "title": "Zainstaluj jako aplikację:",
+                    "description": " Dodaj do ekranu głównego dla doświadczenia jak w aplikacji na urządzeniach mobilnych"
+                },
                 "privacy": {
                     "title": "Prywatność to podstawa:",
                     "description": " Całe przetwarzanie odbywa się w Twojej przeglądarce"

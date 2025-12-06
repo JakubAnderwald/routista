@@ -188,7 +188,7 @@ export default function CreateClient() {
                                             onClick={() => setIsEditing(true)}
                                             data-testid="manual-draw-button"
                                         >
-                                            {image ? "Edit Shape" : "Draw Manually"}
+                                            {image ? t('upload.editShape') : t('upload.drawManually')}
                                         </Button>
                                     </div>
 

@@ -101,6 +101,8 @@
         "upload": {
             "title": "Wgraj swój kształt",
             "description": "Wybierz obraz z wyraźnym kształtem (np. serce, gwiazda lub logo).",
+            "editShape": "Edytuj kształt",
+            "drawManually": "Rysuj ręcznie",
             "next": "Dalej: Wybierz obszar",
             "error": "Nie udało się wyodrębnić kształtu z obrazu. Spróbuj innego obrazu."
         },

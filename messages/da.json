@@ -101,6 +101,8 @@
         "upload": {
             "title": "Upload Din Form",
             "description": "Vælg et billede med en tydelig form (f.eks. et hjerte, stjerne eller logo).",
+            "editShape": "Rediger form",
+            "drawManually": "Tegn manuelt",
             "next": "Næste: Vælg Område",
             "error": "Kunne ikke udtrække form fra billede. Prøv venligst et andet billede."
         },

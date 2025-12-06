@@ -101,6 +101,8 @@
         "upload": {
             "title": "Upload Your Shape",
             "description": "Choose an image with a clear shape (e.g., a heart, star, or logo).",
+            "editShape": "Edit Shape",
+            "drawManually": "Draw Manually",
             "next": "Next: Select Area",
             "error": "Could not extract shape from image. Please try another image."
         },

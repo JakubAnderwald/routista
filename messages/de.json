@@ -101,6 +101,8 @@
         "upload": {
             "title": "Form hochladen",
             "description": "Wähle ein Bild mit einer klaren Form (z. B. Herz, Stern oder Logo).",
+            "editShape": "Form bearbeiten",
+            "drawManually": "Manuell zeichnen",
             "next": "Weiter: Gebiet wählen",
             "error": "Die Form konnte nicht erkannt werden. Bitte versuche ein anderes Bild."
         },

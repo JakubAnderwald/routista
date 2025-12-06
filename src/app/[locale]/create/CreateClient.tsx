@@ -25,6 +25,11 @@ const ResultMap = dynamic(() => import("@/components/ResultMap"), {
     loading: () => <div className="w-full h-full bg-gray-100 animate-pulse" />
 });
 
+const ShapeEditor = dynamic(() => import("@/components/ShapeEditor").then(mod => mod.ShapeEditor), {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-gray-100 animate-pulse" />
+});
+
 
 
 import { FeatureCollection } from "geojson";
@@ -39,6 +44,7 @@ export default function CreateClient() {
     const [routeData, setRouteData] = useState<FeatureCollection | null>(null);
     const [shapePoints, setShapePoints] = useState<[number, number][] | null>(null);
     const [stats, setStats] = useState<{ length: number; accuracy: number } | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
 
     const handleImageSelect = async (file: File) => {
         setImage(file);
@@ -168,19 +174,47 @@ export default function CreateClient() {
                     {step === "upload" && (
                         <div className="flex flex-col items-center">
                             <h2 className="text-2xl font-bold mb-2 dark:text-white">{t('upload.title')}</h2>
-                            <p className="text-gray-500 dark:text-gray-400 mb-8 text-center">
-                                {t('upload.description')}
-                            </p>
-                            <ImageUpload onImageSelect={handleImageSelect} className="max-w-xl mb-8" testId="create-image-upload" />
-                            <div className="flex justify-end w-full max-w-xl">
-                                <Button
-                                    data-testid="upload-next-button"
-                                    disabled={!image || !shapePoints}
-                                    onClick={() => setStep("area")}
-                                >
-                                    {t('upload.next')}
-                                </Button>
-                            </div>
+
+                            {!isEditing ? (
+                                <>
+                                    <p className="text-gray-500 dark:text-gray-400 mb-8 text-center">
+                                        {t('upload.description')}
+                                    </p>
+                                    <ImageUpload onImageSelect={handleImageSelect} className="max-w-xl mb-4" testId="create-image-upload" />
+
+                                    <div className="flex gap-4 w-full max-w-xl mb-8 justify-center">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setIsEditing(true)}
+                                            data-testid="manual-draw-button"
+                                        >
+                                            {image ? "Edit Shape" : "Draw Manually"}
+                                        </Button>
+                                    </div>
+
+                                    <div className="flex justify-end w-full max-w-xl">
+                                        <Button
+                                            data-testid="upload-next-button"
+                                            disabled={!shapePoints}
+                                            onClick={() => setStep("area")}
+                                        >
+                                            {t('upload.next')}
+                                        </Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="w-full h-[60vh] md:h-[600px] border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+                                    <ShapeEditor
+                                        imageSrc={image ? URL.createObjectURL(image) : null}
+                                        initialPoints={shapePoints?.map(p => ({ x: p[0], y: p[1] })) || []}
+                                        onSave={(points: { x: number, y: number }[]) => {
+                                            setShapePoints(points.map(p => [p.x, p.y]));
+                                            setIsEditing(false);
+                                        }}
+                                        onCancel={() => setIsEditing(false)}
+                                    />
+                                </div>
+                            )}
                         </div>
                     )}
 

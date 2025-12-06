@@ -10,18 +10,23 @@ Routista is a client-side heavy Next.js application that leverages external APIs
     *   Image is drawn to an off-screen Canvas.
     *   `imageProcessing.ts` extracts the shape as a series of normalized coordinates (0-1).
 
-2.  **Area Selection** (`AreaSelector.tsx`)
+3.  **Shape Editor** (`ShapeEditor.tsx`)
+    *   **Manual Drawing**: Allows users to draw a polygon on a blank canvas.
+    *   **Overlay Editing**: Allows users to edit the automatically extracted shape (move points, drag corners) overlaid on the original image.
+    *   **Simplification**: Shapes extracted from images are simplified using the Douglas-Peucker algorithm to reduce noise (points on straight lines) while preserving key vertices.
+
+4.  **Area Selection** (`AreaSelector.tsx`)
     *   User selects a center point (lat/lng) and a radius (meters).
     *   `geoUtils.ts` scales the normalized shape points to real-world coordinates based on this center and radius.
 
-3.  **Route Generation** (`routeGenerator.ts`)
+5.  **Route Generation** (`routeGenerator.ts`)
     *   The scaled points are simplified (Ramer-Douglas-Peucker) to reduce API load.
     *   Points are sent to the internal API route (`/api/radar/directions`).
     *   The API route proxies the request to the Radar API in chunks to respect limits and avoid CORS.
     *   Radar returns navigable paths between the points.
     *   Segments are stitched together to form a continuous `LineString`.
 
-4.  **Visualization** (`ResultMap.tsx`)
+6.  **Visualization** (`ResultMap.tsx`)
     *   The original shape (scaled) and the generated route are overlaid on a Leaflet map.
     *   Accuracy is calculated by comparing the two shapes.
 
@@ -30,11 +35,12 @@ Routista is a client-side heavy Next.js application that leverages external APIs
 ### Frontend (`src/components`)
 *   **Map Components**: Wrappers around `react-leaflet` to handle map state and interactions.
 *   **UI Components**: Reusable UI elements (Buttons, Inputs) styled with Tailwind CSS.
+*   **`ShapeEditor.tsx`**: A vector-based editor for creating and modifying polygon shapes using SVG. Handles point manipulation (add, drag, delete) and aspect ratio locking.
 
 ### Libraries (`src/lib`)
 *   **`geoUtils.ts`**: Pure functions for geographic calculations (distance, scaling, accuracy).
 *   **`routeGenerator.ts`**: Handles interaction with the ORS API and response processing.
-*   **`imageProcessing.ts`**: Canvas manipulation and edge detection logic.
+*   **`imageProcessing.ts`**: Canvas manipulation, edge detection, and Douglas-Peucker simplification logic.
 
 ## Key Algorithms
 

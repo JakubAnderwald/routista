@@ -135,6 +135,16 @@
         "button": "Vælg Billede",
         "selected": "Billede Valgt"
     },
+    "ShapeEditor": {
+        "title": "Tegn Form",
+        "undo": "Fortryd",
+        "clear": "Ryd",
+        "instructionStart": "Klik for at starte med at tegne",
+        "instructionContinue": "Klik for at tilføje punkt",
+        "cancel": "Annuller",
+        "save": "Gem Form",
+        "minPointsError": "Du skal bruge mindst 3 punkter for at danne en form."
+    },
     "Header": {
         "home": "Hjem",
         "about": "Om"

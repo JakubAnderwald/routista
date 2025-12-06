@@ -143,6 +143,16 @@
         "button": "Select Image",
         "selected": "Image Selected"
     },
+    "ShapeEditor": {
+        "title": "Draw Shape",
+        "undo": "Undo",
+        "clear": "Clear",
+        "instructionStart": "Click to start drawing",
+        "instructionContinue": "Click to add point",
+        "cancel": "Cancel",
+        "save": "Save Shape",
+        "minPointsError": "You need at least 3 points to form a shape."
+    },
     "Header": {
         "home": "Home",
         "about": "About"

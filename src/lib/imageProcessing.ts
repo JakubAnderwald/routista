@@ -5,9 +5,15 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
 
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            const size = 800; // Resize for easier processing
-            canvas.width = size;
-            canvas.height = size;
+            const maxDimension = 800;
+            let scale = 1;
+
+            if (img.width > maxDimension || img.height > maxDimension) {
+                scale = Math.min(maxDimension / img.width, maxDimension / img.height);
+            }
+
+            canvas.width = Math.floor(img.width * scale);
+            canvas.height = Math.floor(img.height * scale);
             const ctx = canvas.getContext('2d');
 
             if (!ctx) {
@@ -15,9 +21,8 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
                 return;
             }
 
-            // Draw image
-            ctx.drawImage(img, 0, 0, size, size);
-            ctx.drawImage(img, 0, 0, size, size);
+            // Draw image preserving aspect ratio
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             // const imageData = ctx.getImageData(0, 0, size, size);
             // const data = imageData.data;
 
@@ -138,24 +143,28 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
 
             if (boundaryPoints.length === 0) {
                 console.warn("[extractShapeFromImage] No significant shape found, using fallback (first pixel)");
-                // Fallback: if we found *any* pixels but no "valid" shape, maybe the shape is just small?
-                // Re-run simple trace from first pixel found?
-                // Or just reject?
-                // Let's reject to be safe, or user will get 0km route.
                 reject(new Error("No significant shape found in image (noise only?)"));
                 return;
             }
 
-            // 3. Sample points evenly
-            const result: [number, number][] = [];
-            for (let i = 0; i < numPoints; i++) {
-                const index = Math.floor(i * boundaryPoints.length / numPoints);
-                const p = boundaryPoints[index];
-                result.push([p.x / width, p.y / height]);
-            }
+            // 3. Simplify points using Douglas-Peucker algorithm
+            // This reduces points on straight lines, keeping only "turns"
+            const epsilon = 5; // Tolerance in pixels. Higher = simpler shape.
+            const simplifiedPoints = simplifyPoints(boundaryPoints, epsilon);
+            console.log(`[extractShapeFromImage] Simplified ${boundaryPoints.length} points to ${simplifiedPoints.length} points`);
 
-            if (result.length > 0) {
-                result.push(result[0]); // Close the loop
+            // 4. Normalize points
+            const result: [number, number][] = simplifiedPoints.map(p => [p.x / width, p.y / height]);
+
+            // Ensure loop is closed if it was closed before
+            // M NT usually produces a loop, but let's make sure the last point connects to first if distinct
+            if (result.length > 2) {
+                const first = result[0];
+                const last = result[result.length - 1];
+                const dist = Math.hypot(first[0] - last[0], first[1] - last[1]);
+                if (dist > 0.01) {
+                    result.push(first);
+                }
             }
 
             URL.revokeObjectURL(url);
@@ -169,4 +178,57 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
 
         img.src = url;
     });
+}
+
+// Douglas-Peucker Simplification
+function simplifyPoints(points: { x: number, y: number }[], epsilon: number): { x: number, y: number }[] {
+    if (points.length <= 2) return points;
+
+    let dmax = 0;
+    let index = 0;
+    const end = points.length - 1;
+
+    for (let i = 1; i < end; i++) {
+        const d = perpendicularDistance(points[i], points[0], points[end]);
+        if (d > dmax) {
+            index = i;
+            dmax = d;
+        }
+    }
+
+    if (dmax > epsilon) {
+        const recResults1 = simplifyPoints(points.slice(0, index + 1), epsilon);
+        const recResults2 = simplifyPoints(points.slice(index), epsilon);
+
+        // Build the result list
+        return [...recResults1.slice(0, recResults1.length - 1), ...recResults2];
+    } else {
+        return [points[0], points[end]];
+    }
+}
+
+function perpendicularDistance(point: { x: number, y: number }, lineStart: { x: number, y: number }, lineEnd: { x: number, y: number }): number {
+    let dx = lineEnd.x - lineStart.x;
+    let dy = lineEnd.y - lineStart.y;
+
+    // Normalize
+    const mag = Math.hypot(dx, dy);
+    if (mag > 0) {
+        dx /= mag;
+        dy /= mag;
+    }
+
+    const pvx = point.x - lineStart.x;
+    const pvy = point.y - lineStart.y;
+
+    // Project point onto line (scaling factor)
+    const pvdot = pvx * dx + pvy * dy;
+
+    // Clamped projection
+    // For general DP, we usually consider the infinite line, but for polygons segment logic is safer.
+    // However, standard DP uses line distance.
+    const dsx = pvx - pvdot * dx;
+    const dsy = pvy - pvdot * dy;
+
+    return Math.hypot(dsx, dsy);
 }

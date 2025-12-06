@@ -143,6 +143,16 @@
         "button": "Bild auswählen",
         "selected": "Bild ausgewählt"
     },
+    "ShapeEditor": {
+        "title": "Form zeichnen",
+        "undo": "Rückgängig",
+        "clear": "Löschen",
+        "instructionStart": "Klicken zum Zeichnen",
+        "instructionContinue": "Klicken für nächsten Punkt",
+        "cancel": "Abbrechen",
+        "save": "Form speichern",
+        "minPointsError": "Du brauchst mindestens 3 Punkte für eine Form."
+    },
     "Header": {
         "home": "Startseite",
         "about": "Über uns"

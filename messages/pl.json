@@ -143,6 +143,16 @@
         "button": "Wybierz obraz",
         "selected": "Obraz wybrany"
     },
+    "ShapeEditor": {
+        "title": "Rysuj kształt",
+        "undo": "Cofnij",
+        "clear": "Wyczyść",
+        "instructionStart": "Kliknij, aby zacząć rysować",
+        "instructionContinue": "Kliknij, aby dodać punkt",
+        "cancel": "Anuluj",
+        "save": "Zapisz kształt",
+        "minPointsError": "Potrzebujesz co najmniej 3 punktów, aby utworzyć kształt."
+    },
     "Header": {
         "home": "Strona główna",
         "about": "O nas"

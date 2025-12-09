@@ -20,8 +20,8 @@ describe('Route Accuracy Tests', () => {
         const imagePath = path.join(TEST_IMAGES_DIR, imageFile);
         console.log(`Testing image: ${imageFile}`);
 
-        // 1. Extract shape
-        const shapePoints = await extractShapeFromImageNode(imagePath);
+        // 1. Extract shape (150 points is enough for test shapes, reduces API calls)
+        const shapePoints = await extractShapeFromImageNode(imagePath, 150);
         expect(shapePoints.length).toBeGreaterThan(0);
 
         // 2. Scale points

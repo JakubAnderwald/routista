@@ -99,6 +99,7 @@
         "steps": {
             "upload": "Upload",
             "area": "Område",
+            "areaMode": "Område & Transport",
             "mode": "Transport",
             "result": "Resultat"
         },
@@ -112,8 +113,11 @@
         },
         "area": {
             "title": "Vælg Område",
+            "titleCombined": "Vælg Område & Transport",
             "back": "Tilbage",
-            "next": "Næste: Vælg Tilstand"
+            "next": "Næste: Vælg Transport",
+            "generate": "Generer Rute",
+            "error": "Fejl ved generering af rute. Prøv venligst igen."
         },
         "mode": {
             "title": "Vælg transportmiddel",
@@ -135,6 +139,14 @@
             "download": "Download GPX"
         }
     },
+    "ModeSelector": {
+        "walking": "Gang",
+        "walkingDesc": "Bedst til parker og bycentre.",
+        "cycling": "Cykling",
+        "cyclingDesc": "God til større former og veje.",
+        "driving": "Kørsel",
+        "drivingDesc": "Til massive former på tværs af byer."
+    },
     "ImageUpload": {
         "title": "Upload din form",
         "description": "Træk og slip et billede her, eller klik for at vælge en fil.",
@@ -151,6 +163,19 @@
         "cancel": "Annuller",
         "save": "Gem Form",
         "minPointsError": "Du skal bruge mindst 3 punkter for at danne en form."
+    },
+    "AreaSelector": {
+        "transportMode": "Transportmiddel",
+        "foot-walking": "Gang",
+        "cycling-regular": "Cykel",
+        "driving-car": "Bil",
+        "routeLength": "Rutelængde",
+        "short": "Kort",
+        "medium": "Mellem",
+        "long": "Lang",
+        "fineTune": "Finjuster",
+        "meters": "meter",
+        "instructions": "Træk kortet for at placere midten. Vælg transport og rutelængde."
     },
     "Header": {
         "home": "Hjem",

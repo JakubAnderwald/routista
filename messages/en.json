@@ -99,6 +99,7 @@
         "steps": {
             "upload": "Upload",
             "area": "Area",
+            "areaMode": "Area & Mode",
             "mode": "Mode",
             "result": "Result"
         },
@@ -112,8 +113,11 @@
         },
         "area": {
             "title": "Select Area",
+            "titleCombined": "Select Area & Mode",
             "back": "Back",
-            "next": "Next: Choose Mode"
+            "next": "Next: Choose Mode",
+            "generate": "Generate Route",
+            "error": "Error generating route. Please try again."
         },
         "mode": {
             "title": "Choose Transportation Mode",
@@ -142,6 +146,19 @@
         "cyclingDesc": "Good for larger shapes and roads.",
         "driving": "Driving",
         "drivingDesc": "For massive shapes across cities."
+    },
+    "AreaSelector": {
+        "transportMode": "Transportation Mode",
+        "foot-walking": "Walk",
+        "cycling-regular": "Cycle",
+        "driving-car": "Drive",
+        "routeLength": "Route Length",
+        "short": "Short",
+        "medium": "Medium",
+        "long": "Long",
+        "fineTune": "Fine-tune",
+        "meters": "meters",
+        "instructions": "Drag the map to position the center. Select mode and route length."
     },
     "ImageUpload": {
         "title": "Upload your shape",

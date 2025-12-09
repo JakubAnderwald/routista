@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { ReportIssueButton } from "@/components/ReportIssueButton";
 import { NextIntlClientProvider } from 'next-intl';
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { ABTestProvider } from "@/components/ABTestProvider";
 import { getMessages, setRequestLocale } from 'next-intl/server';
 
 const geistSans = Geist({
@@ -77,12 +78,14 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <NextIntlClientProvider messages={messages}>
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-            <ReportIssueButton />
-          </NextIntlClientProvider>
+          <ABTestProvider>
+            <NextIntlClientProvider messages={messages}>
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+              <ReportIssueButton />
+            </NextIntlClientProvider>
+          </ABTestProvider>
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />

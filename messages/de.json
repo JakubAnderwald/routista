@@ -99,6 +99,7 @@
         "steps": {
             "upload": "Upload",
             "area": "Gebiet",
+            "areaMode": "Gebiet & Modus",
             "mode": "Modus",
             "result": "Ergebnis"
         },
@@ -112,8 +113,11 @@
         },
         "area": {
             "title": "Gebiet wählen",
+            "titleCombined": "Gebiet & Modus wählen",
             "back": "Zurück",
-            "next": "Weiter: Modus wählen"
+            "next": "Weiter: Modus wählen",
+            "generate": "Route berechnen",
+            "error": "Fehler bei der Routenberechnung. Bitte versuche es erneut."
         },
         "mode": {
             "title": "Fortbewegungsart wählen",
@@ -142,6 +146,19 @@
         "cyclingDesc": "Gut für größere Formen und Straßen.",
         "driving": "Auto",
         "drivingDesc": "Für riesige Formen über ganze Städte."
+    },
+    "AreaSelector": {
+        "transportMode": "Fortbewegungsart",
+        "foot-walking": "Gehen",
+        "cycling-regular": "Rad",
+        "driving-car": "Auto",
+        "routeLength": "Routenlänge",
+        "short": "Kurz",
+        "medium": "Mittel",
+        "long": "Lang",
+        "fineTune": "Feinabstimmung",
+        "meters": "Meter",
+        "instructions": "Ziehe die Karte, um den Mittelpunkt zu wählen. Wähle Modus und Routenlänge."
     },
     "ImageUpload": {
         "title": "Lade deine Form hoch",

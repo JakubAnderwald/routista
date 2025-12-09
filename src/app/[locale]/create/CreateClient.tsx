@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
-import { ModeSelector, TransportMode } from "@/components/ModeSelector";
+import { ModeSelector } from "@/components/ModeSelector";
 import { Button } from "@/components/ui/Button";
 import { ExampleSelector } from "@/components/ExampleSelector";
 import dynamic from "next/dynamic";
@@ -10,6 +10,8 @@ import { extractShapeFromImage } from "@/lib/imageProcessing";
 import { scalePointsToGeo, calculateRouteLength, calculateRouteAccuracy } from "@/lib/geoUtils";
 import { generateGPX, downloadGPX } from "@/lib/gpxGenerator";
 import { useTranslations } from 'next-intl';
+import type { TransportMode } from "@/components/AreaSelector";
+import { useABVariant, trackWithVariant } from "@/components/ABTestProvider";
 
 // Actually, react-leaflet components can be imported directly, but they must be rendered inside MapContainer.
 // Since Map is dynamic, we might need to pass a component that renders GeoJSON.
@@ -37,11 +39,16 @@ import { FeatureCollection } from "geojson";
 
 export default function CreateClient() {
     const t = useTranslations('CreatePage');
+    const variant = useABVariant();
+    
+    // Variant A: 4 steps (upload -> area -> mode -> result)
+    // Variant B: 3 steps (upload -> area+mode -> result)
     const [step, setStep] = useState<"upload" | "area" | "mode" | "processing" | "result">("upload");
     const [image, setImage] = useState<File | null>(null);
     const [center, setCenter] = useState<[number, number]>([51.505, -0.09]);
     const [radius, setRadius] = useState(1000);
-    const [mode, setMode] = useState<TransportMode | null>(null);
+    // For variant A, start with null mode; for variant B, default to foot-walking
+    const [mode, setMode] = useState<TransportMode | null>(variant === 'A' ? null : "foot-walking");
     const [routeData, setRouteData] = useState<FeatureCollection | null>(null);
     const [shapePoints, setShapePoints] = useState<[number, number][] | null>(null);
     const [stats, setStats] = useState<{ length: number; accuracy: number } | null>(null);
@@ -137,11 +144,19 @@ export default function CreateClient() {
             const accuracy = calculateRouteAccuracy(geoPoints, data, radius);
             setStats({ length, accuracy });
 
+            // Track successful route generation with A/B variant
+            trackWithVariant('route_generated', { 
+                mode, 
+                routeLength: length,
+                accuracy: accuracy 
+            });
+
             setStep("result");
 
         } catch (error) {
             console.error("Route generation failed:", error);
-            let message = t('mode.error');
+            const errorKey = variant === 'A' ? 'mode.error' : 'area.error';
+            let message = t(errorKey);
             if (error instanceof Error) {
                 if (error.message.includes("Route not found")) {
                     message = "Could not find a valid route for this shape with the selected mode. Try:\n• Using a simpler shape\n• Selecting a different transportation mode\n• Choosing a smaller area";
@@ -150,7 +165,8 @@ export default function CreateClient() {
                 }
             }
             alert(message);
-            setStep("mode");
+            // Go back to the appropriate step based on variant
+            setStep(variant === 'A' ? "mode" : "area");
         }
     };
 
@@ -158,10 +174,27 @@ export default function CreateClient() {
         if (routeData) {
             const gpx = generateGPX(routeData);
             downloadGPX(gpx, "routista-route.gpx");
+            // Track GPX download with A/B variant
+            trackWithVariant('gpx_downloaded', { mode });
         }
     };
 
-    const steps = ["upload", "area", "mode", "result"];
+    // Steps differ based on A/B variant
+    // Variant A: upload -> area -> mode -> result (4 steps)
+    // Variant B: upload -> areaMode -> result (3 steps, combined area+mode)
+    const steps = variant === 'A' 
+        ? ["upload", "area", "mode", "result"]
+        : ["upload", "areaMode", "result"];
+    
+    // Map step to display order for progress indicator
+    const getStepDisplayIndex = (currentStep: string) => {
+        if (variant === 'A') {
+            return ["upload", "area", "mode", "processing", "result"].indexOf(currentStep);
+        }
+        // For variant B, "area" step maps to "areaMode" display
+        if (currentStep === "area") return 1;
+        return ["upload", "areaMode", "processing", "result"].indexOf(currentStep);
+    };
 
     return (
         <div className="container mx-auto px-4 py-8 min-h-[calc(100vh-64px)]">
@@ -169,8 +202,8 @@ export default function CreateClient() {
                 {/* Progress Steps */}
                 <div className="flex items-center justify-between mb-12 px-4">
                     {steps.map((s, i) => {
-                        const stepIndex = steps.indexOf(s);
-                        const currentStepIndex = ["upload", "area", "mode", "processing", "result"].indexOf(step);
+                        const stepIndex = i;
+                        const currentStepIndex = getStepDisplayIndex(step);
                         const active = currentStepIndex >= stepIndex;
 
                         return (
@@ -238,22 +271,43 @@ export default function CreateClient() {
 
                     {step === "area" && (
                         <div className="flex flex-col h-[60vh] md:h-[600px]">
-                            <h2 className="text-2xl font-bold mb-4 dark:text-white">{t('area.title')}</h2>
+                            <h2 className="text-2xl font-bold mb-4 dark:text-white">
+                                {variant === 'A' ? t('area.title') : t('area.titleCombined')}
+                            </h2>
                             <div className="flex-1 bg-gray-100 dark:bg-gray-950 rounded-xl overflow-hidden relative border border-gray-200 dark:border-gray-800">
-                                <AreaSelector
-                                    onAreaSelect={handleAreaSelect}
-                                    initialCenter={center}
-                                    initialRadius={radius}
-                                />
+                                {variant === 'A' ? (
+                                    // Variant A: Area-only selector (no mode)
+                                    <AreaSelector
+                                        onAreaSelect={handleAreaSelect}
+                                        initialCenter={center}
+                                        initialRadius={radius}
+                                    />
+                                ) : (
+                                    // Variant B: Combined area + mode selector
+                                    <AreaSelector
+                                        onAreaSelect={handleAreaSelect}
+                                        initialCenter={center}
+                                        initialRadius={radius}
+                                        mode={mode}
+                                        onModeChange={setMode}
+                                    />
+                                )}
                             </div>
                             <div className="flex justify-between mt-6">
                                 <Button data-testid="area-back-button" variant="outline" onClick={() => setStep("upload")}>{t('area.back')}</Button>
-                                <Button data-testid="area-next-button" onClick={() => setStep("mode")}>{t('area.next')}</Button>
+                                {variant === 'A' ? (
+                                    // Variant A: Next goes to mode selection
+                                    <Button data-testid="area-next-button" onClick={() => setStep("mode")}>{t('area.next')}</Button>
+                                ) : (
+                                    // Variant B: Generate directly from area step
+                                    <Button data-testid="area-generate-button" disabled={!mode} onClick={handleGenerate}>{t('area.generate')}</Button>
+                                )}
                             </div>
                         </div>
                     )}
 
-                    {step === "mode" && (
+                    {/* Variant A only: Separate Mode Selection Step */}
+                    {variant === 'A' && step === "mode" && (
                         <div className="flex flex-col items-center">
                             <h2 className="text-2xl font-bold mb-8 dark:text-white">{t('mode.title')}</h2>
                             <ModeSelector selectedMode={mode} onSelect={setMode} />
@@ -297,7 +351,7 @@ export default function CreateClient() {
                                 {routeData && <ResultMap center={center} zoom={13} routeData={routeData} />}
                             </div>
                             <div className="flex justify-between mt-6">
-                                <Button data-testid="result-back-button" variant="outline" onClick={() => setStep("mode")}>{t('result.back')}</Button>
+                                <Button data-testid="result-back-button" variant="outline" onClick={() => setStep(variant === 'A' ? "mode" : "area")}>{t('result.back')}</Button>
                                 <Button data-testid="result-download-button" onClick={handleDownload}>{t('result.download')}</Button>
                             </div>
                         </div>
@@ -321,6 +375,7 @@ export default function CreateClient() {
                 <span data-testid="has-shape-points" data-value={!!shapePoints}>{String(!!shapePoints)}</span>
                 <span data-testid="selected-mode" data-value={mode || ""}>{mode || "none"}</span>
                 <span data-testid="has-route" data-value={!!routeData}>{String(!!routeData)}</span>
+                <span data-testid="ab-variant" data-value={variant}>{variant}</span>
             </div>
         </div>
     );

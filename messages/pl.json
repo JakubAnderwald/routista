@@ -99,6 +99,7 @@
         "steps": {
             "upload": "Wgraj",
             "area": "Obszar",
+            "areaMode": "Obszar i tryb",
             "mode": "Tryb",
             "result": "Wynik"
         },
@@ -112,8 +113,11 @@
         },
         "area": {
             "title": "Wybierz obszar",
+            "titleCombined": "Wybierz obszar i tryb",
             "back": "Wstecz",
-            "next": "Dalej: Wybierz tryb"
+            "next": "Dalej: Wybierz tryb",
+            "generate": "Generuj trasę",
+            "error": "Błąd podczas generowania trasy. Spróbuj ponownie."
         },
         "mode": {
             "title": "Wybierz tryb transportu",
@@ -142,6 +146,19 @@
         "cyclingDesc": "Dobre dla większych kształtów i dróg.",
         "driving": "Samochód",
         "drivingDesc": "Dla ogromnych kształtów w całych miastach."
+    },
+    "AreaSelector": {
+        "transportMode": "Tryb transportu",
+        "foot-walking": "Pieszo",
+        "cycling-regular": "Rower",
+        "driving-car": "Auto",
+        "routeLength": "Długość trasy",
+        "short": "Krótka",
+        "medium": "Średnia",
+        "long": "Długa",
+        "fineTune": "Dostosuj",
+        "meters": "metrów",
+        "instructions": "Przeciągnij mapę, aby ustawić środek. Wybierz tryb i długość trasy."
     },
     "ImageUpload": {
         "title": "Wgraj swój kształt",

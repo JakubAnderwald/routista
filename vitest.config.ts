@@ -4,6 +4,6 @@ export default defineConfig({
     test: {
         testTimeout: 60000,
         // Limit concurrent tests to avoid Radar API rate limiting
-        maxConcurrency: 3,
+        maxConcurrency: 2,
     },
 });

@@ -16,7 +16,7 @@ const MODE = 'foot-walking';
 describe('Route Accuracy Tests', () => {
     const images = fs.readdirSync(TEST_IMAGES_DIR).filter(file => file.endsWith('.png'));
 
-    it.each(images)('should generate accurate route for %s', { timeout: 60000 }, async (imageFile) => {
+    it.concurrent.each(images)('should generate accurate route for %s', { timeout: 60000 }, async (imageFile) => {
         const imagePath = path.join(TEST_IMAGES_DIR, imageFile);
         console.log(`Testing image: ${imageFile}`);
 

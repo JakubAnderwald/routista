@@ -313,6 +313,7 @@ export default function CreateClient() {
                 <button id="test-load-star" data-testid="test-load-star" onClick={() => loadTestImage("star.png")}>Load Star</button>
                 <button id="test-load-heart" data-testid="test-load-heart" onClick={() => loadTestImage("heart-v2.png")}>Load Heart</button>
                 <button id="test-load-circle" data-testid="test-load-circle" onClick={() => loadTestImage("circle.png")}>Load Circle</button>
+                <button id="test-load-abc" data-testid="test-load-abc" onClick={() => loadTestImage("test-images/abc.png")}>Load ABC</button>
 
                 {/* Status indicators for test automation */}
                 <span data-testid="current-step" data-value={step}>{step}</span>

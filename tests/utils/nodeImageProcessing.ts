@@ -8,14 +8,11 @@ export async function extractShapeFromImageNode(filePath: string, numPoints: num
         .toBuffer({ resolveWithObject: true });
 
     const { width, height } = info;
-    // console.log(`Image Info: ${width}x${height}, channels: ${channels}, data length: ${data.length}`);
-
     const threshold = 128;
 
-    // 1. Identify all dark pixels and mark them in a 2D grid for fast lookup
+    // 1. Identify all dark pixels and mark them in a 2D grid
     const grid = new Uint8Array(width * height);
-    const visited = new Uint8Array(width * height);
-    let startX = -1, startY = -1;
+    let foundPixels = 0;
 
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
@@ -28,83 +25,72 @@ export async function extractShapeFromImageNode(filePath: string, numPoints: num
 
             if (brightness < threshold && a > 128) {
                 grid[y * width + x] = 1;
-                if (startX === -1) {
-                    startX = x;
-                    startY = y;
-                }
+                foundPixels++;
             }
         }
     }
 
-    if (startX === -1) {
+    if (foundPixels === 0) {
         throw new Error("No shape found in image");
     }
 
-    // 2. Trace the boundary (Moore-Neighbor Tracing)
-    const boundaryPoints: { x: number, y: number }[] = [];
-    let cx = startX;
-    let cy = startY;
-    let backtrackX = startX - 1; // Start coming from the left
-    let backtrackY = startY;
+    // 2. Trace ALL boundaries (Moore-Neighbor Tracing for multiple components)
+    const allShapes: { x: number, y: number }[][] = [];
+    
+    // Track which pixels have been assigned to a component
+    const componentMap = new Uint8Array(width * height);
 
     // Directions: N, NE, E, SE, S, SW, W, NW
     const dx = [0, 1, 1, 1, 0, -1, -1, -1];
     const dy = [-1, -1, 0, 1, 1, 1, 0, -1];
 
-    // Find the first boundary point (P0)
-    boundaryPoints.push({ x: cx, y: cy });
-    visited[cy * width + cx] = 1;
-
-    let loops = 0;
-    const maxLoops = width * height; // Safety break
-
-    while (loops < maxLoops) {
-        let foundNext = false;
-
-        // Search neighbors in clockwise order
-        // We need to start searching from the neighbor *after* the one we came from (backtrack)
-        // Actually, Moore-Neighbor starts from the pixel we entered *from* (backtrack) and goes clockwise.
-
-        // Find index of backtrack direction
-        let startDir = 0;
-        for (let i = 0; i < 8; i++) {
-            if (cx + dx[i] === backtrackX && cy + dy[i] === backtrackY) {
-                startDir = i;
-                break;
-            }
+    // Flood-fill helper to mark all connected pixels as belonging to current component
+    const floodFillMark = (startX: number, startY: number, componentId: number) => {
+        const stack: [number, number][] = [[startX, startY]];
+        while (stack.length > 0) {
+            const [fx, fy] = stack.pop()!;
+            const idx = fy * width + fx;
+            
+            if (fx < 0 || fx >= width || fy < 0 || fy >= height) continue;
+            if (grid[idx] !== 1 || componentMap[idx] !== 0) continue;
+            
+            componentMap[idx] = componentId;
+            
+            // Add 4-connected neighbors
+            stack.push([fx + 1, fy]);
+            stack.push([fx - 1, fy]);
+            stack.push([fx, fy + 1]);
+            stack.push([fx, fy - 1]);
         }
+    };
 
-        // Scan clockwise
-        for (let i = 0; i < 8; i++) {
-            const dir = (startDir + i) % 8;
-            const nx = cx + dx[dir];
-            const ny = cy + dy[dir];
+    let componentId = 0;
 
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                if (grid[ny * width + nx] === 1) {
-                    // Found next boundary pixel
-                    // Update backtrack to be the current pixel (relative to the new one)
-                    // Actually, backtrack for the *next* step is the neighbor *before* the one we found?
-                    // Standard Moore: Backtrack is the previous white pixel.
-                    // Here we just set backtrack to the current pixel `cx, cy`? 
-                    // No, we need to enter the new pixel `nx, ny` from `cx, cy`? 
-                    // Let's simplify: Backtrack is `cx, cy`. 
-                    // But we need to start search from the "white" pixel we just skipped over.
-                    // The "white" pixel is the one at `(dir - 1)`?
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            // Only start tracing from unassigned dark pixels
+            if (grid[y * width + x] === 1 && componentMap[y * width + x] === 0) {
+                componentId++;
+                
+                // First, flood-fill to mark ALL pixels of this component
+                floodFillMark(x, y, componentId);
+                
+                // Now trace the boundary
+                const points: { x: number, y: number }[] = [];
+                let cx = x;
+                let cy = y;
+                let backtrackX = x - 1;
+                let backtrackY = y;
 
-                    backtrackX = cx + dx[(dir + 6) % 8]; // Approx "previous" neighbor
-                    backtrackY = cy + dy[(dir + 6) % 8]; // (dir - 2) mod 8 in 8-connectivity?
+                points.push({ x: cx, y: cy });
 
-                    // Actually, let's just use a simpler "always look left" or standard implementation.
-                    // Standard: Start from backtrack. Rotate clockwise until black.
-                    // The black pixel is the next current. The pixel *before* it (clockwise) is the new backtrack.
+                let loops = 0;
+                const maxLoops = width * height * 2;
 
-                    // Let's re-implement strictly:
-                    // 1. Start with B = backtrack (white), P = current (black).
-                    // 2. Search neighbors of P starting from B, clockwise.
-                    // 3. First black neighbor is P_next. The neighbor immediately preceding it is B_next.
+                while (loops < maxLoops) {
+                    let foundNext = false;
 
-                    // We need to find the actual backtrack index in the neighbor list
+                    // Find index of backtrack direction
                     let backtrackIdx = -1;
                     for (let k = 0; k < 8; k++) {
                         if (cx + dx[k] === backtrackX && cy + dy[k] === backtrackY) {
@@ -112,8 +98,7 @@ export async function extractShapeFromImageNode(filePath: string, numPoints: num
                             break;
                         }
                     }
-                    // If backtrack is not a neighbor (e.g. first point), assume West
-                    if (backtrackIdx === -1) backtrackIdx = 6; // West
+                    if (backtrackIdx === -1) backtrackIdx = 6; // Default West
 
                     // Scan clockwise from backtrack
                     for (let j = 0; j < 8; j++) {
@@ -123,11 +108,7 @@ export async function extractShapeFromImageNode(filePath: string, numPoints: num
 
                         if (sx >= 0 && sx < width && sy >= 0 && sy < height && grid[sy * width + sx] === 1) {
                             // Found next P
-                            const prevIdx = (scanIdx + 7) % 8; // The one before (counter-clockwise) or after?
-                            // We scanned clockwise. The one before `scanIdx` was white (or we would have stopped).
-                            // So B_next is the neighbor at `(scanIdx - 1)` (modulo 8).
-                            // In our array `(scanIdx + 7) % 8`.
-
+                            const prevIdx = (scanIdx + 7) % 8;
                             backtrackX = cx + dx[prevIdx];
                             backtrackY = cy + dy[prevIdx];
 
@@ -137,37 +118,93 @@ export async function extractShapeFromImageNode(filePath: string, numPoints: num
                             break;
                         }
                     }
-                    break; // Break the outer loop (we found next pixel)
+
+                    if (!foundNext) break;
+                    if (cx === x && cy === y) break; // Closed the loop
+
+                    points.push({ x: cx, y: cy });
+                    loops++;
                 }
+
+                // If this shape is significant (>50 points), add to collection
+                if (points.length > 50) {
+                    allShapes.push(points);
+                    console.log(`[extractShapeFromImageNode] Found component ${allShapes.length} with ${points.length} boundary points at ${x},${y}`);
+                }
+                // Continue scanning for more components (no break!)
             }
         }
-
-        if (!foundNext) {
-            // Isolated pixel or end of line
-            break;
-        }
-
-        // Stop if we closed the loop
-        if (cx === startX && cy === startY) {
-            break;
-        }
-
-        boundaryPoints.push({ x: cx, y: cy });
-        loops++;
     }
 
-    console.log(`Traced boundary: ${boundaryPoints.length} points`);
+    console.log(`[extractShapeFromImageNode] Found ${allShapes.length} total component(s)`);
 
-    // 3. Sample points evenly
+    if (allShapes.length === 0) {
+        throw new Error("No significant shape found in image");
+    }
+
+    // 3. Sort shapes by centroid (left-to-right, then top-to-bottom)
+    const shapesWithCentroid = allShapes.map(points => {
+        const sumX = points.reduce((acc, p) => acc + p.x, 0);
+        const sumY = points.reduce((acc, p) => acc + p.y, 0);
+        return {
+            points,
+            centroidX: sumX / points.length,
+            centroidY: sumY / points.length
+        };
+    });
+
+    // Sort primarily by X (left-to-right), secondarily by Y (top-to-bottom)
+    shapesWithCentroid.sort((a, b) => {
+        const xDiff = a.centroidX - b.centroidX;
+        if (Math.abs(xDiff) > 20) return xDiff; // Significant horizontal difference
+        return a.centroidY - b.centroidY; // Otherwise sort by Y
+    });
+
+    // 4. Connect shapes into a single continuous path
+    let combinedPoints: { x: number, y: number }[] = [];
+    
+    for (let i = 0; i < shapesWithCentroid.length; i++) {
+        const shape = shapesWithCentroid[i].points;
+        
+        if (i === 0) {
+            // First shape: add all points
+            combinedPoints = [...shape];
+        } else {
+            // Subsequent shapes: find best connection point
+            const lastPoint = combinedPoints[combinedPoints.length - 1];
+            
+            // Find the point in the new shape closest to our last point
+            let bestIdx = 0;
+            let bestDist = Infinity;
+            for (let j = 0; j < shape.length; j++) {
+                const dist = Math.hypot(shape[j].x - lastPoint.x, shape[j].y - lastPoint.y);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestIdx = j;
+                }
+            }
+            
+            // Reorder shape to start from closest point
+            const reorderedShape = [...shape.slice(bestIdx), ...shape.slice(0, bestIdx)];
+            
+            // Add the new shape
+            combinedPoints.push(...reorderedShape);
+        }
+    }
+
+    console.log(`[extractShapeFromImageNode] Combined path has ${combinedPoints.length} points`);
+
+    // 5. Sample points evenly from combined path
     const result: [number, number][] = [];
     for (let i = 0; i < numPoints; i++) {
-        const index = Math.floor(i * boundaryPoints.length / numPoints);
-        const p = boundaryPoints[index];
+        const index = Math.floor(i * combinedPoints.length / numPoints);
+        const p = combinedPoints[index];
         result.push([p.x / width, p.y / height]);
     }
 
+    // Close the loop back to start
     if (result.length > 0) {
-        result.push(result[0]); // Close the loop
+        result.push(result[0]);
     }
 
     return result;

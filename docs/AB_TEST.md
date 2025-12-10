@@ -51,37 +51,40 @@ Path: /
 SameSite: lax
 ```
 
-## Tracked Events
+## Tracking Method
 
-### 1. `ab_variant_assigned`
-- **When**: Page load (once per session)
-- **Properties**: `{ variant: 'A' | 'B' }`
+**URL Parameter Approach** (works on Vercel Hobby plan)
 
-### 2. `route_generated`
-- **When**: Successful route generation
-- **Properties**: `{ variant, mode, routeLength, accuracy }`
+The variant is appended to the URL as a query parameter:
+```
+/en/create?ab=A  →  Variant A (control)
+/en/create?ab=B  →  Variant B (treatment)
+```
 
-### 3. `gpx_downloaded`
-- **When**: User downloads GPX file
-- **Properties**: `{ variant, mode }`
+This is tracked automatically by Vercel Analytics as part of page views.
+
+> **Note**: Custom events (`track()`) require Vercel Pro plan. We use URL parameters instead.
 
 ## Analyzing Results
 
 ### Vercel Analytics Dashboard
-1. Go to **Analytics → Custom Events**
-2. Filter by event name (`route_generated`, `gpx_downloaded`)
-3. Group by `variant` property
+
+1. Go to **Analytics** tab
+2. Click on **Page** filter
+3. Compare page views:
+   - Filter for `/en/create?ab=A` → Variant A visitors
+   - Filter for `/en/create?ab=B` → Variant B visitors
 
 ### Key Metrics to Compare
 
-| Metric | Formula |
-|--------|---------|
-| **Conversion Rate** | `route_generated / ab_variant_assigned` per variant |
-| **Download Rate** | `gpx_downloaded / route_generated` per variant |
-| **Completion Rate** | `gpx_downloaded / ab_variant_assigned` per variant |
+| Metric | How to Measure |
+|--------|----------------|
+| **Visitors per Variant** | Filter Page by `?ab=A` vs `?ab=B` |
+| **Bounce Rate** | Compare bounce rates for each variant |
+| **Pages per Session** | Indicates engagement depth |
 
 ### Statistical Significance
-- Minimum recommended: 1000+ events per variant
+- Minimum recommended: 500+ page views per variant
 - Use chi-squared test or proportion z-test
 - Target p-value: < 0.05
 
@@ -103,14 +106,20 @@ function MyComponent() {
 }
 ```
 
-### Tracking Custom Events
+### Getting Variant Outside React
 
 ```typescript
-import { trackWithVariant } from "@/components/ABTestProvider";
+import { getCurrentVariant } from "@/components/ABTestProvider";
 
-// Automatically includes variant in properties
-trackWithVariant('my_event', { customProp: 'value' });
+const variant = getCurrentVariant(); // 'A' or 'B'
 ```
+
+### How URL Tracking Works
+
+The `ABTestProvider` automatically appends `?ab=A` or `?ab=B` to the URL on page load using `history.replaceState()`. This:
+- Doesn't cause a page reload
+- Doesn't add to browser history
+- Gets tracked by Vercel Analytics as part of the page path
 
 ## Ending the Test
 

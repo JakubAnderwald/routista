@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useSyncExternalStore } from 'react';
-import { track } from '@vercel/analytics';
 
 export type ABVariant = 'A' | 'B';
 
@@ -29,13 +28,22 @@ export function ABTestProvider({ children }: { children: React.ReactNode }) {
         () => 'B' as ABVariant // Server snapshot
     );
     
-    const hasTrackedRef = useRef(false);
+    const hasUpdatedUrlRef = useRef(false);
 
     useEffect(() => {
-        // Track variant assignment only once per session
-        if (!hasTrackedRef.current && variant) {
-            track('ab_variant_assigned', { variant });
-            hasTrackedRef.current = true;
+        // Add variant to URL for Vercel Analytics tracking (works on Hobby plan)
+        // This allows filtering by page: /en/create?ab=A vs /en/create?ab=B
+        if (!hasUpdatedUrlRef.current && variant && typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            const currentAB = url.searchParams.get('ab');
+            
+            // Only update if not already set or different
+            if (currentAB !== variant) {
+                url.searchParams.set('ab', variant);
+                // Use replaceState to avoid adding to browser history
+                window.history.replaceState({}, '', url.toString());
+            }
+            hasUpdatedUrlRef.current = true;
         }
     }, [variant]);
 
@@ -56,11 +64,12 @@ export function useABVariant(): ABVariant {
 }
 
 /**
- * Helper to track events with variant information
+ * Helper to get current variant (for logging or external analytics)
+ * Note: Custom event tracking requires Vercel Pro plan.
+ * On Hobby plan, we track via URL parameter (?ab=A or ?ab=B) instead.
  */
-export function trackWithVariant(eventName: string, properties: Record<string, unknown> = {}) {
+export function getCurrentVariant(): ABVariant {
+    if (typeof document === 'undefined') return 'B';
     const cookieMatch = document.cookie.match(new RegExp(`${AB_COOKIE_NAME}=([AB])`));
-    const variant = cookieMatch?.[1] || 'B';
-    
-    track(eventName, { ...properties, variant });
+    return (cookieMatch?.[1] as ABVariant) || 'B';
 }

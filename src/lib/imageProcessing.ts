@@ -218,9 +218,13 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
 
             // 5. Simplify points using Douglas-Peucker algorithm
             // This reduces points on straight lines, keeping only "turns"
+            // Note: epsilon=5 pixels is a balance between noise reduction and detail preservation
+            // For a 800px canvas, 5px ≈ 0.6% tolerance
             const epsilon = 5; // Tolerance in pixels. Higher = simpler shape.
             const simplifiedPoints = simplifyPoints(combinedPoints, epsilon);
-            console.log(`[extractShapeFromImage] Simplified ${combinedPoints.length} points to ${simplifiedPoints.length} points`);
+            
+            console.log(`[extractShapeFromImage] Simplification: ${combinedPoints.length} → ${simplifiedPoints.length} points (epsilon: ${epsilon}px)`);
+            console.log(`[extractShapeFromImage] Shape bounds: x=[${Math.min(...simplifiedPoints.map(p => p.x)).toFixed(0)}, ${Math.max(...simplifiedPoints.map(p => p.x)).toFixed(0)}], y=[${Math.min(...simplifiedPoints.map(p => p.y)).toFixed(0)}, ${Math.max(...simplifiedPoints.map(p => p.y)).toFixed(0)}]`);
 
             // 6. Normalize points
             const result: [number, number][] = simplifiedPoints.map(p => [p.x / width, p.y / height]);
@@ -230,11 +234,14 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
                 const first = result[0];
                 const last = result[result.length - 1];
                 const dist = Math.hypot(first[0] - last[0], first[1] - last[1]);
-                if (dist > 0.01) {
+                const isClosed = dist <= 0.01;
+                if (!isClosed) {
                     result.push(first);
                 }
+                console.log(`[extractShapeFromImage] Shape type: ${isClosed ? 'closed loop' : 'open shape'} (start-end distance: ${(dist * 100).toFixed(1)}%)`);
             }
 
+            console.log(`[extractShapeFromImage] Final output: ${result.length} normalized points`);
             URL.revokeObjectURL(url);
             resolve(result);
         };

@@ -30,15 +30,23 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
         throw new Error("Invalid coordinates");
     }
 
-    // Use mode-specific tolerance - car routing is stricter, so we need fewer waypoints
-    // Higher tolerance = fewer points = better chance all points are on roads
+    // Use mode-specific tolerance for Douglas-Peucker simplification
+    // Lower tolerance = more points preserved = better shape fidelity
+    // Values are in degrees (~0.0001° ≈ 11m at equator, ~7m at 50° latitude)
+    // 
+    // IMPORTANT: Previously tolerances were 5-10x higher causing severe over-simplification
+    // for open shapes (non-closed loops). See GitHub issue #5.
     const toleranceMap: Record<string, number> = {
-        "driving-car": 0.002,    // 20x higher - car routing is very strict about roads
-        "cycling-regular": 0.0005, // 5x higher - bike can use more paths
-        "foot-walking": 0.0002     // 2x higher - foot is most flexible
+        "driving-car": 0.0004,     // ~30-45m - car needs roads, can't follow every detail
+        "cycling-regular": 0.0001, // ~7-11m - bikes can use more paths, preserve more detail
+        "foot-walking": 0.00005    // ~4-6m - foot is most flexible, preserve fine detail
     };
     const tolerance = toleranceMap[mode] || 0.0001;
+    
+    const inputPointCount = coordinates.length;
     const simplifiedCoordinates = simplifyPoints(coordinates, tolerance);
+    
+    console.log(`[RadarService] Simplification: ${inputPointCount} → ${simplifiedCoordinates.length} points (tolerance: ${tolerance}, mode: ${mode})`);
 
     const RADAR_API_KEY = process.env.NEXT_PUBLIC_RADAR_LIVE_PK || process.env.NEXT_PUBLIC_RADAR_TEST_PK;
 
@@ -86,14 +94,19 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
             i--;
         }
     }
+    
+    console.log(`[RadarService] Routing ${simplifiedCoordinates.length} waypoints in ${chunks.length} chunk(s)`);
 
     const features: Feature[] = []; // Explicitly type features as Feature[]
     let totalDistance = 0;
     let totalDuration = 0;
 
-    for (const chunk of chunks) {
+    for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+        const chunk = chunks[chunkIdx];
         // Format coordinates as pipe-delimited lat,lng pairs
         const locationsParam = chunk.map((c: number[]) => `${c[0]},${c[1]}`).join('|');
+        
+        console.log(`[RadarService] Processing chunk ${chunkIdx + 1}/${chunks.length} with ${chunk.length} points`);
 
         const url = new URL('https://api.radar.io/v1/route/directions');
         url.searchParams.append('locations', locationsParam);
@@ -187,6 +200,8 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
         };
     }
 
+    console.log(`[RadarService] Route generated: ${mergedCoordinates.length} route points, ${(totalDistance / 1000).toFixed(2)}km, ${Math.round(totalDuration / 60)}min`);
+    
     return {
         type: "FeatureCollection",
         features: [

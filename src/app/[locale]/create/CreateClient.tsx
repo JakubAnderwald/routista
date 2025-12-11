@@ -129,10 +129,13 @@ export default function CreateClient() {
         if (!shapePoints || !mode) return;
 
         setStep("processing");
+        console.log(`[CreateClient] Starting route generation...`);
+        console.log(`[CreateClient] Input: ${shapePoints.length} shape points, center: [${center[0].toFixed(4)}, ${center[1].toFixed(4)}], radius: ${radius}m, mode: ${mode}`);
 
         try {
             // 1. Scale points
             const geoPoints = scalePointsToGeo(shapePoints, center, radius);
+            console.log(`[CreateClient] Scaled to ${geoPoints.length} geo points`);
 
             // 2. Generate route on client-side
             const { generateRoute } = await import("@/lib/routeGenerator");
@@ -143,6 +146,8 @@ export default function CreateClient() {
             const length = calculateRouteLength(data);
             const accuracy = calculateRouteAccuracy(geoPoints, data, radius);
             setStats({ length, accuracy });
+            
+            console.log(`[CreateClient] Route complete: ${(length / 1000).toFixed(2)}km, ${accuracy.toFixed(0)}% accuracy`);
 
             setStep("result");
 

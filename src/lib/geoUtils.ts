@@ -107,18 +107,21 @@ export function simplifyPoints(points: [number, number][], tolerance: number): [
 
     // Check if this is a closed loop (first and last points are very close)
     const dist = calculateDistance(start, end);
+    const isClosedLoop = dist < 100; // within 100 meters
 
-    // If it's a closed loop (points are within 100 meters - increased from 10m), we need special handling
-    // to avoid over-simplification
-    if (dist < 100) {
-        // For closed loops, don't use the direct line from start to end
-        // Instead, break the loop and process it differently
-        // Simple approach: ensure we keep more points for closed shapes
-        const adjustedTolerance = tolerance / 20; // Much stricter for closed loops
-        return simplifyPointsRecursive(points, adjustedTolerance);
-    }
-
-    return simplifyPointsRecursive(points, tolerance);
+    // IMPORTANT FIX (GitHub issue #5): Apply stricter tolerance to ALL shapes
+    // Previously only closed loops got the /20 adjustment, causing open shapes
+    // (like letters, symbols) to be over-simplified to near-straight lines.
+    // 
+    // For closed loops: use tolerance/20 (very strict, ~2-3m effective)
+    // For open shapes: use tolerance/10 (strict but allows some simplification)
+    const adjustedTolerance = isClosedLoop ? tolerance / 20 : tolerance / 10;
+    
+    const result = simplifyPointsRecursive(points, adjustedTolerance);
+    
+    console.log(`[geoUtils] simplifyPoints: ${points.length} → ${result.length} points (closed: ${isClosedLoop}, tolerance: ${tolerance} → ${adjustedTolerance.toFixed(6)})`);
+    
+    return result;
 }
 
 function simplifyPointsRecursive(points: [number, number][], tolerance: number): [number, number][] {

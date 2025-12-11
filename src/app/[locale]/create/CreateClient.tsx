@@ -144,7 +144,6 @@ export default function CreateClient() {
             const accuracy = calculateRouteAccuracy(geoPoints, data, radius);
             setStats({ length, accuracy });
 
-            // A/B tracking: variant is in URL (?ab=A or ?ab=B) for Vercel Analytics page views
             setStep("result");
 
         } catch (error) {
@@ -367,7 +366,7 @@ export default function CreateClient() {
                 <span data-testid="has-shape-points" data-value={!!shapePoints}>{String(!!shapePoints)}</span>
                 <span data-testid="selected-mode" data-value={mode || ""}>{mode || "none"}</span>
                 <span data-testid="has-route" data-value={!!routeData}>{String(!!routeData)}</span>
-                <span data-testid="ab-variant" data-value={variant}>{variant}</span>
+                <span data-testid="ui-variant" data-value={variant}>{variant}</span>
             </div>
         </div>
     );

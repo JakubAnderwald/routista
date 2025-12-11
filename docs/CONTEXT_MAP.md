@@ -18,7 +18,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Translations** | `messages/[locale].json` | i18n strings for all pages. Supported locales: `en` (English), `de` (German), `pl` (Polish), `da` (Danish). |
 | **Page Structure** | `src/app/[locale]/[page]/page.tsx` | All pages support dynamic locale routing via Next.js App Router with next-intl. |
 | **Page Layouts** | `src/app/[locale]/layout.tsx` | Root layout that sets up i18n providers and metadata. |
-| **A/B Testing** | `src/components/ABTestProvider.tsx` | React context for A/B variant assignment. See `docs/AB_TEST.md`. |
+| **UI Variant Config** | `src/config.ts`, `src/components/ABTestProvider.tsx` | Feature flag for UI variant (A or B). See `docs/AB_TEST.md`. |
 
 ## 📂 File Tree & Purpose
 
@@ -30,12 +30,12 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `gpxGenerator.ts`: Utility for file export.
 
 ### Components (`src/components/`)
-*   `CreateClient.tsx`: **CRITICAL**. The main page logic. Has A/B variant conditional rendering.
+*   `CreateClient.tsx`: **CRITICAL**. The main page logic. Has UI variant conditional rendering.
 *   `ImageUpload.tsx`: Drag-and-drop UI.
-*   `AreaSelector.tsx`: Interactive map for area picking. Mode props optional (A/B test).
+*   `AreaSelector.tsx`: Interactive map for area picking. Mode props optional (variant B).
 *   `ResultMap.tsx`: Final output display.
 *   `ModeSelector.tsx`: Walking/Cycling/Driving cards. Used in variant A only.
-*   `ABTestProvider.tsx`: A/B test context provider. See `docs/AB_TEST.md`.
+*   `ABTestProvider.tsx`: UI variant context provider. See `docs/AB_TEST.md`.
 
 ### Pages (`src/app/`)
 *   `[locale]/create/page.tsx`: Wrapper for `CreateClient`.

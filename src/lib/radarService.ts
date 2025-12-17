@@ -1,5 +1,24 @@
 import { simplifyPoints } from "./geoUtils";
 import { FeatureCollection, Feature } from "geojson";
+import { Redis } from "@upstash/redis";
+import * as Sentry from "@sentry/nextjs";
+
+/**
+ * Create Redis client from environment variables.
+ * Checks both Vercel KV and Upstash naming conventions.
+ * Returns null if not configured.
+ */
+function getRedisClient(): Redis | null {
+    // Check Vercel KV naming convention first, then Upstash native naming
+    const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+    
+    if (!url || !token) {
+        return null;
+    }
+    
+    return new Redis({ url, token });
+}
 
 export interface RouteGenerationOptions {
     coordinates: [number, number][];
@@ -15,6 +34,30 @@ export interface RadarAddress {
 export interface AutocompleteResponse {
     addresses: RadarAddress[];
 }
+
+/**
+ * Creates a hash string from coordinates array for cache key generation.
+ * Uses a simple but effective hash that captures coordinate precision.
+ */
+function hashCoordinates(coordinates: [number, number][]): string {
+    // Round to 5 decimal places (~1m precision) and create a stable string representation
+    const coordString = coordinates
+        .map(([lat, lng]) => `${lat.toFixed(5)},${lng.toFixed(5)}`)
+        .join('|');
+    
+    // Simple hash function (djb2 algorithm)
+    let hash = 5381;
+    for (let i = 0; i < coordString.length; i++) {
+        hash = ((hash << 5) + hash) + coordString.charCodeAt(i);
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36);
+}
+
+/**
+ * Cache TTL in seconds (24 hours)
+ */
+const CACHE_TTL_SECONDS = 24 * 60 * 60;
 
 /**
  * Generates a route by calling the Radar API.
@@ -47,6 +90,29 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     const simplifiedCoordinates = simplifyPoints(coordinates, tolerance);
     
     console.log(`[RadarService] Simplification: ${inputPointCount} → ${simplifiedCoordinates.length} points (tolerance: ${tolerance}, mode: ${mode})`);
+
+    // Generate cache key from simplified coordinates and mode
+    const cacheKey = `route:${mode}:${hashCoordinates(simplifiedCoordinates as [number, number][])}`;
+    
+    // Get Redis client (may be null if not configured)
+    const redis = getRedisClient();
+    
+    // Try to get cached result (only if Redis is configured)
+    if (redis) {
+        try {
+            const cachedResult = await redis.get<FeatureCollection>(cacheKey);
+            if (cachedResult) {
+                console.log(`[RadarService] Cache HIT for key: ${cacheKey}`);
+                return cachedResult;
+            }
+            console.log(`[RadarService] Cache MISS for key: ${cacheKey}`);
+        } catch (cacheError) {
+            // Redis error - continue without cache
+            console.log(`[RadarService] Cache error, proceeding without cache: ${cacheError instanceof Error ? cacheError.message : 'unknown error'}`);
+        }
+    } else {
+        console.log(`[RadarService] Redis not configured, proceeding without cache`);
+    }
 
     const RADAR_API_KEY = process.env.NEXT_PUBLIC_RADAR_LIVE_PK || process.env.NEXT_PUBLIC_RADAR_TEST_PK;
 
@@ -158,6 +224,18 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
             console.error(`[RadarService] Fetch error for chunk: ${e.message || e}`);
+            
+            // Capture error in Sentry with context
+            Sentry.captureException(e, {
+                extra: {
+                    service: "RadarService",
+                    operation: "getRadarRoute",
+                    chunkIndex: chunkIdx,
+                    totalChunks: chunks.length,
+                    mode: radarMode,
+                }
+            });
+            
             // Depending on desired behavior, you might want to re-throw or push a "failed chunk" feature
             throw e; // Re-throw to indicate a failure in route generation
         }
@@ -202,7 +280,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
 
     console.log(`[RadarService] Route generated: ${mergedCoordinates.length} route points, ${(totalDistance / 1000).toFixed(2)}km, ${Math.round(totalDuration / 60)}min`);
     
-    return {
+    const result: FeatureCollection = {
         type: "FeatureCollection",
         features: [
             {
@@ -220,6 +298,19 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
             }
         ]
     };
+
+    // Cache the result for future requests (only if Redis is configured)
+    if (redis) {
+        try {
+            await redis.set(cacheKey, result, { ex: CACHE_TTL_SECONDS });
+            console.log(`[RadarService] Cached result with key: ${cacheKey} (TTL: ${CACHE_TTL_SECONDS}s)`);
+        } catch (cacheError) {
+            // Redis error - continue without caching
+            console.log(`[RadarService] Failed to cache result: ${cacheError instanceof Error ? cacheError.message : 'unknown error'}`);
+        }
+    }
+
+    return result;
 }
 
 /**
@@ -256,6 +347,19 @@ export async function getRadarAutocomplete(query: string): Promise<AutocompleteR
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`[RadarService] Autocomplete API Error: ${response.status} ${response.statusText} - ${errorText}`);
+            
+            // Capture API errors in Sentry
+            Sentry.captureMessage(`Autocomplete API Error: ${response.status}`, {
+                level: "error",
+                extra: {
+                    service: "RadarService",
+                    operation: "getRadarAutocomplete",
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorText,
+                }
+            });
+            
             return { addresses: [] };
         }
 
@@ -263,6 +367,15 @@ export async function getRadarAutocomplete(query: string): Promise<AutocompleteR
         return { addresses: data.addresses || [] };
     } catch (error: unknown) {
         console.error("[RadarService] Autocomplete fetch error:", error);
+        
+        // Capture error in Sentry
+        Sentry.captureException(error, {
+            extra: {
+                service: "RadarService",
+                operation: "getRadarAutocomplete",
+            }
+        });
+        
         return { addresses: [] };
     }
 }

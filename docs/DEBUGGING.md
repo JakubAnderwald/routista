@@ -73,6 +73,62 @@ The `radarService.ts` file returns a mock response if no Radar API key is config
 - **Route not found:** Points may be too far apart or in non-navigable areas. Try a different location or transportation mode.
 - **Chunk failures:** If one chunk fails, the entire route fails. Check console for specific error messages.
 
+## Caching (Upstash Redis)
+
+### Cache Logs
+Look for these log messages in Vercel logs or local console:
+
+| Log Message | Meaning |
+|-------------|---------|
+| `[RadarService] Cache HIT for key: ...` | Route served from cache (no API call) |
+| `[RadarService] Cache MISS for key: ...` | Route not cached, calling Radar API |
+| `[RadarService] Cached result with key: ...` | Successfully stored route in cache |
+| `[RadarService] Redis not configured...` | No Redis env vars, caching disabled |
+
+### Cache Key Format
+```
+route:{mode}:{hash}
+```
+- `mode`: `foot-walking`, `cycling-regular`, or `driving-car`
+- `hash`: djb2 hash of coordinates (5 decimal precision)
+
+### Debugging Cache Issues
+1. **Cache not working locally:** Pull env vars with `npx vercel env pull .env.local`
+2. **Same route not caching:** Coordinates must match exactly (5 decimal places)
+3. **Check Redis directly:** Use Upstash console to inspect keys
+
+## Rate Limiting
+
+### Rate Limit Logs
+| Log Message | Meaning |
+|-------------|---------|
+| `[RateLimit] ALLOWED {ip}: {count}/{limit}` | Request allowed |
+| `[RateLimit] BLOCKED {ip}: {count}/{limit}` | Request blocked (429 returned) |
+| `[RateLimit] Redis not configured...` | No Redis, rate limiting disabled |
+
+### Testing Rate Limits
+Make 11 requests in 1 minute from the same IP. The 11th should return:
+```json
+{
+  "error": "Too many requests",
+  "message": "Rate limit exceeded. Please try again later.",
+  "retryAfter": 1234567890
+}
+```
+
+## Sentry Error Tracking
+
+### Verifying Sentry Works
+1. Check Sentry dashboard for "Session Started" events after page load
+2. Trigger an error (e.g., generate route with bad params)
+3. Check Sentry Issues for the error with stack trace
+
+### Rate Limit Blocks in Sentry
+Blocked requests appear as warnings with level "warning" and message "Rate limit exceeded". Check `extra` data for IP and path.
+
+### Disabling Sentry Locally
+Remove `NEXT_PUBLIC_SENTRY_DSN` from `.env.local` — Sentry SDK no-ops gracefully.
+
 ## Visualization
 
 ### Debugging Shape Alignment

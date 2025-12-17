@@ -60,6 +60,41 @@ This prevents "cheating" where a route could just be a single point (low forward
 ## State Management
 State is primarily managed in the parent page (`src/app/create/page.tsx` or similar) and passed down via props. There is no global state management library (Redux/Zustand) as the application flow is linear and simple.
 
+## Infrastructure & Scalability
+
+### Route Caching (Upstash Redis)
+- Routes are cached by hashing coordinates + mode into a cache key
+- Cache TTL: 24 hours
+- Reduces Radar API calls for identical requests
+- Graceful fallback: App works without Redis configured
+
+**Files:** `src/lib/radarService.ts`
+
+### Rate Limiting
+- IP-based rate limiting: 10 requests per minute per IP
+- Implemented in middleware using sliding window algorithm
+- Returns 429 with `Retry-After` header when exceeded
+- Blocked requests logged to Sentry
+
+**Files:** `middleware.ts`, `src/lib/rateLimit.ts`
+
+### Error Tracking (Sentry)
+- Client, server, and edge runtime error capture
+- Global error boundary for React errors
+- API route errors captured with context
+- Rate limit blocks logged as warnings
+
+**Files:** `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/app/global-error.tsx`
+
+### Environment Variables
+| Variable | Purpose |
+|----------|---------|
+| `KV_REST_API_URL` / `UPSTASH_REDIS_REST_URL` | Redis endpoint for caching |
+| `KV_REST_API_TOKEN` / `UPSTASH_REDIS_REST_TOKEN` | Redis auth token |
+| `NEXT_PUBLIC_SENTRY_DSN` | Sentry error tracking |
+| `SENTRY_AUTH_TOKEN` | Source map uploads |
+| `SENTRY_ORG` / `SENTRY_PROJECT` | Sentry project identifiers |
+
 ## Automated Browser Testing
 
 Routista includes infrastructure to support automated end-to-end testing with browser automation tools (Puppeteer, Playwright, Antigravity). Since traditional image upload requires OS file picker dialogs that cannot be automated, the application provides:

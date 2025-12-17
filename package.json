@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
+    "@sentry/nextjs": "^10.31.0",
+    "@upstash/redis": "^1.35.8",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "class-variance-authority": "^0.7.1",

@@ -195,7 +195,10 @@
         "note": "Musiknote",
         "anchor": "Anker",
         "dino": "Dino",
-        "paw": "Pfote"
+        "paw": "Pfote",
+        "christmasTree": "Weihnachtsbaum",
+        "snowflake": "Schneeflocke",
+        "giftBox": "Geschenkbox"
     },
     "ThemeToggle": {
         "light": "Hell",

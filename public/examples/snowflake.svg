@@ -1,0 +1,16 @@
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="white"/>
+  <g stroke="black" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Main 6-pointed star shape (continuous path) -->
+    <path d="M 256 60 L 256 452"/>
+    <path d="M 86 158 L 426 354"/>
+    <path d="M 86 354 L 426 158"/>
+    <!-- Small V branches on each arm -->
+    <path d="M 256 120 L 220 150 M 256 120 L 292 150"/>
+    <path d="M 256 392 L 220 362 M 256 392 L 292 362"/>
+    <path d="M 130 190 L 150 230 M 130 190 L 100 220"/>
+    <path d="M 382 322 L 362 282 M 382 322 L 412 292"/>
+    <path d="M 130 322 L 100 292 M 130 322 L 150 282"/>
+    <path d="M 382 190 L 412 220 M 382 190 L 362 230"/>
+  </g>
+</svg>

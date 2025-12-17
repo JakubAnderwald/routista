@@ -1,0 +1,16 @@
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="white"/>
+  <g stroke="black" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Lid -->
+    <rect x="100" y="160" width="312" height="60"/>
+    <!-- Box body -->
+    <rect x="120" y="220" width="272" height="200"/>
+    <!-- Ribbon vertical -->
+    <line x1="256" y1="160" x2="256" y2="420"/>
+    <!-- Bow loops -->
+    <ellipse cx="200" cy="140" rx="45" ry="35"/>
+    <ellipse cx="312" cy="140" rx="45" ry="35"/>
+    <!-- Bow center -->
+    <circle cx="256" cy="160" r="25"/>
+  </g>
+</svg>

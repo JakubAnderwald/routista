@@ -195,7 +195,10 @@
         "note": "Nutka",
         "anchor": "Kotwica",
         "dino": "Dinozaur",
-        "paw": "Łapa"
+        "paw": "Łapa",
+        "christmasTree": "Choinka",
+        "snowflake": "Płatek śniegu",
+        "giftBox": "Pudełko na prezent"
     },
     "ThemeToggle": {
         "light": "Jasny",

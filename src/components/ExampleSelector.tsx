@@ -14,6 +14,9 @@ const EXAMPLES = [
     { id: 'anchor', src: '/examples/anchor.png', labelKey: 'anchor' },
     { id: 'dino', src: '/examples/dino.png', labelKey: 'dino' },
     { id: 'paw', src: '/examples/paw.png', labelKey: 'paw' },
+    { id: 'christmas-tree', src: '/examples/christmas-tree.png', labelKey: 'christmasTree' },
+    { id: 'snowflake', src: '/examples/snowflake.png', labelKey: 'snowflake' },
+    { id: 'gift-box', src: '/examples/gift-box.png', labelKey: 'giftBox' },
 ];
 
 export function ExampleSelector({ onSelect }: ExampleSelectorProps) {

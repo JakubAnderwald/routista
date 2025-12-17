@@ -8,7 +8,7 @@ The application includes comprehensive logging to track the shape-to-route pipel
 
 | Prefix | Source File | What It Shows |
 |--------|-------------|---------------|
-| `[extractShapeFromImage]` | `imageProcessing.ts` | Image processing, boundary tracing, pixel-level simplification |
+| `[extractShapeFromImage]` | `imageProcessing.ts` | Image processing, boundary tracing, uniform point sampling |
 | `[geoUtils]` | `geoUtils.ts` | Geo coordinate simplification (Douglas-Peucker) |
 | `[RadarService]` | `radarService.ts` | API calls, chunking, route stitching |
 | `[CreateClient]` | `CreateClient.tsx` | Overall flow, input/output stats |
@@ -19,18 +19,15 @@ The application includes comprehensive logging to track the shape-to-route pipel
 [extractShapeFromImage] Found component 1 with 2847 boundary points at 45,120
 [extractShapeFromImage] Found 1 total component(s)
 [extractShapeFromImage] Combined path has 2847 points
-[extractShapeFromImage] Simplification: 2847 → 89 points (epsilon: 5px)
-[extractShapeFromImage] Shape bounds: x=[45, 755], y=[23, 677]
-[extractShapeFromImage] Shape type: closed loop (start-end distance: 0.3%)
-[extractShapeFromImage] Final output: 89 normalized points
+[extractShapeFromImage] Sampled 151 points (requested: 150)
 
 [CreateClient] Starting route generation...
-[CreateClient] Input: 89 shape points, center: [51.5050, -0.0900], radius: 2000m, mode: cycling-regular
-[CreateClient] Scaled to 89 geo points
+[CreateClient] Input: 151 shape points, center: [51.5050, -0.0900], radius: 2000m, mode: cycling-regular
+[CreateClient] Scaled to 151 geo points
 
-[geoUtils] simplifyPoints: 89 → 45 points (closed: true, tolerance: 0.0001 → 0.000005)
+[geoUtils] simplifyPoints: 151 → 118 points (closed: true, tolerance: 0.0001 → 0.000005)
 
-[RadarService] Simplification: 89 → 45 points (tolerance: 0.0001, mode: cycling-regular)
+[RadarService] Simplification: 151 → 118 points (tolerance: 0.0001, mode: cycling-regular)
 [RadarService] Routing 45 waypoints in 5 chunk(s)
 [RadarService] Processing chunk 1/5 with 11 points
 [RadarService] Processing chunk 2/5 with 11 points
@@ -45,7 +42,7 @@ The application includes comprehensive logging to track the shape-to-route pipel
 If accuracy is low (< 80%), check the logs for:
 
 1. **Over-simplification**: Look at point counts through the pipeline
-   - `extractShapeFromImage`: Should output 30-150 points for typical shapes
+   - `extractShapeFromImage`: Should output ~151 points (150 + 1 to close loop)
    - `geoUtils simplifyPoints`: Should preserve at least 50% of input points
    - If points drop to < 10, the shape is being over-simplified
 
@@ -89,15 +86,16 @@ The core logic in `src/lib/geoUtils.ts` is pure and can be tested without the br
 - Run `npm test` to execute the Vitest suite.
 - Add new test cases in `tests/` if you encounter edge cases.
 
-## Simplification Tolerances
+## Point Sampling and Simplification
 
-The Douglas-Peucker algorithm runs twice:
+The pipeline uses uniform sampling followed by Douglas-Peucker simplification:
 
-1. **Image Processing** (`imageProcessing.ts`): epsilon = 5 pixels
-   - Removes noise from boundary tracing
-   - Typical reduction: 1000+ points → 50-150 points
+1. **Image Processing** (`imageProcessing.ts`): Uniform sampling with `numPoints` parameter
+   - Samples evenly-spaced points along the traced boundary
+   - Default: 150 points (configurable)
+   - Ensures consistent point count regardless of boundary complexity
 
-2. **Geo Coordinates** (`radarService.ts` via `geoUtils.ts`):
+2. **Geo Coordinates** (`radarService.ts` via `geoUtils.ts`): Douglas-Peucker algorithm
    - Mode-specific tolerances (in degrees):
      - `driving-car`: 0.0004° (~30-45m)
      - `cycling-regular`: 0.0001° (~7-11m)

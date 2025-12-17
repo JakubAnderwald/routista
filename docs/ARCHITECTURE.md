@@ -40,7 +40,7 @@ Routista is a client-side heavy Next.js application that leverages external APIs
 ### Libraries (`src/lib`)
 *   **`geoUtils.ts`**: Pure functions for geographic calculations (distance, scaling, accuracy).
 *   **`routeGenerator.ts`**: Handles interaction with the ORS API and response processing.
-*   **`imageProcessing.ts`**: Canvas manipulation, edge detection, and Douglas-Peucker simplification logic.
+*   **`imageProcessing.ts`**: Canvas manipulation, edge detection, and uniform point sampling for consistent shape extraction.
 
 ## Key Algorithms
 

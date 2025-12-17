@@ -195,7 +195,10 @@
         "note": "Musiknote",
         "anchor": "Anker",
         "dino": "Dino",
-        "paw": "Pote"
+        "paw": "Pote",
+        "christmasTree": "Juletræ",
+        "snowflake": "Snefnug",
+        "giftBox": "Gaveæske"
     },
     "ThemeToggle": {
         "light": "Lys",

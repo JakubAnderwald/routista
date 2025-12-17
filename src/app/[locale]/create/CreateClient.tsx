@@ -57,7 +57,8 @@ export default function CreateClient() {
     const handleImageSelect = async (file: File) => {
         setImage(file);
         try {
-            const points = await extractShapeFromImage(file);
+            // Use 150 points for consistency with accuracy tests
+            const points = await extractShapeFromImage(file, 150);
             setShapePoints(points);
         } catch (e) {
             console.error("Failed to extract shape", e);
@@ -146,7 +147,6 @@ export default function CreateClient() {
             const length = calculateRouteLength(data);
             const accuracy = calculateRouteAccuracy(geoPoints, data, radius);
             setStats({ length, accuracy });
-            
             console.log(`[CreateClient] Route complete: ${(length / 1000).toFixed(2)}km, ${accuracy.toFixed(0)}% accuracy`);
 
             setStep("result");
@@ -364,6 +364,9 @@ export default function CreateClient() {
                 <button id="test-load-heart" data-testid="test-load-heart" onClick={() => loadTestImage("heart-v2.png")}>Load Heart</button>
                 <button id="test-load-circle" data-testid="test-load-circle" onClick={() => loadTestImage("circle.png")}>Load Circle</button>
                 <button id="test-load-abc" data-testid="test-load-abc" onClick={() => loadTestImage("test-images/abc.png")}>Load ABC</button>
+                <button id="test-load-christmas-tree" data-testid="test-load-christmas-tree" onClick={() => loadTestImage("examples/christmas-tree.png")}>Load Christmas Tree</button>
+                <button id="test-load-snowflake" data-testid="test-load-snowflake" onClick={() => loadTestImage("examples/snowflake.png")}>Load Snowflake</button>
+                <button id="test-load-gift-box" data-testid="test-load-gift-box" onClick={() => loadTestImage("examples/gift-box.png")}>Load Gift Box</button>
 
                 {/* Status indicators for test automation */}
                 <span data-testid="current-step" data-value={step}>{step}</span>

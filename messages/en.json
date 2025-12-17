@@ -195,7 +195,10 @@
         "note": "Music Note",
         "anchor": "Anchor",
         "dino": "Dino",
-        "paw": "Paw"
+        "paw": "Paw",
+        "christmasTree": "Christmas Tree",
+        "snowflake": "Snowflake",
+        "giftBox": "Gift Box"
     },
     "ThemeToggle": {
         "light": "Light",

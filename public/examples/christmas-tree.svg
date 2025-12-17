@@ -1,0 +1,9 @@
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="white"/>
+  <g stroke="black" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Single triangle tree shape -->
+    <path d="M 256 60 L 100 380 L 412 380 Z"/>
+    <!-- Trunk -->
+    <rect x="210" y="380" width="92" height="80"/>
+  </g>
+</svg>

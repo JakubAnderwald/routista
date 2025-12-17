@@ -104,6 +104,9 @@ Use these buttons to programmatically load test images:
 | `test-load-star` | `test-load-star` | Load star.png | Star shape |
 | `test-load-heart` | `test-load-heart` | Load heart-v2.png | Heart shape |
 | `test-load-circle` | `test-load-circle` | Load circle.png | Circle shape |
+| `test-load-christmas-tree` | `test-load-christmas-tree` | Load christmas-tree.png | Christmas tree shape |
+| `test-load-snowflake` | `test-load-snowflake` | Load snowflake.png | Snowflake shape |
+| `test-load-gift-box` | `test-load-gift-box` | Load gift-box.png | Gift box shape |
 
 **Usage Example:**
 ```javascript
@@ -111,6 +114,11 @@ Use these buttons to programmatically load test images:
 await page.click('[data-testid="test-load-star"]');
 // or using ID
 await page.click('#test-load-star');
+
+// Load Christmas-themed examples
+await page.click('[data-testid="test-load-christmas-tree"]');
+await page.click('[data-testid="test-load-snowflake"]');
+await page.click('[data-testid="test-load-gift-box"]');
 ```
 
 ### Status Indicators
@@ -294,26 +302,66 @@ await page.click('[data-testid="result-download-button"]');
 
 ## Test Image Files
 
-Test images are available in two locations:
+All test images are located in the `public/` folder to ensure browser and headless tests use identical sources:
 
 ### Public Folder (`public/`)
-These images are used by the test controls:
-- `star.png`
-- `heart-v2.png`
-- `circle.png`
+Root-level images:
+- `star.png` - Star shape
+- `heart-v2.png` - Heart shape
+- `circle.png` - Circle shape
 
-### Test Images Folder (`docs/test images/`)
-Additional test images for unit testing:
-- `circle.png`
-- `heart-v2.png`
-- `star.png`
-- `lightning.png`
-- `note.png`
-- `anchor.png`
-- `dino.png`
-- `paw.png`
+### Examples Folder (`public/examples/`)
+Example images for user selection and testing:
+- `lightning.png` - Lightning bolt shape
+- `note.png` - Music note shape
+- `anchor.png` - Anchor shape
+- `dino.png` - Dinosaur shape
+- `paw.png` - Paw print shape
+- `christmas-tree.png` - Christmas tree shape
+- `snowflake.png` - Snowflake shape
+- `gift-box.png` - Gift box shape
 
-The public folder images are used for browser automation, while the test images folder is used for Node.js-based unit tests.
+Both browser automation and headless tests (`tests/routeAccuracy.test.ts`) use these same images to ensure consistent results.
+
+## Browser-Headless Test Alignment
+
+The headless route accuracy tests (`tests/routeAccuracy.test.ts`) are designed to exactly mirror the browser flow. This ensures that test results match what users experience in the browser.
+
+### Aligned Parameters
+
+| Parameter | Browser Default | Headless Test | Source |
+|-----------|----------------|---------------|--------|
+| **Center** | `[51.505, -0.09]` | `[51.505, -0.09]` | `CreateClient.tsx` line 48 |
+| **Radius** | `1000m` | `1000m` | `CreateClient.tsx` line 49 |
+| **Mode** | `foot-walking` | `foot-walking` | Default transport mode |
+| **numPoints** | `150` | `150` | `extractShapeFromImage()` call |
+
+### Aligned Flow
+
+Both browser and headless tests follow the same steps:
+
+```
+1. Load Image        → public/ folder (same source)
+2. Extract Shape     → 150 points (extractShapeFromImage / extractShapeFromImageNode)
+3. Scale to Geo      → scalePointsToGeo(points, center, radius)
+4. Generate Route    → getRadarRoute() (browser uses /api/radar/directions proxy)
+5. Calculate Accuracy → calculateRouteAccuracy(geoPoints, routeData, radius)
+```
+
+### Verifying Alignment
+
+If browser and headless tests produce different results for the same image:
+
+1. **Check image source**: Ensure the exact same PNG file is used
+2. **Check numPoints**: Both should use 150 points
+3. **Check center/radius**: Browser may have different values if user changed map
+4. **Check mode**: Browser may have different transport mode selected
+
+Use browser DevTools console to inspect current parameters:
+```javascript
+// Check shape points count
+console.log('Shape points:', document.querySelector('[data-testid="has-shape-points"]')?.getAttribute('data-value'));
+```
 
 ## Best Practices
 

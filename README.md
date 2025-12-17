@@ -38,6 +38,8 @@ Built with modern web technologies:
 -   **UI Library**: [React 19](https://react.dev/)
 -   **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
 -   **Maps**: [Leaflet](https://leafletjs.com/) & [React-Leaflet](https://react-leaflet.js.org/)
+-   **Caching**: [Upstash Redis](https://upstash.com/) (optional)
+-   **Error Tracking**: [Sentry](https://sentry.io/) (optional)
 -   **Testing**: [Vitest](https://vitest.dev/) & [Puppeteer](https://pptr.dev/) (E2E)
 -   **Deployment**: [Vercel](https://vercel.com/)
 -   **Internationalization**: [next-intl](https://next-intl-docs.vercel.app/)

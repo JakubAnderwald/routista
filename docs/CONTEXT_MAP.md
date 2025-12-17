@@ -14,6 +14,9 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Image Upload** | `src/components/ImageUpload.tsx` | Handles file drop and preview. **See Testing Note below.** |
 | **Area Selection** | `src/components/AreaSelector.tsx` | Map interface for choosing center point and radius. |
 | **GPX Export** | `src/lib/gpxGenerator.ts` | Converts Route data to GPX XML format. |
+| **Route Caching** | `src/lib/radarService.ts` | Caches routes in Upstash Redis (24h TTL). |
+| **Rate Limiting** | `middleware.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis. |
+| **Error Tracking** | `sentry.*.config.ts`, `src/app/global-error.tsx` | Sentry SDK for client/server/edge error capture. |
 | **Testing Hooks** | `src/app/[locale]/create/CreateClient.tsx` | Contains hidden `data-testid` controls and `window.__routistaTestHelpers`. |
 | **Translations** | `messages/[locale].json` | i18n strings for all pages. Supported locales: `en` (English), `de` (German), `pl` (Polish), `da` (Danish). |
 | **Page Structure** | `src/app/[locale]/[page]/page.tsx` | All pages support dynamic locale routing via Next.js App Router with next-intl. |
@@ -24,10 +27,21 @@ This file maps concepts and features to their source of truth in the codebase. U
 
 ### Core Logic (`src/lib/`)
 *   `routeGenerator.ts`: **CRITICAL**. The "brain" that finds the route (client-side wrapper).
-*   `radarService.ts`: **CRITICAL**. Server-side service that proxies Radar API calls.
+*   `radarService.ts`: **CRITICAL**. Server-side service that proxies Radar API calls. Includes route caching.
+*   `rateLimit.ts`: Rate limiting helper using Upstash Redis.
 *   `geoUtils.ts`: **CRITICAL**. Math heavy. Handles coordinate geometry.
 *   `imageProcessing.ts`: **CRITICAL**. Computer vision lite.
 *   `gpxGenerator.ts`: Utility for file export.
+
+### Infrastructure (root)
+*   `middleware.ts`: Rate limiting for `/api/radar/*` routes, i18n routing.
+*   `sentry.client.config.ts`: Client-side Sentry initialization.
+*   `sentry.server.config.ts`: Server-side Sentry initialization.
+*   `sentry.edge.config.ts`: Edge runtime Sentry initialization.
+*   `next.config.ts`: Next.js config wrapped with Sentry.
+
+### Documentation (root)
+*   `README.md`: **CHECK ON EVERY CHANGE** - Update if features/setup/usage affected.
 
 ### Components (`src/components/`)
 *   `CreateClient.tsx`: **CRITICAL**. The main page logic. Has UI variant conditional rendering.

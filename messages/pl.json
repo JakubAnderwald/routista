@@ -163,9 +163,10 @@
     "ImageUpload": {
         "title": "Wgraj swój kształt",
         "description": "Przeciągnij i upuść tutaj obraz lub kliknij, aby wybrać plik.",
-        "instruction": "Dla najlepszych wyników użyj obrazów o wysokim kontraście, rysunków liniowych lub prostych kształtów.",
+        "instruction": "Najlepiej działa z ciemnymi kształtami na jasnym tle (np. czarne sylwetki, rysunki liniowe, logo).",
         "button": "Wybierz obraz",
-        "selected": "Obraz wybrany"
+        "selected": "Obraz wybrany",
+        "warning": "Wykryto wiele małych kształtów. Może to wskazywać na cienie lub szum zamiast zamierzonego kształtu. Użyj przycisku 'Edytuj kształt' lub spróbuj z wyraźniejszym obrazem."
     },
     "ShapeEditor": {
         "title": "Rysuj kształt",

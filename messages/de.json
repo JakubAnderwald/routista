@@ -163,9 +163,10 @@
     "ImageUpload": {
         "title": "Lade deine Form hoch",
         "description": "Ziehen Sie ein Bild hierher oder klicken Sie, um eine Datei auszuwählen.",
-        "instruction": "Für beste Ergebnisse verwenden Sie kontrastreiche Bilder, Strichzeichnungen oder einfache Formen.",
+        "instruction": "Funktioniert am besten mit dunklen Formen auf hellem Hintergrund (z.B. schwarze Silhouetten, Strichzeichnungen, Logos).",
         "button": "Bild auswählen",
-        "selected": "Bild ausgewählt"
+        "selected": "Bild ausgewählt",
+        "warning": "Mehrere kleine Formen erkannt. Dies kann auf Schatten oder Rauschen hinweisen. Verwenden Sie die Schaltfläche 'Form bearbeiten' oder versuchen Sie ein klareres Bild."
     },
     "ShapeEditor": {
         "title": "Form zeichnen",

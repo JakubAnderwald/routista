@@ -53,13 +53,18 @@ export default function CreateClient() {
     const [shapePoints, setShapePoints] = useState<[number, number][] | null>(null);
     const [stats, setStats] = useState<{ length: number; accuracy: number } | null>(null);
     const [isEditing, setIsEditing] = useState(false);
+    const [shapeWarning, setShapeWarning] = useState<boolean>(false);
 
+    const tImageUpload = useTranslations('ImageUpload');
+    
     const handleImageSelect = async (file: File) => {
         setImage(file);
+        setShapeWarning(false);
         try {
             // Use 150 points for consistency with accuracy tests
-            const points = await extractShapeFromImage(file, 150);
-            setShapePoints(points);
+            const result = await extractShapeFromImage(file, 150);
+            setShapePoints(result.points);
+            setShapeWarning(result.isLikelyNoise);
         } catch (e) {
             console.error("Failed to extract shape", e);
             alert(t('upload.error'));
@@ -224,6 +229,14 @@ export default function CreateClient() {
                                         {t('upload.description')}
                                     </p>
                                     <ImageUpload onImageSelect={handleImageSelect} className="max-w-xl mb-8" testId="create-image-upload" />
+
+                                    {shapeWarning && (
+                                        <div className="max-w-xl mb-6 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                                            <p className="text-amber-800 dark:text-amber-200 text-sm">
+                                                ⚠️ {tImageUpload('warning')}
+                                            </p>
+                                        </div>
+                                    )}
 
                                     <div className="mb-10 w-full flex justify-center">
                                         <ExampleSelector onSelect={handleExampleSelect} />

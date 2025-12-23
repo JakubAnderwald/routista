@@ -1,4 +1,10 @@
-export async function extractShapeFromImage(file: File, numPoints: number = 1000): Promise<[number, number][]> {
+export interface ShapeExtractionResult {
+    points: [number, number][];
+    componentCount: number;
+    isLikelyNoise: boolean;
+}
+
+export async function extractShapeFromImage(file: File, numPoints: number = 1000): Promise<ShapeExtractionResult> {
     return new Promise((resolve, reject) => {
         const img = new Image();
         const url = URL.createObjectURL(file);
@@ -231,7 +237,15 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
 
             console.log(`[extractShapeFromImage] Sampled ${result.length} points (requested: ${numPoints})`);
             URL.revokeObjectURL(url);
-            resolve(result);
+            
+            // Detect likely noise: multiple small disconnected components suggest shadows/artifacts
+            const isLikelyNoise = allShapes.length > 3 || (allShapes.length > 1 && allShapes.every(s => s.length < 200));
+            
+            resolve({
+                points: result,
+                componentCount: allShapes.length,
+                isLikelyNoise
+            });
         };
 
         img.onerror = () => {

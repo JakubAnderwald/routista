@@ -150,9 +150,10 @@
     "ImageUpload": {
         "title": "Upload din form",
         "description": "Træk og slip et billede her, eller klik for at vælge en fil.",
-        "instruction": "For de bedste resultater brug billeder med høj kontrast, stregtegninger eller simple former.",
+        "instruction": "Virker bedst med mørke former på lys baggrund (f.eks. sorte silhuetter, stregtegninger, logoer).",
         "button": "Vælg Billede",
-        "selected": "Billede Valgt"
+        "selected": "Billede Valgt",
+        "warning": "Flere små former registreret. Dette kan indikere skygger eller støj i stedet for din tilsigtede form. Brug knappen 'Rediger form' eller prøv et tydeligere billede."
     },
     "ShapeEditor": {
         "title": "Tegn Form",

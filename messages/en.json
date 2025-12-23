@@ -163,9 +163,10 @@
     "ImageUpload": {
         "title": "Upload your shape",
         "description": "Drag and drop an image here, or click to select a file.",
-        "instruction": "For best results use high contrast images, line drawings or simple shapes.",
+        "instruction": "Works best with dark shapes on light backgrounds (e.g., black silhouettes, line art, logos).",
         "button": "Select Image",
-        "selected": "Image Selected"
+        "selected": "Image Selected",
+        "warning": "Multiple small shapes detected. This may indicate shadows or noise rather than your intended shape. Consider using the Edit Shape button to adjust, or try a clearer image."
     },
     "ShapeEditor": {
         "title": "Draw Shape",

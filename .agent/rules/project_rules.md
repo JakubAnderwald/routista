@@ -73,6 +73,29 @@ After completing any coding task:
 - **Deployment**: Vercel
 - **Internationalization**: next-intl
 
+## 📚 Context7 MCP - Library Documentation
+
+**Context7 MCP is configured** to provide up-to-date documentation for libraries used in this project.
+
+**When to use Context7:**
+- Working with **next-intl** (i18n patterns, useTranslations, App Router setup)
+- Working with **Leaflet/react-leaflet** (map components, markers, events)
+- Working with **Next.js 16** (App Router, server components, middleware)
+- Working with **Tailwind CSS 4** (new utility classes, config syntax)
+- Working with **Lucide icons** (icon names, usage patterns)
+
+**How to use:**
+1. Use `mcp_context7_resolve-library-id` to find the library ID
+2. Use `mcp_context7_get-library-docs` with topic to fetch relevant docs
+3. Key library IDs:
+   - next-intl: `/amannn/next-intl`
+   - Leaflet: `/leaflet/leaflet`
+   - Next.js: `/vercel/next.js`
+   - Tailwind: `tailwindcss.com/docs`
+   - Lucide: `/lucide-icons/lucide`
+
+**IMPORTANT**: Use Context7 when unsure about current API patterns to avoid outdated code.
+
 ## 🎨 Coding Style
 
 - Use functional components with hooks. Prefer small, focused components.

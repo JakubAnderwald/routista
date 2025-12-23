@@ -66,3 +66,16 @@ This file maps concepts and features to their source of truth in the codebase. U
 ### Architecture
 *   **Data Flow**: Image -> Points (0-1) -> Scaled Geo Points (Lat/Lng) -> Route (LineString).
 *   **State**: Local state in `CreateClient.tsx` drives the wizard.
+
+### Context7 MCP - Up-to-date Library Docs
+Use Context7 MCP for current documentation on project dependencies:
+
+| Library | Context7 ID | Use Case |
+| :--- | :--- | :--- |
+| next-intl | `/amannn/next-intl` | i18n, useTranslations, App Router i18n |
+| Leaflet | `/leaflet/leaflet` | Map rendering, markers, events |
+| Next.js | `/vercel/next.js` | App Router, server components |
+| Tailwind CSS | `tailwindcss.com/docs` | Utility classes, config |
+| Lucide | `/lucide-icons/lucide` | Icon names, React usage |
+
+**Usage**: `mcp_context7_get-library-docs` with `context7CompatibleLibraryID` and `topic`.

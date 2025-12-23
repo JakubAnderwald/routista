@@ -46,6 +46,7 @@ export function ExampleSelector({ onSelect }: ExampleSelectorProps) {
                                     src={example.src}
                                     alt={t(example.labelKey)}
                                     fill
+                                    sizes="(max-width: 640px) 25vw, 64px"
                                     className="object-contain p-1 filter dark:invert"
                                 />
                             </div>

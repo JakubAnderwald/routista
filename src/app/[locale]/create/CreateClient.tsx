@@ -92,7 +92,6 @@ export default function CreateClient() {
             const mimeType = blob.type || "image/png";
             const file = new File([blob], filename, { type: mimeType });
             handleImageSelect(file);
-            handleImageSelect(file);
         } catch (e) {
             console.error("Failed to load image from data URL", e);
         }

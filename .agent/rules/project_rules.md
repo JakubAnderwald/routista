@@ -46,6 +46,20 @@ Before pushing any changes to GitHub, you MUST run these checks locally:
 
 **CRITICAL**: If any check fails, fix issues before pushing. The CI/CD pipeline will fail otherwise.
 
+## 🔧 Git Push - Required Permissions
+
+When pushing to GitHub, **always use `required_permissions: ["all"]`** to avoid SSL certificate errors.
+
+The sandbox environment blocks access to system SSL certs, causing:
+```
+fatal: unable to access '...': error setting certificate verify locations
+```
+
+**Correct usage:**
+```
+run_terminal_cmd with required_permissions: ["all"]
+```
+
 ## 📝 Post-Work Verification
 
 After completing any coding task:

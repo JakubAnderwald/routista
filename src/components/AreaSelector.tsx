@@ -7,35 +7,16 @@ import { useTranslations } from 'next-intl';
 
 import { Search, Footprints, Bike, Car } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TransportMode, MODE_PRESETS, PRESET_TOLERANCE_METERS } from "@/config";
 
-export type TransportMode = "foot-walking" | "cycling-regular" | "driving-car";
-
-// Mode-specific route length presets with radius values
-const MODE_PRESETS: Record<TransportMode, { id: string; radius: number; desc: string }[]> = {
-    "foot-walking": [
-        { id: "short", radius: 600, desc: "~2 km" },
-        { id: "medium", radius: 1500, desc: "~5 km" },
-        { id: "long", radius: 3000, desc: "~10 km" },
-    ],
-    "cycling-regular": [
-        { id: "short", radius: 1500, desc: "~5 km" },
-        { id: "medium", radius: 3000, desc: "~10 km" },
-        { id: "long", radius: 6000, desc: "~20 km" },
-    ],
-    "driving-car": [
-        { id: "short", radius: 3000, desc: "~10 km" },
-        { id: "medium", radius: 6000, desc: "~20 km" },
-        { id: "long", radius: 10000, desc: "~40 km" },
-    ],
-};
+// Re-export TransportMode for backward compatibility
+export type { TransportMode } from "@/config";
 
 const TRANSPORT_MODES = [
     { id: "foot-walking" as TransportMode, icon: Footprints },
     { id: "cycling-regular" as TransportMode, icon: Bike },
     { id: "driving-car" as TransportMode, icon: Car },
 ] as const;
-
-const PRESET_TOLERANCE = 50; // meters tolerance for matching preset
 
 // Dynamic import for Map to avoid SSR issues
 const Map = dynamic(() => import("@/components/Map"), {
@@ -104,7 +85,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
     // Check if current radius matches a preset (within tolerance)
     const getActivePreset = () => {
         for (const preset of currentPresets) {
-            if (Math.abs(radius - preset.radius) <= PRESET_TOLERANCE) {
+            if (Math.abs(radius - preset.radius) <= PRESET_TOLERANCE_METERS) {
                 return preset.id;
             }
         }
@@ -124,7 +105,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
         const newPresets = MODE_PRESETS[newMode];
         
         // Find which preset was active (if any)
-        const activePresetIndex = oldPresets.findIndex(p => Math.abs(radius - p.radius) <= PRESET_TOLERANCE);
+        const activePresetIndex = oldPresets.findIndex(p => Math.abs(radius - p.radius) <= PRESET_TOLERANCE_METERS);
         
         if (activePresetIndex !== -1) {
             // Set radius to equivalent preset in new mode

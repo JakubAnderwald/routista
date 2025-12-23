@@ -1,4 +1,5 @@
 import { FeatureCollection } from "geojson";
+import { GEO } from "@/config";
 
 /**
  * Scales normalized shape points (0-1) to real-world geographic coordinates.
@@ -13,10 +14,9 @@ export function scalePointsToGeo(
     center: [number, number],   // [lat, lng]
     radius: number              // meters
 ): [number, number][] {       // [lat, lng]
-    const earthRadius = 6378137; // meters
     const latRad = (center[0] * Math.PI) / 180;
-    const metersPerLat = (2 * Math.PI * earthRadius) / 360;
-    const metersPerLng = (2 * Math.PI * earthRadius * Math.cos(latRad)) / 360;
+    const metersPerLat = (2 * Math.PI * GEO.earthRadiusMeters) / 360;
+    const metersPerLng = (2 * Math.PI * GEO.earthRadiusMeters * Math.cos(latRad)) / 360;
 
     // Calculate bounding box in degrees
     const latOffset = radius / metersPerLat;
@@ -32,9 +32,8 @@ export function scalePointsToGeo(
 
     return points.map(([x, y]) => {
         // Invert Y because image coordinates (0,0) is top-left, but map (lat) increases upwards
-        // Actually, let's keep it simple. 
         // x (0-1) -> lng (min-max)
-        // y (0-1) -> lat (max-min) because y goes down in image, lat goes down? No lat goes up.
+        // y (0-1) -> lat (max-min) because y goes down in image
         // Image: 0,0 top-left. Map: MaxLat, MinLng is top-left.
 
         const lng = minLng + x * lngRange;
@@ -52,8 +51,8 @@ export function scalePointsToGeo(
  * @returns Distance in meters.
  */
 export function calculateDistance(p1: [number, number], p2: [number, number]): number {
-    const R = 6371e3; // metres
-    const φ1 = p1[0] * Math.PI / 180; // φ, λ in radians
+    const R = GEO.earthRadiusMeanMeters;
+    const φ1 = p1[0] * Math.PI / 180;
     const φ2 = p2[0] * Math.PI / 180;
     const Δφ = (p2[0] - p1[0]) * Math.PI / 180;
     const Δλ = (p2[1] - p1[1]) * Math.PI / 180;
@@ -107,15 +106,17 @@ export function simplifyPoints(points: [number, number][], tolerance: number): [
 
     // Check if this is a closed loop (first and last points are very close)
     const dist = calculateDistance(start, end);
-    const isClosedLoop = dist < 100; // within 100 meters
+    const isClosedLoop = dist < GEO.closedLoopThresholdMeters;
 
     // IMPORTANT FIX (GitHub issue #5): Apply stricter tolerance to ALL shapes
     // Previously only closed loops got the /20 adjustment, causing open shapes
     // (like letters, symbols) to be over-simplified to near-straight lines.
     // 
-    // For closed loops: use tolerance/20 (very strict, ~2-3m effective)
-    // For open shapes: use tolerance/10 (strict but allows some simplification)
-    const adjustedTolerance = isClosedLoop ? tolerance / 20 : tolerance / 10;
+    // For closed loops: use tolerance/closedLoopDivisor (very strict, ~2-3m effective)
+    // For open shapes: use tolerance/openShapeDivisor (strict but allows some simplification)
+    const adjustedTolerance = isClosedLoop 
+        ? tolerance / GEO.simplification.closedLoopDivisor 
+        : tolerance / GEO.simplification.openShapeDivisor;
     
     const result = simplifyPointsRecursive(points, adjustedTolerance);
     
@@ -188,22 +189,8 @@ function perpendicularDistance(p: [number, number], p1: [number, number], p2: [n
 }
 
 function distanceToSegment(p: [number, number], v: [number, number], w: [number, number]): number {
-    // const R = 6371e3; // metres
-    // Convert to Cartesian (approximation for small distances) or use Haversine with projection
-    // Since we are dealing with small distances (meters), we can treat lat/lng as planar locally
-    // But for correctness on globe, it's complex.
-    // Let's use the existing perpendicularDistance logic but adapted for lat/lng degrees to meters?
-    // No, perpendicularDistance above is for 2D plane (x,y).
-    // Let's use cross-track distance?
-    // Or simply: project p onto line segment vw, find closest point q, calculate distance(p, q).
-
-    // Simple approach:
-    // 1. Convert p, v, w to meters (relative to v)
-    // 2. Use 2D point-segment distance
-    // 3. Result is in meters
-
     const latRad = (v[0] * Math.PI) / 180;
-    const metersPerLat = 111320; // Approx
+    const metersPerLat = GEO.metersPerLatDegree;
     const metersPerLng = 40075000 * Math.cos(latRad) / 360;
 
     const x = (p[1] - v[1]) * metersPerLng;
@@ -261,10 +248,6 @@ export function calculateRouteAccuracy(
 ): number {
     if (!geoJson || !geoJson.features || originalPoints.length === 0) return 0;
 
-    // const lats = originalPoints.map(p => p[0]);
-    // const lngs = originalPoints.map(p => p[1]);
-    // console.log(`Original Points Bounds: Lat [${Math.min(...lats)}, ${Math.max(...lats)}], Lng [${Math.min(...lngs)}, ${Math.max(...lngs)}]`);
-
     // Flatten all route points
     const routePoints: [number, number][] = [];
     for (const feature of geoJson.features) {
@@ -301,7 +284,7 @@ export function calculateRouteAccuracy(
         const pStart = routePoints[i];
         const pEnd = routePoints[i + 1];
         const segmentDist = calculateDistance(pStart, pEnd);
-        const numSamples = Math.max(1, Math.floor(segmentDist / 10)); // Sample every 10 meters
+        const numSamples = Math.max(1, Math.floor(segmentDist / GEO.accuracy.sampleDistanceMeters));
 
         for (let j = 0; j <= numSamples; j++) {
             const t = j / numSamples;
@@ -316,25 +299,18 @@ export function calculateRouteAccuracy(
             }
             totalBackwardError += minDist;
             checkedPoints++;
-
-            if (minDist > 100) {
-                // console.log(`High Backward Error: ${minDist.toFixed(2)}m at [${lat}, ${lng}]`);
-                // console.log(`Segment: [${pStart}] -> [${pEnd}], Length: ${segmentDist.toFixed(2)}m`);
-            }
         }
     }
     const avgBackwardError = checkedPoints > 0 ? totalBackwardError / checkedPoints : 0;
 
     // Combine errors. We weight them equally.
     const totalAvgError = (avgForwardError + avgBackwardError) / 2;
-    // console.log(`Avg Forward Error: ${avgForwardError.toFixed(2)}m`);
-    // console.log(`Avg Backward Error: ${avgBackwardError.toFixed(2)}m`);
 
     // Normalize score.
     // We want a score that reflects "perceived" accuracy.
     // A deviation of 10% of the radius is actually quite visible but still "recognizable".
-    // Let's say 50% deviation is where the shape is lost (0%).
-    const maxToleratedError = radius * 0.5;
+    // Let's say maxToleratedErrorFraction deviation is where the shape is lost (0%).
+    const maxToleratedError = radius * GEO.accuracy.maxToleratedErrorFraction;
 
     // Linear falloff
     const score = 100 * (1 - totalAvgError / maxToleratedError);

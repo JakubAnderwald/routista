@@ -10,7 +10,7 @@ import { extractShapeFromImage } from "@/lib/imageProcessing";
 import { scalePointsToGeo, calculateRouteLength, calculateRouteAccuracy } from "@/lib/geoUtils";
 import { generateGPX, downloadGPX } from "@/lib/gpxGenerator";
 import { useTranslations } from 'next-intl';
-import type { TransportMode } from "@/components/AreaSelector";
+import { TransportMode } from "@/config";
 import { useABVariant } from "@/components/ABTestProvider";
 
 // Actually, react-leaflet components can be imported directly, but they must be rendered inside MapContainer.

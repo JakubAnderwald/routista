@@ -1,8 +1,7 @@
 import { Car, Footprints, Bike } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from 'next-intl';
-
-export type TransportMode = "foot-walking" | "cycling-regular" | "driving-car";
+import { TransportMode } from "@/config";
 
 interface ModeSelectorProps {
     selectedMode: TransportMode | null;
@@ -14,19 +13,19 @@ export function ModeSelector({ selectedMode, onSelect }: ModeSelectorProps) {
 
     const modes = [
         {
-            id: "foot-walking",
+            id: "foot-walking" as TransportMode,
             label: t('walking'),
             icon: Footprints,
             description: t('walkingDesc'),
         },
         {
-            id: "cycling-regular",
+            id: "cycling-regular" as TransportMode,
             label: t('cycling'),
             icon: Bike,
             description: t('cyclingDesc'),
         },
         {
-            id: "driving-car",
+            id: "driving-car" as TransportMode,
             label: t('driving'),
             icon: Car,
             description: t('drivingDesc'),

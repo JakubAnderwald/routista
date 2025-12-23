@@ -2,6 +2,12 @@ import { simplifyPoints } from "./geoUtils";
 import { FeatureCollection, Feature } from "geojson";
 import { Redis } from "@upstash/redis";
 import * as Sentry from "@sentry/nextjs";
+import { 
+    SIMPLIFICATION_TOLERANCES, 
+    MODE_TO_RADAR, 
+    TransportMode 
+} from "@/config";
+import { RADAR_API, CACHE } from "@/config";
 
 /**
  * Create Redis client from environment variables.
@@ -55,11 +61,6 @@ function hashCoordinates(coordinates: [number, number][]): string {
 }
 
 /**
- * Cache TTL in seconds (24 hours)
- */
-const CACHE_TTL_SECONDS = 24 * 60 * 60;
-
-/**
  * Generates a route by calling the Radar API.
  * This function is designed to be used server-side to keep API keys secure.
  * 
@@ -73,18 +74,8 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
         throw new Error("Invalid coordinates");
     }
 
-    // Use mode-specific tolerance for Douglas-Peucker simplification
-    // Lower tolerance = more points preserved = better shape fidelity
-    // Values are in degrees (~0.0001° ≈ 11m at equator, ~7m at 50° latitude)
-    // 
-    // IMPORTANT: Previously tolerances were 5-10x higher causing severe over-simplification
-    // for open shapes (non-closed loops). See GitHub issue #5.
-    const toleranceMap: Record<string, number> = {
-        "driving-car": 0.0004,     // ~30-45m - car needs roads, can't follow every detail
-        "cycling-regular": 0.0001, // ~7-11m - bikes can use more paths, preserve more detail
-        "foot-walking": 0.00005    // ~4-6m - foot is most flexible, preserve fine detail
-    };
-    const tolerance = toleranceMap[mode] || 0.0001;
+    // Use mode-specific tolerance for Douglas-Peucker simplification from config
+    const tolerance = SIMPLIFICATION_TOLERANCES[mode as TransportMode] || SIMPLIFICATION_TOLERANCES["cycling-regular"];
     
     const inputPointCount = coordinates.length;
     const simplifiedCoordinates = simplifyPoints(coordinates, tolerance);
@@ -92,7 +83,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     console.log(`[RadarService] Simplification: ${inputPointCount} → ${simplifiedCoordinates.length} points (tolerance: ${tolerance}, mode: ${mode})`);
 
     // Generate cache key from simplified coordinates and mode
-    const cacheKey = `route:${mode}:${hashCoordinates(simplifiedCoordinates as [number, number][])}`;
+    const cacheKey = `${CACHE.routeKeyPrefix}${mode}:${hashCoordinates(simplifiedCoordinates as [number, number][])}`;
     
     // Get Redis client (may be null if not configured)
     const redis = getRedisClient();
@@ -140,16 +131,11 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
         };
     }
 
-    // Map transportation modes from app format to Radar format
-    const modeMap: Record<string, string> = {
-        "driving-car": "car",
-        "cycling-regular": "bike",
-        "foot-walking": "foot"
-    };
-    const radarMode = modeMap[mode] || "car";
+    // Map transportation mode from app format to Radar format using config
+    const radarMode = MODE_TO_RADAR[mode as TransportMode] || "car";
 
     // Batching logic - Radar supports up to 25 coordinates per request
-    const chunkSize = 10;
+    const chunkSize = RADAR_API.chunkSize;
     const chunks = [];
     for (let i = 0; i < simplifiedCoordinates.length; i += chunkSize) {
         // Ensure overlap so segments connect
@@ -163,7 +149,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     
     console.log(`[RadarService] Routing ${simplifiedCoordinates.length} waypoints in ${chunks.length} chunk(s)`);
 
-    const features: Feature[] = []; // Explicitly type features as Feature[]
+    const features: Feature[] = [];
     let totalDistance = 0;
     let totalDuration = 0;
 
@@ -191,8 +177,6 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`[RadarService] Radar API Error: ${response.status} ${response.statusText} - ${errorText}`);
-                // Continue to next chunk or handle as a full failure
-                // For now, we'll throw, but a more robust solution might try to recover or skip
                 throw new Error(`Radar API Error: ${response.status} ${response.statusText} - ${errorText}`);
             }
 
@@ -220,7 +204,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
             }
 
             // Add a small delay to avoid rate limits
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, RADAR_API.delayBetweenChunksMs));
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
             console.error(`[RadarService] Fetch error for chunk: ${e.message || e}`);
@@ -236,7 +220,6 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
                 }
             });
             
-            // Depending on desired behavior, you might want to re-throw or push a "failed chunk" feature
             throw e; // Re-throw to indicate a failure in route generation
         }
     }
@@ -246,7 +229,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
 
     for (let i = 0; i < features.length; i++) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const coords = (features[i].geometry as any).coordinates as number[][]; // Cast to any then number[][]
+        const coords = (features[i].geometry as any).coordinates as number[][];
         // If not the first chunk, skip the first point as it overlaps with the last point of previous chunk
         if (i > 0) {
             mergedCoordinates.push(...coords.slice(1));
@@ -265,8 +248,8 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
                     type: "Feature",
                     properties: {
                         summary: {
-                            distance: 0, // Cannot calculate without route
-                            duration: 0  // Cannot calculate without route
+                            distance: 0,
+                            duration: 0
                         }
                     },
                     geometry: {
@@ -302,8 +285,8 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     // Cache the result for future requests (only if Redis is configured)
     if (redis) {
         try {
-            await redis.set(cacheKey, result, { ex: CACHE_TTL_SECONDS });
-            console.log(`[RadarService] Cached result with key: ${cacheKey} (TTL: ${CACHE_TTL_SECONDS}s)`);
+            await redis.set(cacheKey, result, { ex: CACHE.ttlSeconds });
+            console.log(`[RadarService] Cached result with key: ${cacheKey} (TTL: ${CACHE.ttlSeconds}s)`);
         } catch (cacheError) {
             // Redis error - continue without caching
             console.log(`[RadarService] Failed to cache result: ${cacheError instanceof Error ? cacheError.message : 'unknown error'}`);

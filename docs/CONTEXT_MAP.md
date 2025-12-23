@@ -22,8 +22,16 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Page Structure** | `src/app/[locale]/[page]/page.tsx` | All pages support dynamic locale routing via Next.js App Router with next-intl. |
 | **Page Layouts** | `src/app/[locale]/layout.tsx` | Root layout that sets up i18n providers and metadata. |
 | **UI Variant Config** | `src/config.ts`, `src/components/ABTestProvider.tsx` | Feature flag for UI variant (A or B). See `docs/AB_TEST.md`. |
+| **App Configuration** | `src/config.ts`, `src/config/` | Centralized config: routing tolerances, API settings, geo constants, image processing. |
 
 ## 📂 File Tree & Purpose
+
+### Configuration (`src/config/`)
+*   `routing.ts`: Transport modes, simplification tolerances, route presets.
+*   `image.ts`: Image processing constants (dimensions, thresholds).
+*   `api.ts`: Radar API settings, cache TTL, rate limiting.
+*   `geo.ts`: Geographic constants (earth radius, accuracy settings).
+*   `../config.ts`: Main entry point, re-exports all config modules.
 
 ### Core Logic (`src/lib/`)
 *   `routeGenerator.ts`: **CRITICAL**. The "brain" that finds the route (client-side wrapper).

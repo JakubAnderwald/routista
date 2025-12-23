@@ -1,9 +1,17 @@
 /**
  * Application configuration
  * 
- * This file contains feature flags and configuration options for Routista.
- * Modify these values to change application behavior.
+ * This file serves as the main entry point for all configuration.
+ * It re-exports domain-specific configs from src/config/ folder.
  */
+
+// Re-export all config modules
+export * from './config/routing';
+export * from './config/image';
+export * from './config/api';
+export * from './config/geo';
+
+// App-level configuration
 
 export type UIVariant = 'A' | 'B';
 
@@ -18,13 +26,13 @@ interface AppConfig {
     uiVariant: UIVariant;
 }
 
-export const config: AppConfig = {
+export const APP_CONFIG: AppConfig = {
     uiVariant: 'B',
-};
+} as const;
 
 /**
  * Get the current UI variant setting
  */
 export function getUIVariant(): UIVariant {
-    return config.uiVariant;
+    return APP_CONFIG.uiVariant;
 }

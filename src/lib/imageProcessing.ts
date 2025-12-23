@@ -1,3 +1,5 @@
+import { IMAGE_PROCESSING } from "@/config";
+
 export interface ShapeExtractionResult {
     points: [number, number][];
     componentCount: number;
@@ -30,7 +32,7 @@ function calculateOtsuThreshold(data: Uint8ClampedArray, width: number, height: 
     let sumB = 0;        // Sum of background
     let wB = 0;          // Weight of background
     let maxVariance = 0;
-    let optimalThreshold = 128; // Default fallback
+    let optimalThreshold = IMAGE_PROCESSING.otsu.defaultThreshold;
     
     for (let t = 0; t < 256; t++) {
         wB += histogram[t];
@@ -53,10 +55,11 @@ function calculateOtsuThreshold(data: Uint8ClampedArray, width: number, height: 
         }
     }
     
-    // Fallback to 128 if threshold is extreme (likely uniform image)
-    if (optimalThreshold < 20 || optimalThreshold > 235) {
-        console.log(`[Otsu] Extreme threshold ${optimalThreshold}, falling back to 128`);
-        return 128;
+    // Fallback to default if threshold is extreme (likely uniform image)
+    if (optimalThreshold < IMAGE_PROCESSING.otsu.minThreshold || 
+        optimalThreshold > IMAGE_PROCESSING.otsu.maxThreshold) {
+        console.log(`[Otsu] Extreme threshold ${optimalThreshold}, falling back to ${IMAGE_PROCESSING.otsu.defaultThreshold}`);
+        return IMAGE_PROCESSING.otsu.defaultThreshold;
     }
     
     console.log(`[Otsu] Calculated optimal threshold: ${optimalThreshold}`);
@@ -95,23 +98,23 @@ function shouldInvertDetection(data: Uint8ClampedArray, width: number, height: n
     
     // If dark pixels are the majority (>50%) of opaque pixels, the shape is likely light-on-dark
     // We want the minority to be the foreground shape
-    // But only invert if there's a significant light area (at least 5% of image)
+    // But only invert if there's a significant light area (at least minLightCoverageForInvert of image)
     const lightPixels = opaquePixels - darkPixels;
     const lightCoverage = lightPixels / totalPixels;
-    const shouldInvert = darkRatio > 0.5 && lightCoverage > 0.05;
+    const shouldInvert = darkRatio > 0.5 && lightCoverage > IMAGE_PROCESSING.minLightCoverageForInvert;
     
     console.log(`[Detection] Dark ratio: ${(darkRatio * 100).toFixed(1)}% of opaque, light coverage: ${(lightCoverage * 100).toFixed(1)}%, invert: ${shouldInvert}`);
     return shouldInvert;
 }
 
-export async function extractShapeFromImage(file: File, numPoints: number = 1000): Promise<ShapeExtractionResult> {
+export async function extractShapeFromImage(file: File, numPoints: number = IMAGE_PROCESSING.defaultNumPoints): Promise<ShapeExtractionResult> {
     return new Promise((resolve, reject) => {
         const img = new Image();
         const url = URL.createObjectURL(file);
 
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            const maxDimension = 800;
+            const maxDimension = IMAGE_PROCESSING.maxDimension;
             let scale = 1;
 
             // Preserve aspect ratio when scaling
@@ -264,8 +267,8 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
                             loops++;
                         }
 
-                        // If this shape is significant (>50 points), add to collection
-                        if (points.length > 50) {
+                        // If this shape is significant (>minSignificantPoints points), add to collection
+                        if (points.length > IMAGE_PROCESSING.minSignificantPoints) {
                             allShapes.push(points);
                             console.log(`[extractShapeFromImage] Found component ${allShapes.length} with ${points.length} boundary points at ${x},${y}`);
                         }
@@ -352,13 +355,13 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
             URL.revokeObjectURL(url);
             
             // Detect likely noise: multiple SMALL disconnected components suggest shadows/artifacts
-            // Large components (>500 points) are legitimate shape parts, not noise
-            const smallComponents = allShapes.filter(s => s.length < 500);
-            const hasLargeComponent = allShapes.some(s => s.length >= 500);
+            // Large components (>smallComponentPoints points) are legitimate shape parts, not noise
+            const smallComponents = allShapes.filter(s => s.length < IMAGE_PROCESSING.noise.smallComponentPoints);
+            const hasLargeComponent = allShapes.some(s => s.length >= IMAGE_PROCESSING.noise.smallComponentPoints);
             
             // Noise if: many small components without any large one, OR all components are tiny
-            const isLikelyNoise = (!hasLargeComponent && smallComponents.length > 3) || 
-                                  (allShapes.length > 1 && allShapes.every(s => s.length < 200));
+            const isLikelyNoise = (!hasLargeComponent && smallComponents.length > IMAGE_PROCESSING.noise.maxSmallComponents) || 
+                                  (allShapes.length > 1 && allShapes.every(s => s.length < IMAGE_PROCESSING.noise.tinyComponentPoints));
             
             resolve({
                 points: result,

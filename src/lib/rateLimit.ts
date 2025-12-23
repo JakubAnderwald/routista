@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import { RATE_LIMIT, CACHE } from "@/config";
 
 /**
  * Rate limit configuration
@@ -23,11 +24,11 @@ export interface RateLimitResult {
 }
 
 /**
- * Default rate limit: 10 requests per minute
+ * Default rate limit configuration from config
  */
 export const DEFAULT_RATE_LIMIT: RateLimitConfig = {
-    limit: 10,
-    windowSeconds: 60,
+    limit: RATE_LIMIT.limit,
+    windowSeconds: RATE_LIMIT.windowSeconds,
 };
 
 /**
@@ -62,7 +63,7 @@ export async function checkRateLimit(
     const now = Date.now();
     const windowMs = config.windowSeconds * 1000;
     const windowStart = now - windowMs;
-    const key = `ratelimit:${identifier}`;
+    const key = `${CACHE.rateLimitKeyPrefix}${identifier}`;
 
     const redis = getRedisClient();
     
@@ -101,7 +102,7 @@ export async function checkRateLimit(
         validTimestamps.push(now);
 
         // Store updated timestamps with TTL slightly longer than window
-        await redis.set(key, validTimestamps, { ex: config.windowSeconds + 10 });
+        await redis.set(key, validTimestamps, { ex: config.windowSeconds + RATE_LIMIT.ttlBufferSeconds });
 
         const remaining = config.limit - validTimestamps.length;
         console.log(`[RateLimit] ALLOWED ${identifier}: ${validTimestamps.length}/${config.limit} requests (${remaining} remaining)`);

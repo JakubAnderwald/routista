@@ -2,6 +2,106 @@ export interface ShapeExtractionResult {
     points: [number, number][];
     componentCount: number;
     isLikelyNoise: boolean;
+    threshold: number;
+    isInverted: boolean;
+}
+
+/**
+ * Calculate optimal threshold using Otsu's method.
+ * Finds the threshold that maximizes inter-class variance between foreground and background.
+ */
+function calculateOtsuThreshold(data: Uint8ClampedArray, width: number, height: number): number {
+    const totalPixels = width * height;
+    
+    // Build brightness histogram (256 bins)
+    const histogram = new Array(256).fill(0);
+    for (let i = 0; i < totalPixels; i++) {
+        const idx = i * 4;
+        const brightness = Math.floor((data[idx] + data[idx + 1] + data[idx + 2]) / 3);
+        histogram[brightness]++;
+    }
+    
+    // Calculate total mean
+    let totalSum = 0;
+    for (let i = 0; i < 256; i++) {
+        totalSum += i * histogram[i];
+    }
+    
+    let sumB = 0;        // Sum of background
+    let wB = 0;          // Weight of background
+    let maxVariance = 0;
+    let optimalThreshold = 128; // Default fallback
+    
+    for (let t = 0; t < 256; t++) {
+        wB += histogram[t];
+        if (wB === 0) continue;
+        
+        const wF = totalPixels - wB; // Weight of foreground
+        if (wF === 0) break;
+        
+        sumB += t * histogram[t];
+        
+        const meanB = sumB / wB;
+        const meanF = (totalSum - sumB) / wF;
+        
+        // Inter-class variance
+        const variance = wB * wF * (meanB - meanF) * (meanB - meanF);
+        
+        if (variance > maxVariance) {
+            maxVariance = variance;
+            optimalThreshold = t;
+        }
+    }
+    
+    // Fallback to 128 if threshold is extreme (likely uniform image)
+    if (optimalThreshold < 20 || optimalThreshold > 235) {
+        console.log(`[Otsu] Extreme threshold ${optimalThreshold}, falling back to 128`);
+        return 128;
+    }
+    
+    console.log(`[Otsu] Calculated optimal threshold: ${optimalThreshold}`);
+    return optimalThreshold;
+}
+
+/**
+ * Determine if we should detect dark or light pixels based on image content.
+ * Returns true if we should invert (detect light pixels instead of dark).
+ */
+function shouldInvertDetection(data: Uint8ClampedArray, width: number, height: number, threshold: number): boolean {
+    const totalPixels = width * height;
+    let darkPixels = 0;
+    let opaquePixels = 0;
+    
+    for (let i = 0; i < totalPixels; i++) {
+        const idx = i * 4;
+        const a = data[idx + 3];
+        if (a <= 128) continue; // Skip transparent pixels
+        
+        opaquePixels++;
+        const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+        if (brightness < threshold) {
+            darkPixels++;
+        }
+    }
+    
+    // If no opaque pixels, don't invert
+    if (opaquePixels === 0) {
+        console.log(`[Detection] No opaque pixels, using default (no invert)`);
+        return false;
+    }
+    
+    // Calculate ratio among OPAQUE pixels only
+    const darkRatio = darkPixels / opaquePixels;
+    
+    // If dark pixels are the majority (>50%) of opaque pixels, the shape is likely light-on-dark
+    // We want the minority to be the foreground shape
+    // But only invert if there's a significant light area (at least 5% of image)
+    const lightPixels = opaquePixels - darkPixels;
+    const lightCoverage = lightPixels / totalPixels;
+    const shouldInvert = darkRatio > 0.5 && lightCoverage > 0.05;
+    
+    console.log(`[Detection] Dark ratio: ${(darkRatio * 100).toFixed(1)}% of opaque, light coverage: ${(lightCoverage * 100).toFixed(1)}%, invert: ${shouldInvert}`);
+    return shouldInvert;
 }
 
 export async function extractShapeFromImage(file: File, numPoints: number = 1000): Promise<ShapeExtractionResult> {
@@ -34,7 +134,13 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
             const imageData = ctx.getImageData(0, 0, width, height);
             const data = imageData.data;
 
-            // Identify all dark pixels and mark them in a 2D grid
+            // Calculate adaptive threshold using Otsu's method
+            const threshold = calculateOtsuThreshold(data, width, height);
+            
+            // Determine if we should invert detection (for light shapes on dark backgrounds)
+            const isInverted = shouldInvertDetection(data, width, height, threshold);
+            
+            // Identify foreground pixels and mark them in a 2D grid
             const grid = new Uint8Array(width * height);
             let foundPixels = 0;
 
@@ -47,12 +153,19 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
                     const a = data[i + 3];
                     const brightness = (r + g + b) / 3;
 
-                    if (brightness < 128 && a > 128) {
+                    // Detect dark pixels normally, or light pixels if inverted
+                    const isForeground = isInverted 
+                        ? (brightness >= threshold && a > 128)
+                        : (brightness < threshold && a > 128);
+                    
+                    if (isForeground) {
                         grid[y * width + x] = 1;
                         foundPixels++;
                     }
                 }
             }
+            
+            console.log(`[extractShapeFromImage] Threshold: ${threshold}, Inverted: ${isInverted}, Found: ${foundPixels} pixels`);
 
             if (foundPixels === 0) {
                 reject(new Error("No shape found in image"));
@@ -238,13 +351,21 @@ export async function extractShapeFromImage(file: File, numPoints: number = 1000
             console.log(`[extractShapeFromImage] Sampled ${result.length} points (requested: ${numPoints})`);
             URL.revokeObjectURL(url);
             
-            // Detect likely noise: multiple small disconnected components suggest shadows/artifacts
-            const isLikelyNoise = allShapes.length > 3 || (allShapes.length > 1 && allShapes.every(s => s.length < 200));
+            // Detect likely noise: multiple SMALL disconnected components suggest shadows/artifacts
+            // Large components (>500 points) are legitimate shape parts, not noise
+            const smallComponents = allShapes.filter(s => s.length < 500);
+            const hasLargeComponent = allShapes.some(s => s.length >= 500);
+            
+            // Noise if: many small components without any large one, OR all components are tiny
+            const isLikelyNoise = (!hasLargeComponent && smallComponents.length > 3) || 
+                                  (allShapes.length > 1 && allShapes.every(s => s.length < 200));
             
             resolve({
                 points: result,
                 componentCount: allShapes.length,
-                isLikelyNoise
+                isLikelyNoise,
+                threshold,
+                isInverted
             });
         };
 

@@ -33,5 +33,5 @@ export const IMAGE_PROCESSING = {
     
     /** Minimum light coverage ratio to consider inverting detection */
     minLightCoverageForInvert: 0.05,
-} as const;
+};
 

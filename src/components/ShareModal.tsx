@@ -141,7 +141,8 @@ export function ShareModal({ isOpen, onClose, getMap, stats, mode }: ShareModalP
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            style={{ zIndex: 10000 }}
             onClick={(e) => {
                 if (e.target === e.currentTarget) onClose();
             }}

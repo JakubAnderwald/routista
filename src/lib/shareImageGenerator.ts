@@ -32,7 +32,7 @@ interface PlatformDimensions {
 }
 
 const PLATFORM_DIMENSIONS: Record<SharePlatform, PlatformDimensions> = {
-    instagram: { width: 1080, height: 1920, bannerHeight: 120 },
+    instagram: { width: 1080, height: 1920, bannerHeight: 80 }, // Smaller banners for more map space
     facebook: { width: 1200, height: 630, bannerHeight: 80 },
     twitter: { width: 1200, height: 675, bannerHeight: 80 },
 };
@@ -172,87 +172,136 @@ export async function generateShareImage(options: ShareImageOptions): Promise<Bl
     canvas.height = dims.height;
     const ctx = canvas.getContext('2d')!;
     
-    // Fill background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, dims.width, dims.height);
-    
-    // Calculate map area (between top and bottom banners)
-    const topBannerHeight = dims.bannerHeight;
-    const bottomBannerHeight = dims.bannerHeight;
-    const mapAreaHeight = dims.height - topBannerHeight - bottomBannerHeight;
-    
-    // Draw the map (scaled to fit)
-    const mapAspect = mapCanvas.width / mapCanvas.height;
-    const areaAspect = dims.width / mapAreaHeight;
-    
-    let drawWidth = dims.width;
-    let drawHeight = mapAreaHeight;
-    let drawX = 0;
-    let drawY = topBannerHeight;
-    
-    if (mapAspect > areaAspect) {
-        // Map is wider - fit width, center vertically
-        drawHeight = dims.width / mapAspect;
-        drawY = topBannerHeight + (mapAreaHeight - drawHeight) / 2;
-    } else {
-        // Map is taller - fit height, center horizontally
-        drawWidth = mapAreaHeight * mapAspect;
-        drawX = (dims.width - drawWidth) / 2;
-    }
-    
-    // Fill map area with light gray first
-    ctx.fillStyle = '#f3f4f6';
-    ctx.fillRect(0, topBannerHeight, dims.width, mapAreaHeight);
-    
-    // Draw the map
-    ctx.drawImage(mapCanvas, drawX, drawY, drawWidth, drawHeight);
-    
     // Generate QR code
-    const qrSize = Math.min(dims.bannerHeight - 20, 100);
+    const qrSize = platform === 'instagram' ? 120 : Math.min(dims.bannerHeight - 20, 100);
     const qrDataUrl = await generateQRCode(ROUTISTA_URL, qrSize);
     const qrImage = await loadImage(qrDataUrl);
     
-    // ===== TOP BANNER =====
-    ctx.fillStyle = BRAND_COLOR;
-    ctx.fillRect(0, 0, dims.width, topBannerHeight);
-    
-    // Routista logo/text
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `bold ${Math.round(topBannerHeight * 0.4)}px system-ui, -apple-system, sans-serif`;
-    ctx.textBaseline = 'middle';
-    const logoY = topBannerHeight / 2;
-    ctx.fillText('🏃 ROUTISTA', 20, logoY);
-    
-    // URL text
-    ctx.font = `${Math.round(topBannerHeight * 0.25)}px system-ui, -apple-system, sans-serif`;
-    const urlText = 'routista.eu';
-    const urlMetrics = ctx.measureText(urlText);
-    const urlX = dims.width - qrSize - 30 - urlMetrics.width;
-    ctx.fillText(urlText, urlX, logoY);
-    
-    // QR code in top right
-    const qrX = dims.width - qrSize - 10;
-    const qrY = (topBannerHeight - qrSize) / 2;
-    ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
-    
-    // ===== BOTTOM BANNER =====
-    ctx.fillStyle = '#1f2937'; // gray-800
-    ctx.fillRect(0, dims.height - bottomBannerHeight, dims.width, bottomBannerHeight);
-    
-    // "Generated with Routista" text
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `${Math.round(bottomBannerHeight * 0.28)}px system-ui, -apple-system, sans-serif`;
-    const bottomY1 = dims.height - bottomBannerHeight + bottomBannerHeight * 0.35;
-    ctx.fillText(`"${translations.generatedWith}"`, 20, bottomY1);
-    
-    // Stats line
-    const modeEmoji = getModeEmoji(mode);
-    const lengthStr = formatLength(stats.length);
-    const statsText = `${lengthStr} • ${stats.accuracy.toFixed(0)}% ${translations.accuracy} • ${modeEmoji}`;
-    ctx.font = `${Math.round(bottomBannerHeight * 0.25)}px system-ui, -apple-system, sans-serif`;
-    ctx.fillStyle = '#9ca3af'; // gray-400
-    const bottomY2 = dims.height - bottomBannerHeight + bottomBannerHeight * 0.7;
-    ctx.fillText(statsText, 20, bottomY2);
+    if (platform === 'instagram') {
+        // Instagram: Full-bleed map with overlay branding
+        // Draw map to cover entire canvas (crop to fill)
+        const mapAspect = mapCanvas.width / mapCanvas.height;
+        const canvasAspect = dims.width / dims.height;
+        
+        let srcX = 0, srcY = 0, srcW = mapCanvas.width, srcH = mapCanvas.height;
+        
+        if (mapAspect > canvasAspect) {
+            // Map is wider - crop sides
+            srcW = mapCanvas.height * canvasAspect;
+            srcX = (mapCanvas.width - srcW) / 2;
+        } else {
+            // Map is taller - crop top/bottom
+            srcH = mapCanvas.width / canvasAspect;
+            srcY = (mapCanvas.height - srcH) / 2;
+        }
+        
+        ctx.drawImage(mapCanvas, srcX, srcY, srcW, srcH, 0, 0, dims.width, dims.height);
+        
+        // Top overlay with gradient
+        const topGradient = ctx.createLinearGradient(0, 0, 0, 200);
+        topGradient.addColorStop(0, 'rgba(37, 99, 235, 0.95)'); // blue-600
+        topGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+        ctx.fillStyle = topGradient;
+        ctx.fillRect(0, 0, dims.width, 200);
+        
+        // Routista logo
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 48px system-ui, -apple-system, sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.fillText('🏃 ROUTISTA', 40, 40);
+        
+        // URL
+        ctx.font = '28px system-ui, -apple-system, sans-serif';
+        ctx.fillText('routista.eu', 40, 100);
+        
+        // QR code top right
+        ctx.drawImage(qrImage, dims.width - qrSize - 40, 40, qrSize, qrSize);
+        
+        // Bottom overlay with gradient
+        const bottomGradient = ctx.createLinearGradient(0, dims.height - 300, 0, dims.height);
+        bottomGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        bottomGradient.addColorStop(1, 'rgba(0, 0, 0, 0.85)');
+        ctx.fillStyle = bottomGradient;
+        ctx.fillRect(0, dims.height - 300, dims.width, 300);
+        
+        // Stats and branding at bottom
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+        ctx.textBaseline = 'bottom';
+        const modeEmoji = getModeEmoji(mode);
+        const lengthStr = formatLength(stats.length);
+        ctx.fillText(`${modeEmoji} ${lengthStr}`, 40, dims.height - 100);
+        
+        ctx.font = '28px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.fillText(`${stats.accuracy.toFixed(0)}% ${translations.accuracy}`, 40, dims.height - 55);
+        
+        ctx.font = 'italic 24px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillText(`"${translations.generatedWith}"`, 40, dims.height - 20);
+        
+    } else {
+        // Facebook/Twitter: Banner layout
+        const topBannerHeight = dims.bannerHeight;
+        const bottomBannerHeight = dims.bannerHeight;
+        const mapAreaHeight = dims.height - topBannerHeight - bottomBannerHeight;
+        
+        // Fill background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, dims.width, dims.height);
+        
+        // Draw the map (scaled to fit)
+        const mapAspect = mapCanvas.width / mapCanvas.height;
+        const areaAspect = dims.width / mapAreaHeight;
+        
+        let drawWidth = dims.width;
+        let drawHeight = mapAreaHeight;
+        let drawX = 0;
+        let drawY = topBannerHeight;
+        
+        if (mapAspect > areaAspect) {
+            drawHeight = dims.width / mapAspect;
+            drawY = topBannerHeight + (mapAreaHeight - drawHeight) / 2;
+        } else {
+            drawWidth = mapAreaHeight * mapAspect;
+            drawX = (dims.width - drawWidth) / 2;
+        }
+        
+        ctx.fillStyle = '#f3f4f6';
+        ctx.fillRect(0, topBannerHeight, dims.width, mapAreaHeight);
+        ctx.drawImage(mapCanvas, drawX, drawY, drawWidth, drawHeight);
+        
+        // Top banner
+        ctx.fillStyle = BRAND_COLOR;
+        ctx.fillRect(0, 0, dims.width, topBannerHeight);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${Math.round(topBannerHeight * 0.4)}px system-ui, -apple-system, sans-serif`;
+        ctx.textBaseline = 'middle';
+        const logoY = topBannerHeight / 2;
+        ctx.fillText('🏃 ROUTISTA', 20, logoY);
+        
+        ctx.font = `${Math.round(topBannerHeight * 0.25)}px system-ui, -apple-system, sans-serif`;
+        const urlText = 'routista.eu';
+        const urlMetrics = ctx.measureText(urlText);
+        ctx.fillText(urlText, dims.width - qrSize - 30 - urlMetrics.width, logoY);
+        
+        ctx.drawImage(qrImage, dims.width - qrSize - 10, (topBannerHeight - qrSize) / 2, qrSize, qrSize);
+        
+        // Bottom banner
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(0, dims.height - bottomBannerHeight, dims.width, bottomBannerHeight);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `${Math.round(bottomBannerHeight * 0.28)}px system-ui, -apple-system, sans-serif`;
+        ctx.fillText(`"${translations.generatedWith}"`, 20, dims.height - bottomBannerHeight + bottomBannerHeight * 0.35);
+        
+        const modeEmoji = getModeEmoji(mode);
+        const lengthStr = formatLength(stats.length);
+        ctx.font = `${Math.round(bottomBannerHeight * 0.25)}px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = '#9ca3af';
+        ctx.fillText(`${lengthStr} • ${stats.accuracy.toFixed(0)}% ${translations.accuracy} • ${modeEmoji}`, 20, dims.height - bottomBannerHeight + bottomBannerHeight * 0.7);
+    }
     
     console.log(`[ShareImageGenerator] Image generated successfully`);
     

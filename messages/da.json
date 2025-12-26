@@ -136,6 +136,7 @@
                 "accuracy": "Formnøjagtighed"
             },
             "back": "Tilbage",
+            "share": "Del",
             "download": "Download GPX"
         }
     },
@@ -210,5 +211,30 @@
     "metadata": {
         "title": "Routista - Lav Former om til Ruter",
         "description": "Generer GPS-ruter i den virkelige verden fra enhver form eller billede."
+    },
+    "ShareModal": {
+        "title": "Del din rute",
+        "subtitle": "Vælg et format optimeret til din yndlingsplatform",
+        "platforms": {
+            "instagram": "Instagram Story",
+            "instagramDesc": "Lodret format (9:16)",
+            "facebook": "Facebook",
+            "facebookDesc": "Liggende format (1.91:1)",
+            "twitter": "Twitter",
+            "twitterDesc": "Bredt format (16:9)"
+        },
+        "generatedWith": "Genereret med Routista",
+        "accuracy": "nøjagtighed",
+        "length": "Rutelængde",
+        "share": "Del",
+        "copyImage": "Kopiér billede",
+        "copied": "Kopieret!",
+        "download": "Download",
+        "generating": "Genererer...",
+        "close": "Luk",
+        "error": "Kunne ikke generere billede. Prøv venligst igen.",
+        "clipboardFailed": "Kunne ikke kopiere. Prøv at downloade i stedet.",
+        "pasteHint": "Billede kopieret! Indsæt det når du opretter dit opslag.",
+        "openPlatformHint": "Åbn derefter"
     }
 }

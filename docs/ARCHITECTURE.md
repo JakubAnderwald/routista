@@ -152,7 +152,10 @@ Merge my feature branch to main and push to deploy to production
 Push my changes to the feature branch so I can test on mobile
 ```
 
-**Note:** Preview deployments take ~1-2 minutes to build. The same URL updates with each push.
+**Notes:**
+- Preview deployments take ~1-2 minutes to build
+- Same URL updates with each push
+- Deleting Git branch does NOT delete deployment - must delete manually in Vercel Dashboard → Deployments → ⋮ → Delete
 
 ## Automated Browser Testing
 

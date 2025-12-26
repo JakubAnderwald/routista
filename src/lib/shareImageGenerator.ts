@@ -112,8 +112,10 @@ export function getPlatformShareUrl(platform: SharePlatform): string {
             return `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
         case 'facebook':
             return `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`;
+        case 'instagram':
+            // Instagram doesn't have direct story creation URL, open main page
+            return 'https://www.instagram.com/';
         default:
-            // Instagram doesn't have a web share API
             return '';
     }
 }

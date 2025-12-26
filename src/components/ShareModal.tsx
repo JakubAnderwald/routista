@@ -29,7 +29,7 @@ interface ShareModalProps {
 }
 
 const PLATFORMS: { id: SharePlatform; icon: typeof Instagram; hasWebIntent: boolean }[] = [
-    { id: "instagram", icon: Instagram, hasWebIntent: false },
+    { id: "instagram", icon: Instagram, hasWebIntent: true },
     { id: "facebook", icon: Facebook, hasWebIntent: true },
     { id: "twitter", icon: Twitter, hasWebIntent: true },
 ];

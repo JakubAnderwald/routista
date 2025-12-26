@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { ModeSelector } from "@/components/ModeSelector";
 import { Button } from "@/components/ui/Button";
@@ -12,6 +12,8 @@ import { generateGPX, downloadGPX } from "@/lib/gpxGenerator";
 import { useTranslations } from 'next-intl';
 import { TransportMode } from "@/config";
 import { useABVariant } from "@/components/ABTestProvider";
+import { ShareModal } from "@/components/ShareModal";
+import type { ResultMapRef } from "@/components/ResultMap";
 
 // Actually, react-leaflet components can be imported directly, but they must be rendered inside MapContainer.
 // Since Map is dynamic, we might need to pass a component that renders GeoJSON.
@@ -54,6 +56,8 @@ export default function CreateClient() {
     const [stats, setStats] = useState<{ length: number; accuracy: number } | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [shapeWarning, setShapeWarning] = useState<boolean>(false);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const resultMapRef = useRef<ResultMapRef>(null);
 
     const tImageUpload = useTranslations('ImageUpload');
     
@@ -356,16 +360,31 @@ export default function CreateClient() {
                             )}
 
                             <div className="flex-1 bg-gray-100 dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
-                                {routeData && <ResultMap center={center} zoom={13} routeData={routeData} />}
+                                {routeData && <ResultMap ref={resultMapRef} center={center} zoom={13} routeData={routeData} />}
                             </div>
                             <div className="flex justify-between mt-6">
                                 <Button data-testid="result-back-button" variant="outline" onClick={() => setStep(variant === 'A' ? "mode" : "area")}>{t('result.back')}</Button>
-                                <Button data-testid="result-download-button" onClick={handleDownload}>{t('result.download')}</Button>
+                                <div className="flex gap-3">
+                                    <Button data-testid="result-share-button" variant="outline" onClick={() => setIsShareModalOpen(true)}>{t('result.share')}</Button>
+                                    <Button data-testid="result-download-button" onClick={handleDownload}>{t('result.download')}</Button>
+                                </div>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Share Modal */}
+            {stats && mode && (
+                <ShareModal
+                    isOpen={isShareModalOpen}
+                    onClose={() => setIsShareModalOpen(false)}
+                    getMap={() => resultMapRef.current?.getMap() ?? null}
+                    routeData={routeData}
+                    stats={stats}
+                    mode={mode}
+                />
+            )}
 
             {/* Hidden Test Controls for Automated Browser Testing */}
             {/* These elements are invisible but accessible to browser automation tools */}

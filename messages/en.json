@@ -136,6 +136,7 @@
                 "accuracy": "Shape Accuracy"
             },
             "back": "Back",
+            "share": "Share",
             "download": "Download GPX"
         }
     },
@@ -210,5 +211,33 @@
     "metadata": {
         "title": "Routista - Turn Shapes into Routes",
         "description": "Generate real-world GPS routes from any shape or image."
+    },
+    "ShareModal": {
+        "title": "Share Your Route",
+        "subtitle": "Choose a format optimized for your favorite platform",
+        "platforms": {
+            "instagram": "Instagram Story",
+            "instagramDesc": "Vertical format (9:16)",
+            "facebook": "Facebook",
+            "facebookDesc": "Landscape format (1.91:1)",
+            "twitter": "Twitter",
+            "twitterDesc": "Wide format (16:9)"
+        },
+        "generatedWith": "Generated with Routista",
+        "modes": {
+            "foot-walking": "Walking",
+            "cycling-regular": "Cycling",
+            "driving-car": "Driving"
+        },
+        "share": "Share",
+        "copyImage": "Copy Image",
+        "copied": "Copied!",
+        "download": "Download",
+        "generating": "Generating...",
+        "close": "Close",
+        "error": "Failed to generate image. Please try again.",
+        "clipboardFailed": "Could not copy to clipboard. Try downloading instead.",
+        "pasteHint": "Image copied! Paste it when creating your post.",
+        "openPlatformHint": "Then open"
     }
 }

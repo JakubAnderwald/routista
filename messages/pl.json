@@ -136,6 +136,7 @@
                 "accuracy": "Dokładność kształtu"
             },
             "back": "Wstecz",
+            "share": "Udostępnij",
             "download": "Pobierz GPX"
         }
     },
@@ -210,5 +211,33 @@
     "metadata": {
         "title": "Routista - Zamień kształty w trasy",
         "description": "Generuj prawdziwe trasy GPS z dowolnego kształtu lub obrazu."
+    },
+    "ShareModal": {
+        "title": "Udostępnij trasę",
+        "subtitle": "Wybierz format zoptymalizowany dla Twojej platformy",
+        "platforms": {
+            "instagram": "Instagram Story",
+            "instagramDesc": "Format pionowy (9:16)",
+            "facebook": "Facebook",
+            "facebookDesc": "Format poziomy (1.91:1)",
+            "twitter": "Twitter",
+            "twitterDesc": "Format szeroki (16:9)"
+        },
+        "generatedWith": "Utworzono za pomocą Routista",
+        "modes": {
+            "foot-walking": "Spacer",
+            "cycling-regular": "Rower",
+            "driving-car": "Samochód"
+        },
+        "share": "Udostępnij",
+        "copyImage": "Kopiuj obraz",
+        "copied": "Skopiowano!",
+        "download": "Pobierz",
+        "generating": "Generowanie...",
+        "close": "Zamknij",
+        "error": "Nie udało się wygenerować obrazu. Spróbuj ponownie.",
+        "clipboardFailed": "Nie udało się skopiować. Spróbuj pobrać.",
+        "pasteHint": "Obraz skopiowany! Wklej go podczas tworzenia posta.",
+        "openPlatformHint": "Następnie otwórz"
     }
 }

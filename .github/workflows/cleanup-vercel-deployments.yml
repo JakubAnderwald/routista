@@ -1,0 +1,42 @@
+name: Cleanup Vercel Preview Deployments
+
+on:
+  delete:
+    branches:
+      - '**'
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    if: github.event.ref_type == 'branch'
+    steps:
+      - name: Delete Vercel deployments for deleted branch
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DELETED_BRANCH: ${{ github.event.ref }}
+        run: |
+          echo "Cleaning up deployments for branch: $DELETED_BRANCH"
+          
+          # Get team/user info and project
+          PROJECT_NAME="routista"
+          
+          # List deployments and filter by branch meta
+          DEPLOYMENTS=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v6/deployments?projectId=$PROJECT_NAME&limit=100" \
+            | jq -r ".deployments[] | select(.meta.githubCommitRef == \"$DELETED_BRANCH\") | .uid")
+          
+          if [ -z "$DEPLOYMENTS" ]; then
+            echo "No deployments found for branch: $DELETED_BRANCH"
+            exit 0
+          fi
+          
+          # Delete each deployment
+          for DEPLOYMENT_ID in $DEPLOYMENTS; do
+            echo "Deleting deployment: $DEPLOYMENT_ID"
+            curl -s -X DELETE -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID"
+            echo " - Deleted"
+          done
+          
+          echo "Cleanup complete"
+

@@ -136,6 +136,7 @@
                 "accuracy": "Genauigkeit"
             },
             "back": "Zurück",
+            "share": "Teilen",
             "download": "GPX herunterladen"
         }
     },
@@ -210,5 +211,33 @@
     "metadata": {
         "title": "Routista - Formen in Routen verwandeln",
         "description": "Generiere echte GPS-Routen aus jeder Form oder jedem Bild."
+    },
+    "ShareModal": {
+        "title": "Route teilen",
+        "subtitle": "Wähle ein Format für deine bevorzugte Plattform",
+        "platforms": {
+            "instagram": "Instagram Story",
+            "instagramDesc": "Hochformat (9:16)",
+            "facebook": "Facebook",
+            "facebookDesc": "Querformat (1.91:1)",
+            "twitter": "Twitter",
+            "twitterDesc": "Breitformat (16:9)"
+        },
+        "generatedWith": "Erstellt mit Routista",
+        "modes": {
+            "foot-walking": "Gehen",
+            "cycling-regular": "Radfahren",
+            "driving-car": "Fahren"
+        },
+        "share": "Teilen",
+        "copyImage": "Bild kopieren",
+        "copied": "Kopiert!",
+        "download": "Herunterladen",
+        "generating": "Wird erstellt...",
+        "close": "Schließen",
+        "error": "Bild konnte nicht erstellt werden. Bitte versuche es erneut.",
+        "clipboardFailed": "Kopieren fehlgeschlagen. Versuche stattdessen herunterzuladen.",
+        "pasteHint": "Bild kopiert! Füge es beim Erstellen deines Posts ein.",
+        "openPlatformHint": "Dann öffne"
     }
 }

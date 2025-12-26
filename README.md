@@ -70,6 +70,18 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser.
 
+### Mobile Testing (Preview Deployments)
+
+Push to any branch other than `main` to get a Vercel preview URL accessible from mobile:
+
+```bash
+git checkout -b feature/my-feature
+git push origin feature/my-feature
+# → Vercel creates: https://routista-git-feature-my-feature-*.vercel.app
+```
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#deployment--hosting) for full deployment details.
+
 ### Testing
 
 ```bash

@@ -23,6 +23,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Page Layouts** | `src/app/[locale]/layout.tsx` | Root layout that sets up i18n providers and metadata. |
 | **UI Variant Config** | `src/config.ts`, `src/components/ABTestProvider.tsx` | Feature flag for UI variant (A or B). See `docs/AB_TEST.md`. |
 | **App Configuration** | `src/config.ts`, `src/config/` | Centralized config: routing tolerances, API settings, geo constants, image processing. |
+| **Deployment & Hosting** | `docs/ARCHITECTURE.md` (Deployment section) | Vercel setup, environments (Production/Preview), env vars. |
 
 ## 📂 File Tree & Purpose
 

@@ -89,11 +89,38 @@ State is primarily managed in the parent page (`src/app/create/page.tsx` or simi
 ### Environment Variables
 | Variable | Purpose |
 |----------|---------|
+| `NEXT_PUBLIC_RADAR_LIVE_PK` | Radar API key (production) |
+| `NEXT_PUBLIC_RADAR_TEST_PK` | Radar API key (fallback/testing) |
 | `KV_REST_API_URL` / `UPSTASH_REDIS_REST_URL` | Redis endpoint for caching |
 | `KV_REST_API_TOKEN` / `UPSTASH_REDIS_REST_TOKEN` | Redis auth token |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry error tracking |
 | `SENTRY_AUTH_TOKEN` | Source map uploads |
 | `SENTRY_ORG` / `SENTRY_PROJECT` | Sentry project identifiers |
+
+## Deployment & Hosting
+
+### Platform
+- **Hosting**: Vercel (Hobby plan)
+- **CI/CD**: Vercel Git Integration (no GitHub Actions)
+- **Repository**: Connected via Vercel Dashboard, auto-deploys on push
+
+### Environments
+
+| Environment | Branch | URL | Purpose |
+|-------------|--------|-----|---------|
+| Production | `main` | routista.eu | Live user traffic |
+| Preview | Any other branch | `routista-git-<branch>-*.vercel.app` | Testing before merge |
+
+### Preview Deployments
+- Automatically created for every push to non-main branches
+- Each preview gets a unique URL accessible from any device (including mobile)
+- Environment variables can have different values per environment (configured in Vercel Dashboard)
+- PR comments from Vercel bot include preview URL
+
+### Environment-Specific Configuration
+Configure different values for Production vs Preview in Vercel Dashboard:
+- **Vercel Dashboard** → Project → Settings → Environment Variables
+- Each variable can have separate values for: Production, Preview, Development
 
 ## Automated Browser Testing
 

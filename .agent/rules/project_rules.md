@@ -77,6 +77,29 @@ fatal: unable to access '...': error setting certificate verify locations
 run_terminal_cmd with required_permissions: ["all"]
 ```
 
+## 🔍 GitHub Actions Debugging
+
+**Use GitHub CLI (`gh`) instead of browser** for investigating workflow failures:
+
+```bash
+# List recent workflow runs
+gh run list --limit 5
+
+# View failed step logs (most useful!)
+gh run view <run-id> --log-failed
+
+# View full logs for a run
+gh run view <run-id> --log
+
+# Watch a run in real-time
+gh run watch <run-id>
+
+# Re-run a failed workflow
+gh run rerun <run-id>
+```
+
+**Always use `required_permissions: ["all"]`** for `gh` commands to avoid SSL issues.
+
 ## 📝 Post-Work Verification
 
 After completing any coding task:

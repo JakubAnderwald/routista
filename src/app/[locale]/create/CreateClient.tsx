@@ -380,6 +380,7 @@ export default function CreateClient() {
                     isOpen={isShareModalOpen}
                     onClose={() => setIsShareModalOpen(false)}
                     getMap={() => resultMapRef.current?.getMap() ?? null}
+                    routeData={routeData}
                     stats={stats}
                     mode={mode}
                 />

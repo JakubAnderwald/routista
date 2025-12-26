@@ -16,16 +16,44 @@ import {
     isMobile,
 } from "@/lib/shareImageGenerator";
 import type L from "leaflet";
+import type { FeatureCollection } from "geojson";
 
 interface ShareModalProps {
     isOpen: boolean;
     onClose: () => void;
     getMap: () => L.Map | null;
+    routeData: FeatureCollection | null;
     stats: {
         length: number;
         accuracy: number;
     };
     mode: string;
+}
+
+/**
+ * Extracts route coordinates from GeoJSON FeatureCollection
+ */
+function extractRouteCoordinates(routeData: FeatureCollection | null): [number, number][] | undefined {
+    if (!routeData?.features?.length) return undefined;
+    
+    const coords: [number, number][] = [];
+    
+    for (const feature of routeData.features) {
+        if (feature.geometry.type === 'LineString') {
+            // LineString coordinates are [lng, lat], we need [lat, lng]
+            for (const coord of feature.geometry.coordinates) {
+                coords.push([coord[1], coord[0]]);
+            }
+        } else if (feature.geometry.type === 'MultiLineString') {
+            for (const line of feature.geometry.coordinates) {
+                for (const coord of line) {
+                    coords.push([coord[1], coord[0]]);
+                }
+            }
+        }
+    }
+    
+    return coords.length > 0 ? coords : undefined;
 }
 
 const PLATFORMS: { id: SharePlatform; icon: typeof Instagram; hasWebIntent: boolean }[] = [
@@ -34,7 +62,7 @@ const PLATFORMS: { id: SharePlatform; icon: typeof Instagram; hasWebIntent: bool
     { id: "twitter", icon: Twitter, hasWebIntent: true },
 ];
 
-export function ShareModal({ isOpen, onClose, getMap, stats, mode }: ShareModalProps) {
+export function ShareModal({ isOpen, onClose, getMap, routeData, stats, mode }: ShareModalProps) {
     const t = useTranslations("ShareModal");
     const [selectedPlatform, setSelectedPlatform] = useState<SharePlatform>("instagram");
     const [isGenerating, setIsGenerating] = useState(false);
@@ -61,8 +89,11 @@ export function ShareModal({ isOpen, onClose, getMap, stats, mode }: ShareModalP
 
             console.log("[ShareModal] Starting image generation for", selectedPlatform);
 
-            // Capture map to canvas
-            const mapCanvas = await captureMapToCanvas(map);
+            // Extract route coordinates from GeoJSON
+            const routeCoordinates = extractRouteCoordinates(routeData);
+
+            // Capture map to canvas (with route overlay)
+            const mapCanvas = await captureMapToCanvas(map, routeCoordinates);
 
             // Generate share image
             const blob = await generateShareImage({

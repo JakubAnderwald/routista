@@ -273,9 +273,10 @@ export async function generateShareImage(options: ShareImageOptions): Promise<Bl
 }
 
 /**
- * Captures a Leaflet map to a canvas using leaflet-image
+ * Captures a Leaflet map to a canvas using leaflet-image,
+ * then manually draws the route on top (since leaflet-image doesn't capture vector layers)
  */
-export async function captureMapToCanvas(map: L.Map): Promise<HTMLCanvasElement> {
+export async function captureMapToCanvas(map: L.Map, routeCoordinates?: [number, number][]): Promise<HTMLCanvasElement> {
     console.log('[ShareImageGenerator] Capturing map to canvas...');
     
     // Dynamic import to avoid SSR issues
@@ -286,10 +287,54 @@ export async function captureMapToCanvas(map: L.Map): Promise<HTMLCanvasElement>
             if (err) {
                 console.error('[ShareImageGenerator] Map capture failed:', err);
                 reject(err);
-            } else {
-                console.log('[ShareImageGenerator] Map captured successfully');
-                resolve(canvas);
+                return;
             }
+            
+            console.log('[ShareImageGenerator] Map tiles captured, drawing route...');
+            
+            // Draw route on top of the captured map
+            if (routeCoordinates && routeCoordinates.length > 1) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    // Get map container size and bounds
+                    const mapSize = map.getSize();
+                    const bounds = map.getBounds();
+                    
+                    // Calculate scale factors
+                    const scaleX = canvas.width / mapSize.x;
+                    const scaleY = canvas.height / mapSize.y;
+                    
+                    // Convert lat/lng to canvas pixel coordinates
+                    const toCanvasPoint = (lat: number, lng: number): { x: number; y: number } => {
+                        const point = map.latLngToContainerPoint([lat, lng]);
+                        return {
+                            x: point.x * scaleX,
+                            y: point.y * scaleY
+                        };
+                    };
+                    
+                    // Draw the route
+                    ctx.strokeStyle = '#2563eb'; // blue-600
+                    ctx.lineWidth = 4 * scaleX; // Scale line width
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    
+                    ctx.beginPath();
+                    const firstPoint = toCanvasPoint(routeCoordinates[0][0], routeCoordinates[0][1]);
+                    ctx.moveTo(firstPoint.x, firstPoint.y);
+                    
+                    for (let i = 1; i < routeCoordinates.length; i++) {
+                        const point = toCanvasPoint(routeCoordinates[i][0], routeCoordinates[i][1]);
+                        ctx.lineTo(point.x, point.y);
+                    }
+                    
+                    ctx.stroke();
+                    console.log(`[ShareImageGenerator] Route drawn with ${routeCoordinates.length} points`);
+                }
+            }
+            
+            console.log('[ShareImageGenerator] Map captured successfully');
+            resolve(canvas);
         });
     });
 }

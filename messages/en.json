@@ -224,8 +224,11 @@
             "twitterDesc": "Wide format (16:9)"
         },
         "generatedWith": "Generated with Routista",
-        "accuracy": "accuracy",
-        "length": "Route Length",
+        "modes": {
+            "foot-walking": "Walking",
+            "cycling-regular": "Cycling",
+            "driving-car": "Driving"
+        },
         "share": "Share",
         "copyImage": "Copy Image",
         "copied": "Copied!",

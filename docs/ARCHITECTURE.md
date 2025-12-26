@@ -155,7 +155,7 @@ Push my changes to the feature branch so I can test on mobile
 **Notes:**
 - Preview deployments take ~1-2 minutes to build
 - Same URL updates with each push
-- Deleting Git branch does NOT delete deployment - must delete manually in Vercel Dashboard → Deployments → ⋮ → Delete
+- Deleting Git branch auto-deletes deployment via GitHub Action (`.github/workflows/cleanup-vercel-deployments.yml`)
 
 ## Automated Browser Testing
 

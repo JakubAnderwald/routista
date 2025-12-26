@@ -20,8 +20,7 @@ export interface ShareImageOptions {
     mode: string;
     translations: {
         generatedWith: string;
-        accuracy: string;
-        length: string;
+        modeName: string; // Localized mode name (Walking, Cycling, etc.)
     };
 }
 
@@ -85,18 +84,18 @@ function formatLength(meters: number): string {
 }
 
 /**
- * Gets mode display info (emoji and name)
+ * Gets mode emoji
  */
-function getModeInfo(mode: string): { emoji: string; name: string } {
+function getModeEmoji(mode: string): string {
     switch (mode) {
         case 'foot-walking':
-            return { emoji: '🚶', name: 'WALKING' };
+            return '🚶';
         case 'cycling-regular':
-            return { emoji: '🚴', name: 'CYCLING' };
+            return '🚴';
         case 'driving-car':
-            return { emoji: '🚗', name: 'DRIVING' };
+            return '🚗';
         default:
-            return { emoji: '🏃', name: 'RUNNING' };
+            return '🏃';
     }
 }
 
@@ -225,28 +224,33 @@ export async function generateShareImage(options: ShareImageOptions): Promise<Bl
         ctx.fillRect(0, dims.height - 300, dims.width, 300);
         
         // Stats and branding at bottom
-        const modeInfo = getModeInfo(mode);
+        const modeEmoji = getModeEmoji(mode);
         const lengthStr = formatLength(stats.length);
         
+        // Distance (large, prominent)
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 64px system-ui, -apple-system, sans-serif';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(lengthStr, 40, dims.height - 100);
+        
         // Mode with pill background for visibility
+        const modeText = `${modeEmoji}  ${translations.modeName.toUpperCase()}`;
+        ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
+        const modeWidth = ctx.measureText(modeText).width + 40;
+        
         ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
         ctx.beginPath();
-        ctx.roundRect(30, dims.height - 140, 280, 50, 25);
+        ctx.roundRect(35, dims.height - 80, modeWidth, 40, 20);
         ctx.fill();
         
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${modeInfo.emoji}  ${modeInfo.name}`, 55, dims.height - 115);
-        
-        // Distance
-        ctx.font = 'bold 48px system-ui, -apple-system, sans-serif';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(lengthStr, 40, dims.height - 55);
+        ctx.fillText(modeText, 55, dims.height - 60);
         
         // Generated with
         ctx.font = 'italic 24px system-ui, -apple-system, sans-serif';
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.textBaseline = 'bottom';
         ctx.fillText(`"${translations.generatedWith}"`, 40, dims.height - 20);
         
     } else {
@@ -301,23 +305,29 @@ export async function generateShareImage(options: ShareImageOptions): Promise<Bl
         ctx.fillStyle = '#1f2937';
         ctx.fillRect(0, dims.height - bottomBannerHeight, dims.width, bottomBannerHeight);
         
-        const modeInfo = getModeInfo(mode);
+        const modeEmoji = getModeEmoji(mode);
         const lengthStr = formatLength(stats.length);
+        const modeText = `${modeEmoji}  ${translations.modeName.toUpperCase()}`;
+        
+        // Measure mode text to size pill correctly
+        ctx.font = `bold ${Math.round(bottomBannerHeight * 0.32)}px system-ui, -apple-system, sans-serif`;
+        const modeTextWidth = ctx.measureText(modeText).width;
+        const pillWidth = modeTextWidth + 30;
         
         // Mode pill on the left
         ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
         ctx.beginPath();
-        ctx.roundRect(15, dims.height - bottomBannerHeight + 15, 140, bottomBannerHeight - 30, 20);
+        ctx.roundRect(15, dims.height - bottomBannerHeight + 15, pillWidth, bottomBannerHeight - 30, 20);
         ctx.fill();
         
         ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${Math.round(bottomBannerHeight * 0.35)}px system-ui, -apple-system, sans-serif`;
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${modeInfo.emoji} ${modeInfo.name}`, 30, dims.height - bottomBannerHeight / 2);
+        ctx.fillText(modeText, 30, dims.height - bottomBannerHeight / 2);
         
-        // Distance in the middle
-        ctx.font = `bold ${Math.round(bottomBannerHeight * 0.4)}px system-ui, -apple-system, sans-serif`;
-        ctx.fillText(lengthStr, 180, dims.height - bottomBannerHeight / 2);
+        // Distance after pill
+        const distanceX = 15 + pillWidth + 20;
+        ctx.font = `bold ${Math.round(bottomBannerHeight * 0.45)}px system-ui, -apple-system, sans-serif`;
+        ctx.fillText(lengthStr, distanceX, dims.height - bottomBannerHeight / 2);
         
         // Generated with on the right
         ctx.font = `italic ${Math.round(bottomBannerHeight * 0.22)}px system-ui, -apple-system, sans-serif`;

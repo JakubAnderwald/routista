@@ -224,8 +224,11 @@
             "twitterDesc": "Format szeroki (16:9)"
         },
         "generatedWith": "Utworzono za pomocą Routista",
-        "accuracy": "dokładność",
-        "length": "Długość trasy",
+        "modes": {
+            "foot-walking": "Spacer",
+            "cycling-regular": "Rower",
+            "driving-car": "Samochód"
+        },
         "share": "Udostępnij",
         "copyImage": "Kopiuj obraz",
         "copied": "Skopiowano!",

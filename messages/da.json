@@ -224,8 +224,11 @@
             "twitterDesc": "Bredt format (16:9)"
         },
         "generatedWith": "Genereret med Routista",
-        "accuracy": "nøjagtighed",
-        "length": "Rutelængde",
+        "modes": {
+            "foot-walking": "Gå",
+            "cycling-regular": "Cykling",
+            "driving-car": "Kørsel"
+        },
         "share": "Del",
         "copyImage": "Kopiér billede",
         "copied": "Kopieret!",

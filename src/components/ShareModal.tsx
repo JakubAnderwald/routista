@@ -103,8 +103,7 @@ export function ShareModal({ isOpen, onClose, getMap, routeData, stats, mode }: 
                 mode,
                 translations: {
                     generatedWith: t("generatedWith"),
-                    accuracy: t("accuracy"),
-                    length: t("length"),
+                    modeName: t(`modes.${mode}`),
                 },
             });
 

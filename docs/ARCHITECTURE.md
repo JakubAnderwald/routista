@@ -122,6 +122,38 @@ Configure different values for Production vs Preview in Vercel Dashboard:
 - **Vercel Dashboard** → Project → Settings → Environment Variables
 - Each variable can have separate values for: Production, Preview, Development
 
+## Mobile Testing Workflow (Vibe Coding)
+
+When developing features that need mobile testing, use these prompts:
+
+### Start a New Feature
+```
+Create a new branch called feature/[name] and push it to trigger a preview deployment
+```
+
+### Push Changes for Mobile Testing
+```
+Commit my current changes and push to the feature branch for mobile testing
+```
+
+### Check Preview URL
+```
+What's the Vercel preview URL for my current branch?
+```
+→ Pattern: `https://routista-git-[branch]-jakubanderwalds-projects.vercel.app`
+
+### Merge to Production
+```
+Merge my feature branch to main and push to deploy to production
+```
+
+### Quick Iteration Loop
+```
+Push my changes to the feature branch so I can test on mobile
+```
+
+**Note:** Preview deployments take ~1-2 minutes to build. The same URL updates with each push.
+
 ## Automated Browser Testing
 
 Routista includes infrastructure to support automated end-to-end testing with browser automation tools (Puppeteer, Playwright, Antigravity). Since traditional image upload requires OS file picker dialogs that cannot be automated, the application provides:

@@ -46,6 +46,23 @@ Before pushing any changes to GitHub, you MUST run these checks locally:
 
 **CRITICAL**: If any check fails, fix issues before pushing. The CI/CD pipeline will fail otherwise.
 
+## 📱 Mobile Testing (Preview Deployments)
+
+When the user needs to test on mobile, use Vercel Preview Deployments:
+
+1. **Create feature branch** (if not already on one): `git checkout -b feature/[name]`
+2. **Commit & push**: `git add -A && git commit -m "WIP: [description]" && git push origin HEAD`
+3. **Preview URL**: `https://routista-git-[branch]-jakubanderwalds-projects.vercel.app`
+4. **Build time**: ~1-2 minutes after push
+
+**When user says:** "test on mobile", "push for preview", "I need to test this on my phone"
+→ Commit current changes and push to feature branch
+
+**When user says:** "deploy to production", "merge to main", "ship it"
+→ Merge feature branch to main and push
+
+**Note:** Preview environment uses different Radar API key (configured in Vercel Dashboard).
+
 ## 🔧 Git Push - Required Permissions
 
 When pushing to GitHub, **always use `required_permissions: ["all"]`** to avoid SSL certificate errors.

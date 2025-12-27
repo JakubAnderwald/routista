@@ -14,6 +14,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Image Upload** | `src/components/ImageUpload.tsx` | Handles file drop and preview. **See Testing Note below.** |
 | **Area Selection** | `src/components/AreaSelector.tsx` | Map interface for choosing center point and radius. |
 | **GPX Export** | `src/lib/gpxGenerator.ts` | Converts Route data to GPX XML format. |
+| **Social Sharing** | `src/components/ShareModal.tsx`, `src/lib/shareImageGenerator.ts` | Branded image generation for social media. See `docs/SHARE_FEATURE.md`. |
 | **Route Caching** | `src/lib/radarService.ts` | Caches routes in Upstash Redis (24h TTL). |
 | **Rate Limiting** | `middleware.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis. |
 | **Error Tracking** | `sentry.*.config.ts`, `src/app/global-error.tsx` | Sentry SDK for client/server/edge error capture. |
@@ -41,6 +42,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `geoUtils.ts`: **CRITICAL**. Math heavy. Handles coordinate geometry.
 *   `imageProcessing.ts`: **CRITICAL**. Computer vision lite.
 *   `gpxGenerator.ts`: Utility for file export.
+*   `shareImageGenerator.ts`: Branded image generation for social sharing. Uses `leaflet-image` + Canvas API.
 
 ### Infrastructure (root)
 *   `middleware.ts`: Rate limiting for `/api/radar/*` routes, i18n routing.
@@ -56,8 +58,9 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `CreateClient.tsx`: **CRITICAL**. The main page logic. Has UI variant conditional rendering.
 *   `ImageUpload.tsx`: Drag-and-drop UI.
 *   `AreaSelector.tsx`: Interactive map for area picking. Mode props optional (variant B).
-*   `ResultMap.tsx`: Final output display.
+*   `ResultMap.tsx`: Final output display. Exposes `getMap()` ref for sharing.
 *   `ModeSelector.tsx`: Walking/Cycling/Driving cards. Used in variant A only.
+*   `ShareModal.tsx`: Social sharing UI. Platform selection, copy/download/share actions.
 *   `ABTestProvider.tsx`: UI variant context provider. See `docs/AB_TEST.md`.
 
 ### Pages (`src/app/`)

@@ -1,7 +1,7 @@
 # Architecture Documentation
 
 ## System Overview
-Routista is a client-side heavy Next.js application that leverages external APIs for mapping and routing. The core logic resides in the browser to ensure user privacy and responsiveness.
+Routista is a client-side heavy Next.js application that leverages external APIs for mapping and routing. Image and shape processing happens entirely in the browser (images never leave the device). Route generation requires server-side API calls to Radar, with routes cached temporarily for performance.
 
 ## Data Flow
 

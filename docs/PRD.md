@@ -143,8 +143,12 @@ Routista.eu is a web application that enables users to transform any shape or im
 - Plan for async job queue if user base grows (store job status, poll for completion)
 
 ### Data & Privacy
-- No storage of user images or generated routes (process and discard)
-- Optional: Temporary storage for active sessions only, automatic cleanup
+- **Images**: Processed client-side only (Canvas API). Images never leave the user's device.
+- **Route coordinates**: Sent to server API routes, forwarded to Radar API for routing.
+- **Route caching**: Generated routes cached in Redis for 24 hours (keyed by coordinates hash) to reduce API load.
+- **Rate limiting**: IP addresses stored temporarily (~60 seconds) using sliding window algorithm.
+- **Error tracking**: Errors logged to Sentry for debugging (includes endpoint context, no user-identifiable data except IP on rate limit blocks).
+- **No user accounts**: Fully anonymous, no login or registration required.
 
 ## Success Metrics
 

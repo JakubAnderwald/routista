@@ -67,23 +67,35 @@ Generated images include:
 
 ## Tracking Success (Vercel Analytics)
 
+### Share Modal Opens (Outbound Tracking)
+
+When users open the share modal, the URL changes to `#share` (e.g., `/en/create#share`).
+Vercel Analytics tracks this as a page view, allowing you to see how many users open the share feature.
+
+- **Filter by**: Pages containing `#share`
+- **Metric**: Number of share modal opens
+
 ### Incoming Traffic from Shares
 
-Vercel Analytics automatically tracks referrers. When users scan QR codes or click shared links, look for:
+QR codes in shared images include tracking params: `?ref=share&platform=instagram|facebook|twitter`
 
+When users scan QR codes or click shared links, look for:
+
+- **URL params**: `ref=share` and `platform=instagram|facebook|twitter`
 - **Referrer**: `t.co` (Twitter), `facebook.com`, `instagram.com`, `l.instagram.com`
-- **URL pattern**: Traffic to `routista.eu` from social platforms
 
 ### How to View
 
 1. Go to [Vercel Analytics Dashboard](https://vercel.com/jakubanderwalds-projects/routista/analytics)
-2. Check **Top Referrers** section
-3. Filter by date range to see sharing impact
+2. Check **Top Pages** section → filter for `#share` to see modal opens
+3. Check **Top Referrers** section → look for social platforms
+4. Filter by `?ref=share` in URL to see traffic from shared images
 
-### Limitations (Hobby Plan)
+### Hobby Plan Tracking
 
-- No custom events (can't track share button clicks server-side)
-- Referrer tracking is automatic and sufficient for measuring share success
+Custom events (`track()`) are Pro/Enterprise only, but URL-based tracking works:
+- `#share` hash tracks modal opens
+- `?ref=share&platform=X` params track incoming traffic from shares
 - Console logs (`[ShareModal]`, `[ShareImageGenerator]`) available for debugging
 
 ## Translations

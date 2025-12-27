@@ -17,6 +17,7 @@ import {
 } from "@/lib/shareImageGenerator";
 import type L from "leaflet";
 import type { FeatureCollection } from "geojson";
+import { useEffect } from "react";
 
 interface ShareModalProps {
     isOpen: boolean;
@@ -71,6 +72,20 @@ export function ShareModal({ isOpen, onClose, getMap, routeData, stats, mode }: 
     const [generatedBlob, setGeneratedBlob] = useState<Blob | null>(null);
     
     const isMobileDevice = isMobile();
+
+    // Track share modal opens via URL hash for Vercel Analytics (works on Hobby plan)
+    useEffect(() => {
+        if (isOpen) {
+            const originalHash = window.location.hash;
+            // Add #share to URL - Vercel Analytics will pick this up as a page view
+            window.history.pushState(null, '', `${window.location.pathname}${window.location.search}#share`);
+            
+            return () => {
+                // Restore original hash when modal closes
+                window.history.pushState(null, '', `${window.location.pathname}${window.location.search}${originalHash}`);
+            };
+        }
+    }, [isOpen]);
 
     const generateImage = useCallback(async (): Promise<Blob | null> => {
         // Return cached blob if already generated for same platform

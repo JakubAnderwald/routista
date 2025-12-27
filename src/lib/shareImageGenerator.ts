@@ -171,9 +171,10 @@ export async function generateShareImage(options: ShareImageOptions): Promise<Bl
     canvas.height = dims.height;
     const ctx = canvas.getContext('2d')!;
     
-    // Generate QR code
+    // Generate QR code with tracking params for Vercel Analytics
     const qrSize = platform === 'instagram' ? 120 : Math.min(dims.bannerHeight - 20, 100);
-    const qrDataUrl = await generateQRCode(ROUTISTA_URL, qrSize);
+    const trackingUrl = `${ROUTISTA_URL}?ref=share&platform=${platform}`;
+    const qrDataUrl = await generateQRCode(trackingUrl, qrSize);
     const qrImage = await loadImage(qrDataUrl);
     
     if (platform === 'instagram') {

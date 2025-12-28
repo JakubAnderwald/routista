@@ -6,6 +6,7 @@ Documentation for the Routista GPS art route generator.
 
 | I want to... | Document |
 |--------------|----------|
+| **Set up my dev environment** | [Dev Setup Guide](technical/DEV_SETUP.md) |
 | Understand the system architecture | [Architecture](technical/ARCHITECTURE.md) |
 | Find where code lives for a feature | [Context Map](technical/CONTEXT_MAP.md) |
 | Debug an issue | [Debugging Guide](technical/DEBUGGING.md) |

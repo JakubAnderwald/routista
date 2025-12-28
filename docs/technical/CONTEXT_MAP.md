@@ -6,6 +6,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 
 | Concept | Primary File(s) | Description |
 | :--- | :--- | :--- |
+| **Dev Setup** | `docs/technical/DEV_SETUP.md` | Complete environment setup guide with API keys, tools, troubleshooting. |
 | **Routing Logic** | `src/lib/routeGenerator.ts` | Calls Radar API, handles batching, stitching, and error handling. |
 | **Shape Extraction** | `src/lib/imageProcessing.ts` | Canvas logic to turn images into point arrays. |
 | **Geo Calculations** | `src/lib/geoUtils.ts` | Distance, scaling, simplification, and accuracy scoring. Pure functions. |
@@ -118,6 +119,7 @@ Architecture and developer guides:
 
 | Document | Purpose |
 | :--- | :--- |
+| `DEV_SETUP.md` | **Start here** - Complete dev environment setup |
 | `ARCHITECTURE.md` | System overview, data flow, infrastructure |
 | `AUTOMATED_TESTING.md` | Browser automation, test helpers |
 | `DEBUGGING.md` | Console logs, troubleshooting |

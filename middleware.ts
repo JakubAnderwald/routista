@@ -10,6 +10,14 @@ const intlMiddleware = createMiddleware(routing);
 export default async function middleware(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
 
+    // Skip i18n middleware for all API routes
+    if (pathname.startsWith('/api/')) {
+        // Only apply rate limiting to /api/radar/* routes
+        if (!pathname.startsWith('/api/radar')) {
+            return NextResponse.next();
+        }
+    }
+
     // Handle rate limiting for /api/radar/* routes
     if (pathname.startsWith('/api/radar')) {
         const clientIP = getClientIP(request);

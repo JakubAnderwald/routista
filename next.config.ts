@@ -7,6 +7,18 @@ const withNextIntl = createNextIntlPlugin();
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  
+  // Redirect www to non-www (required for Strava OAuth callback domain)
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.routista.eu' }],
+        destination: 'https://routista.eu/:path*',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 // Wrap with next-intl first, then Sentry

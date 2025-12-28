@@ -8,7 +8,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | :--- | :--- | :--- |
 | **Dev Setup** | `docs/technical/DEV_SETUP.md` | Complete environment setup guide with API keys, tools, troubleshooting. |
 | **Routing Logic** | `src/lib/routeGenerator.ts` | Calls Radar API, handles batching, stitching, and error handling. |
-| **Shape Extraction** | `src/lib/imageProcessing.ts` | Canvas logic to turn images into point arrays. |
+| **Shape Extraction** | `src/lib/imageProcessing.ts`, `src/lib/imageProcessingCore.ts` | Canvas wrapper + platform-agnostic algorithms (Otsu, boundary tracing). |
 | **Geo Calculations** | `src/lib/geoUtils.ts` | Distance, scaling, simplification, and accuracy scoring. Pure functions. |
 | **Main UI Flow** | `src/app/[locale]/create/CreateClient.tsx` | State machine for the "Create" wizard (Upload -> Area -> Mode -> Result). |
 | **Map Visualization** | `src/components/ResultMap.tsx` | Displays the generated route and original shape on Leaflet. |
@@ -44,7 +44,8 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `radarService.ts`: **CRITICAL**. Server-side service that proxies Radar API calls. Includes route caching.
 *   `rateLimit.ts`: Rate limiting helper using Upstash Redis.
 *   `geoUtils.ts`: **CRITICAL**. Math heavy. Handles coordinate geometry.
-*   `imageProcessing.ts`: **CRITICAL**. Computer vision lite.
+*   `imageProcessingCore.ts`: **CRITICAL**. Platform-agnostic shape extraction algorithms (Otsu, boundary tracing).
+*   `imageProcessing.ts`: **CRITICAL**. Browser wrapper for image processing (uses Canvas API + core).
 *   `gpxGenerator.ts`: Utility for file export.
 *   `shareImageGenerator.ts`: Branded image generation for social sharing. Uses `leaflet-image` + Canvas API.
 *   `stravaService.ts`: Strava OAuth and API integration. Token management, route upload.
@@ -69,7 +70,7 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `stravaService.test.ts`: Strava mode mapping tests.
     *   `shareImageGenerator.test.ts`: Mobile detection, platform URL tests.
     *   `radarService.test.ts`: Coordinate hashing tests.
-*   `utils/nodeImageProcessing.ts`: Node.js version of image processing for tests.
+*   `utils/nodeImageProcessing.ts`: Node.js wrapper for image processing (uses Sharp + core).
 *   `e2e/`: Placeholder E2E test templates.
 
 ### Components (`src/components/`)

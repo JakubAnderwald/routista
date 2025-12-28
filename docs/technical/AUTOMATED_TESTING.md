@@ -310,10 +310,38 @@ console.log({
 });
 ```
 
+## Unit Tests
+
+Unit tests for pure functions are located in `tests/unit/`:
+
+| Test File | What It Tests |
+|-----------|---------------|
+| `gpxGenerator.test.ts` | GPX XML generation from GeoJSON |
+| `geoUtils.test.ts` | Distance calculations, route length, point simplification |
+| `stravaService.test.ts` | Strava mode mapping helpers |
+| `shareImageGenerator.test.ts` | Mobile detection, platform share URLs |
+| `radarService.test.ts` | Coordinate hashing for cache keys |
+
+### Running Tests with Coverage
+
+```bash
+# Run all tests
+npm test
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+Coverage reports are generated in the `coverage/` directory:
+- `coverage/index.html` - Interactive HTML report
+- `coverage/coverage-summary.json` - JSON summary
+
 ## Related Files
 
 - `src/components/ImageUpload.tsx` - Image upload component
 - `src/app/[locale]/create/CreateClient.tsx` - Main create flow with test controls
-- `tests/routeAccuracy.test.ts` - Node.js unit tests
+- `tests/routeAccuracy.test.ts` - Integration tests for route accuracy
+- `tests/unit/` - Unit tests for pure functions
 - `tests/e2e/` - E2E test files
+- `vitest.config.ts` - Test configuration with coverage settings
 

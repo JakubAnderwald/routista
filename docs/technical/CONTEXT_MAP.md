@@ -21,6 +21,8 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Rate Limiting** | `middleware.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis. |
 | **Error Tracking** | `sentry.*.config.ts`, `src/app/global-error.tsx` | Sentry SDK for client/server/edge error capture. |
 | **Testing Hooks** | `src/app/[locale]/create/CreateClient.tsx` | Contains hidden `data-testid` controls and `window.__routistaTestHelpers`. |
+| **Unit Tests** | `tests/unit/*.test.ts` | Pure function tests for `src/lib/` modules. Run with `npm test`. |
+| **Test Coverage** | `vitest.config.ts` | Coverage config. Run `npm run test:coverage` for reports. |
 | **Translations** | `messages/[locale].json` | i18n strings for all pages. Supported locales: `en` (English), `de` (German), `pl` (Polish), `da` (Danish). |
 | **Page Structure** | `src/app/[locale]/[page]/page.tsx` | All pages support dynamic locale routing via Next.js App Router with next-intl. |
 | **Page Layouts** | `src/app/[locale]/layout.tsx` | Root layout that sets up i18n providers and metadata. |
@@ -58,6 +60,17 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `README.md`: Documentation index and overview.
 *   `features/`: Feature-specific documentation (user-facing features).
 *   `technical/`: Technical documentation (architecture, testing, debugging).
+
+### Tests (`tests/`)
+*   `routeAccuracy.test.ts`: Integration tests - end-to-end route generation accuracy.
+*   `unit/`: Unit tests for pure functions in `src/lib/`.
+    *   `gpxGenerator.test.ts`: GPX XML generation tests.
+    *   `geoUtils.test.ts`: Distance, route length, simplification tests.
+    *   `stravaService.test.ts`: Strava mode mapping tests.
+    *   `shareImageGenerator.test.ts`: Mobile detection, platform URL tests.
+    *   `radarService.test.ts`: Coordinate hashing tests.
+*   `utils/nodeImageProcessing.ts`: Node.js version of image processing for tests.
+*   `e2e/`: Placeholder E2E test templates.
 
 ### Components (`src/components/`)
 *   `CreateClient.tsx`: **CRITICAL**. The main page logic. Has UI variant conditional rendering.

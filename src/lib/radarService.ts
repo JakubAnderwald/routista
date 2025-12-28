@@ -44,8 +44,9 @@ export interface AutocompleteResponse {
 /**
  * Creates a hash string from coordinates array for cache key generation.
  * Uses a simple but effective hash that captures coordinate precision.
+ * @internal Exported for testing purposes
  */
-function hashCoordinates(coordinates: [number, number][]): string {
+export function hashCoordinates(coordinates: [number, number][]): string {
     // Round to 5 decimal places (~1m precision) and create a stable string representation
     const coordString = coordinates
         .map(([lat, lng]) => `${lat.toFixed(5)},${lng.toFixed(5)}`)

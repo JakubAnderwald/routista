@@ -245,7 +245,9 @@ async function createStravaRoute(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('[Strava Upload] API error:', response.status, errorText);
+    // #region agent log
+    console.error('[DEBUG H2] Strava API raw error:', {status: response.status, body: errorText, waypointCount: waypoints.length});
+    // #endregion
     throw new Error(`Strava API error: ${response.status} - ${errorText}`);
   }
 

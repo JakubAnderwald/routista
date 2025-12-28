@@ -32,9 +32,9 @@ interface UploadRequest {
 
 export async function POST(request: NextRequest) {
   console.log('[Strava Upload] Received upload request');
-  const fs = await import('fs');
-  const logPath = '/Users/jakubanderwald/code/routista/.cursor/debug.log';
-  const log = (msg: string, data: Record<string, unknown>, hyp: string) => { try { fs.appendFileSync(logPath, JSON.stringify({location:'strava/upload/route.ts',message:msg,data,timestamp:Date.now(),sessionId:'debug-session',hypothesisId:hyp})+'\n'); } catch {} };
+  // #region agent log
+  const log = (msg: string, data: Record<string, unknown>, hyp: string) => console.log(`[DEBUG ${hyp}] ${msg}:`, JSON.stringify(data));
+  // #endregion
 
   let body: UploadRequest;
   try {
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   const { routeData, tokens, mode, name, description } = body;
 
   // #region agent log
-  log('request received', {hasTokens:!!tokens,expiresAt:tokens?.expires_at,mode}, 'H1');
+  log('request received', {hasTokens:!!tokens,expiresAt:tokens?.expires_at,now:Math.floor(Date.now()/1000),mode}, 'H1');
   // #endregion
 
   // Validate request
@@ -128,15 +128,9 @@ export async function POST(request: NextRequest) {
   const routeName = name || `Routista Route - ${new Date().toLocaleDateString()}`;
   const routeDescription = description || 'Generated with Routista (routista.eu)';
 
-  // #region agent log
-  const fs2 = await import('fs');
-  const logPath2 = '/Users/jakubanderwald/code/routista/.cursor/debug.log';
-  const log2 = (msg: string, data: Record<string, unknown>, hyp: string) => { try { fs2.appendFileSync(logPath2, JSON.stringify({location:'strava/upload/route.ts',message:msg,data,timestamp:Date.now(),sessionId:'debug-session',hypothesisId:hyp})+'\n'); } catch {} };
-  // #endregion
-
   try {
     // #region agent log
-    log2('calling createStravaRoute', {coordCount:coordinates.length,type,sub_type}, 'H2,H5');
+    log('calling createStravaRoute', {coordCount:coordinates.length,type,sub_type}, 'H2,H5');
     // #endregion
 
     // Upload to Strava
@@ -152,7 +146,7 @@ export async function POST(request: NextRequest) {
     console.log('[Strava Upload] Route created successfully:', stravaRoute.id);
 
     // #region agent log
-    log2('route created successfully', {routeId:stravaRoute.id}, 'success');
+    log('route created successfully', {routeId:stravaRoute.id}, 'success');
     // #endregion
 
     // Return success with route URL and updated tokens
@@ -168,7 +162,7 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Upload failed';
     
     // #region agent log
-    log2('upload failed', {message,includes401:message.includes('401'),includesUnauth:message.includes('unauthorized')}, 'H2,H5');
+    log('upload failed', {message,includes401:message.includes('401'),includesUnauth:message.includes('unauthorized')}, 'H2,H5');
     // #endregion
 
     // Check for auth errors

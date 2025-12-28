@@ -167,28 +167,36 @@ After completing any coding task:
 - **Deployment**: Vercel
 - **Internationalization**: next-intl
 
-## 📚 Context7 MCP - Library Documentation
+## 📚 Context7 MCP - Documentation & API Reference
 
-**Context7 MCP is configured** to provide up-to-date documentation for libraries used in this project.
+**Context7 MCP is configured** to provide up-to-date documentation for **any library, API, or protocol** - not just JS libraries.
 
 **When to use Context7:**
-- Working with **next-intl** (i18n patterns, useTranslations, App Router setup)
-- Working with **Leaflet/react-leaflet** (map components, markers, events)
-- Working with **Next.js 16** (App Router, server components, middleware)
-- Working with **Tailwind CSS 4** (new utility classes, config syntax)
-- Working with **Lucide icons** (icon names, usage patterns)
+- **JS/TS Libraries**: next-intl, Leaflet, react-leaflet, Next.js, Tailwind CSS, Lucide icons
+- **External APIs**: Strava API, Radar API, OAuth providers, any REST/GraphQL API
+- **Protocols & Standards**: GPX format, OAuth 2.0, webhooks, file formats
+- **Backend Libraries**: Node.js libraries, database clients, auth libraries
+- **Any technology** where you need current, accurate documentation
 
 **How to use:**
-1. Use `mcp_context7_resolve-library-id` to find the library ID
+1. Use `mcp_context7_resolve-library-id` to find the library/API ID (search by name)
 2. Use `mcp_context7_get-library-docs` with topic to fetch relevant docs
-3. Key library IDs:
-   - next-intl: `/amannn/next-intl`
-   - Leaflet: `/leaflet/leaflet`
-   - Next.js: `/vercel/next.js`
-   - Tailwind: `tailwindcss.com/docs`
-   - Lucide: `/lucide-icons/lucide`
+3. Use `mode='code'` for API refs/examples, `mode='info'` for conceptual guides
 
-**IMPORTANT**: Use Context7 when unsure about current API patterns to avoid outdated code.
+**Key library IDs for this project:**
+| Library/API | Context7 ID |
+|-------------|-------------|
+| next-intl | `/amannn/next-intl` |
+| Leaflet | `/leaflet/leaflet` |
+| Next.js | `/vercel/next.js` |
+| Tailwind CSS | `tailwindcss.com/docs` |
+| Lucide icons | `/lucide-icons/lucide` |
+| **Strava API** | `/websites/developers_strava` |
+
+**IMPORTANT**: 
+- Use Context7 when unsure about current API patterns to avoid outdated code
+- Context7 indexes 10,000+ libraries including APIs, SDKs, and documentation sites
+- Always resolve-library-id first unless you know the exact ID
 
 ## 🎨 Coding Style
 

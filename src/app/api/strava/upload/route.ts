@@ -32,6 +32,9 @@ interface UploadRequest {
 
 export async function POST(request: NextRequest) {
   console.log('[Strava Upload] Received upload request');
+  const fs = await import('fs');
+  const logPath = '/Users/jakubanderwald/code/routista/.cursor/debug.log';
+  const log = (msg: string, data: Record<string, unknown>, hyp: string) => { try { fs.appendFileSync(logPath, JSON.stringify({location:'strava/upload/route.ts',message:msg,data,timestamp:Date.now(),sessionId:'debug-session',hypothesisId:hyp})+'\n'); } catch {} };
 
   let body: UploadRequest;
   try {
@@ -44,6 +47,10 @@ export async function POST(request: NextRequest) {
   }
 
   const { routeData, tokens, mode, name, description } = body;
+
+  // #region agent log
+  log('request received', {hasTokens:!!tokens,expiresAt:tokens?.expires_at,mode}, 'H1');
+  // #endregion
 
   // Validate request
   if (!routeData || !tokens || !mode) {
@@ -64,13 +71,24 @@ export async function POST(request: NextRequest) {
   let currentTokens = tokens;
   const now = Math.floor(Date.now() / 1000);
   
+  // #region agent log
+  log('token expiry check', {expiresAt:tokens.expires_at,now,needsRefresh:tokens.expires_at<=now+60}, 'H1,H4');
+  // #endregion
+
   if (tokens.expires_at <= now + 60) {
     console.log('[Strava Upload] Tokens expired, refreshing...');
     
     const clientId = process.env.STRAVA_CLIENT_ID;
     const clientSecret = process.env.STRAVA_CLIENT_SECRET;
     
+    // #region agent log
+    log('refresh attempt', {hasClientId:!!clientId,hasClientSecret:!!clientSecret}, 'H1');
+    // #endregion
+
     if (!clientId || !clientSecret) {
+      // #region agent log
+      log('missing env vars', {hasClientId:!!clientId,hasClientSecret:!!clientSecret}, 'H1');
+      // #endregion
       return NextResponse.json(
         { error: 'Server configuration error' },
         { status: 500 }
@@ -79,7 +97,13 @@ export async function POST(request: NextRequest) {
 
     try {
       currentTokens = await refreshTokens(tokens.refresh_token, clientId, clientSecret);
+      // #region agent log
+      log('refresh success', {newExpiresAt:currentTokens.expires_at}, 'H1,H3');
+      // #endregion
     } catch (error) {
+      // #region agent log
+      log('refresh failed', {error:error instanceof Error?error.message:String(error)}, 'H1,H3');
+      // #endregion
       console.error('[Strava Upload] Token refresh failed:', error);
       return NextResponse.json(
         { error: 'Token refresh failed. Please reconnect to Strava.', needsReauth: true },
@@ -104,7 +128,17 @@ export async function POST(request: NextRequest) {
   const routeName = name || `Routista Route - ${new Date().toLocaleDateString()}`;
   const routeDescription = description || 'Generated with Routista (routista.eu)';
 
+  // #region agent log
+  const fs2 = await import('fs');
+  const logPath2 = '/Users/jakubanderwald/code/routista/.cursor/debug.log';
+  const log2 = (msg: string, data: Record<string, unknown>, hyp: string) => { try { fs2.appendFileSync(logPath2, JSON.stringify({location:'strava/upload/route.ts',message:msg,data,timestamp:Date.now(),sessionId:'debug-session',hypothesisId:hyp})+'\n'); } catch {} };
+  // #endregion
+
   try {
+    // #region agent log
+    log2('calling createStravaRoute', {coordCount:coordinates.length,type,sub_type}, 'H2,H5');
+    // #endregion
+
     // Upload to Strava
     const stravaRoute = await createStravaRoute(
       currentTokens.access_token,
@@ -116,6 +150,10 @@ export async function POST(request: NextRequest) {
     );
 
     console.log('[Strava Upload] Route created successfully:', stravaRoute.id);
+
+    // #region agent log
+    log2('route created successfully', {routeId:stravaRoute.id}, 'success');
+    // #endregion
 
     // Return success with route URL and updated tokens
     return NextResponse.json({
@@ -129,6 +167,10 @@ export async function POST(request: NextRequest) {
     console.error('[Strava Upload] Upload failed:', error);
     const message = error instanceof Error ? error.message : 'Upload failed';
     
+    // #region agent log
+    log2('upload failed', {message,includes401:message.includes('401'),includesUnauth:message.includes('unauthorized')}, 'H2,H5');
+    // #endregion
+
     // Check for auth errors
     if (message.includes('401') || message.includes('unauthorized')) {
       return NextResponse.json(

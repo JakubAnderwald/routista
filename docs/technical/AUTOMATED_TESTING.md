@@ -172,70 +172,6 @@ All interactive elements in the create flow have `data-testid` attributes for re
 | `result-back-button` | Back (Result → Mode) | Return to mode selection |
 | `result-download-button` | Download GPX | Download the generated route |
 
-## Bug Reproduction Example
-
-Here's a complete example of reproducing a user-reported bug with their specific image:
-
-```javascript
-// Scenario: User reports bug with a specific image attached to GitHub issue
-// The image is available at: https://github.com/user/repo/issues/123/image.png
-
-// 1. Navigate to create page
-await page.goto('http://localhost:3000/en/create');
-
-// 2. Load the user's problematic image
-const userImageURL = 'https://github.com/user/repo/issues/123/image.png';
-
-await page.evaluate(async (imageURL) => {
-  // Fetch the image
-  const response = await fetch(imageURL);
-  const blob = await response.blob();
-  
-  // Convert to data URL
-  const reader = new FileReader();
-  const dataURL = await new Promise((resolve) => {
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(blob);
-  });
-  
-  // Upload using test helper
-  window.__routistaTestHelpers.loadImageFromDataURL(dataURL, 'github-issue-123.png');
-}, userImageURL);
-
-// 3. Wait for processing
-await page.waitForFunction(() => {
-  return document.querySelector('[data-testid="has-shape-points"]')
-    ?.getAttribute('data-value') === 'true';
-}, { timeout: 10000 });
-
-// 4. Continue with the rest of the flow to reproduce the bug...
-await page.click('[data-testid="upload-next-button"]');
-// ... rest of the test
-```
-
-### Alternative: Using Local Files
-
-If the user sent you an image file directly:
-
-```javascript
-const fs = require('fs');
-
-// Read the user's image file
-const imageBuffer = fs.readFileSync('./user-bug-reports/issue-123-image.png');
-const base64 = imageBuffer.toString('base64');
-const mimeType = 'image/png'; // or detect from file extension
-const dataURL = `data:${mimeType};base64,${base64}`;
-
-// Navigate and upload
-await page.goto('http://localhost:3000/en/create');
-
-await page.evaluate((dataURL) => {
-  window.__routistaTestHelpers.loadImageFromDataURL(dataURL, 'user-issue-123.png');
-}, dataURL);
-
-// Continue testing...
-```
-
 ## Complete E2E Test Example
 
 Here's a complete example using Antigravity browser subagent (adaptable to Puppeteer/Playwright):
@@ -277,8 +213,7 @@ await page.waitForFunction(() => {
 });
 
 // 9. Select a transport mode
-// (ModeSelector has its own buttons - click one of the mode cards)
-await page.click('button:has-text("Walking")'); // or use more specific selector
+await page.click('button:has-text("Walking")');
 
 // 10. Generate route
 await page.click('[data-testid="mode-generate-button"]');
@@ -287,7 +222,7 @@ await page.click('[data-testid="mode-generate-button"]');
 await page.waitForFunction(() => {
   return document.querySelector('[data-testid="current-step"]')
     ?.getAttribute('data-value') === 'result';
-}, { timeout: 60000 }); // Route generation can take time
+}, { timeout: 60000 });
 
 // 12. Verify route was generated
 const hasRoute = await page.$eval(
@@ -302,7 +237,7 @@ await page.click('[data-testid="result-download-button"]');
 
 ## Test Image Files
 
-All test images are located in the `public/` folder to ensure browser and headless tests use identical sources:
+All test images are located in the `public/` folder:
 
 ### Public Folder (`public/`)
 Root-level images:
@@ -311,57 +246,8 @@ Root-level images:
 - `circle.png` - Circle shape
 
 ### Examples Folder (`public/examples/`)
-Example images for user selection and testing:
-- `lightning.png` - Lightning bolt shape
-- `note.png` - Music note shape
-- `anchor.png` - Anchor shape
-- `dino.png` - Dinosaur shape
-- `paw.png` - Paw print shape
-- `christmas-tree.png` - Christmas tree shape
-- `snowflake.png` - Snowflake shape
-- `gift-box.png` - Gift box shape
-
-Both browser automation and headless tests (`tests/routeAccuracy.test.ts`) use these same images to ensure consistent results.
-
-## Browser-Headless Test Alignment
-
-The headless route accuracy tests (`tests/routeAccuracy.test.ts`) are designed to exactly mirror the browser flow. This ensures that test results match what users experience in the browser.
-
-### Aligned Parameters
-
-| Parameter | Browser Default | Headless Test | Source |
-|-----------|----------------|---------------|--------|
-| **Center** | `[51.505, -0.09]` | `[51.505, -0.09]` | `CreateClient.tsx` line 48 |
-| **Radius** | `1000m` | `1000m` | `CreateClient.tsx` line 49 |
-| **Mode** | `foot-walking` | `foot-walking` | Default transport mode |
-| **numPoints** | `150` | `150` | `extractShapeFromImage()` call |
-
-### Aligned Flow
-
-Both browser and headless tests follow the same steps:
-
-```
-1. Load Image        → public/ folder (same source)
-2. Extract Shape     → 150 points (extractShapeFromImage / extractShapeFromImageNode)
-3. Scale to Geo      → scalePointsToGeo(points, center, radius)
-4. Generate Route    → getRadarRoute() (browser uses /api/radar/directions proxy)
-5. Calculate Accuracy → calculateRouteAccuracy(geoPoints, routeData, radius)
-```
-
-### Verifying Alignment
-
-If browser and headless tests produce different results for the same image:
-
-1. **Check image source**: Ensure the exact same PNG file is used
-2. **Check numPoints**: Both should use 150 points
-3. **Check center/radius**: Browser may have different values if user changed map
-4. **Check mode**: Browser may have different transport mode selected
-
-Use browser DevTools console to inspect current parameters:
-```javascript
-// Check shape points count
-console.log('Shape points:', document.querySelector('[data-testid="has-shape-points"]')?.getAttribute('data-value'));
-```
+- `lightning.png`, `note.png`, `anchor.png`, `dino.png`, `paw.png`
+- `christmas-tree.png`, `snowflake.png`, `gift-box.png`
 
 ## Best Practices
 
@@ -388,7 +274,7 @@ if (!isDisabled) {
 ```
 
 ### 3. Handle Route Generation Timeouts
-Route generation calls external APIs and may take time. Use generous timeouts:
+Route generation calls external APIs and may take time:
 ```javascript
 await page.waitForFunction(() => {
   return document.querySelector('[data-testid="current-step"]')?.getAttribute('data-value') === 'result';
@@ -408,15 +294,13 @@ await page.setInputFiles('[data-testid="create-image-upload-input"]', './my-imag
 ## Debugging Tips
 
 ### Inspect Hidden Elements
-While the test controls are hidden, you can inspect them in browser DevTools:
-1. Open DevTools (F12)
-2. Console tab
-3. Run: `document.querySelector('[data-testid="test-controls"]').style.display = 'block'`
+```javascript
+// In browser console
+document.querySelector('[data-testid="test-controls"]').style.display = 'block'
+```
 
 ### Check Current State
-You can query the application state at any time:
 ```javascript
-// In browser console or automation script
 console.log({
   step: document.querySelector('[data-testid="current-step"]')?.getAttribute('data-value'),
   hasImage: document.querySelector('[data-testid="has-image"]')?.getAttribute('data-value'),
@@ -426,26 +310,10 @@ console.log({
 });
 ```
 
-## Extending Test Coverage
-
-To add support for more test images:
-
-1. **Add image to public folder**: Copy image to `public/my-image.png`
-2. **Add test button**: Edit `CreateClient.tsx`, add a new button in the test controls section:
-   ```tsx
-   <button 
-     id="test-load-myimage" 
-     data-testid="test-load-myimage" 
-     onClick={() => loadTestImage("my-image.png")}
-   >
-     Load My Image
-   </button>
-   ```
-3. **Document it**: Update this file with the new test button details
-
 ## Related Files
 
-- [`src/components/ImageUpload.tsx`](file:///Users/jakubanderwald/code/routista.antigravity/src/components/ImageUpload.tsx) - Image upload component with test IDs
-- [`src/app/[locale]/create/CreateClient.tsx`](file:///Users/jakubanderwald/code/routista.antigravity/src/app/[locale]/create/CreateClient.tsx) - Main create flow with test controls
-- [`tests/routeAccuracy.test.ts`](file:///Users/jakubanderwald/code/routista.antigravity/tests/routeAccuracy.test.ts) - Node.js unit tests example
-- [`docs/ARCHITECTURE.md`](file:///Users/jakubanderwald/code/routista.antigravity/docs/ARCHITECTURE.md) - System architecture overview
+- `src/components/ImageUpload.tsx` - Image upload component
+- `src/app/[locale]/create/CreateClient.tsx` - Main create flow with test controls
+- `tests/routeAccuracy.test.ts` - Node.js unit tests
+- `tests/e2e/` - E2E test files
+

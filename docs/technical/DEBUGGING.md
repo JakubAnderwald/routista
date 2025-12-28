@@ -159,3 +159,4 @@ The pipeline uses uniform sampling followed by Douglas-Peucker simplification:
    - Additional adjustment in `simplifyPoints`:
      - Closed loops: tolerance / 20
      - Open shapes: tolerance / 10
+

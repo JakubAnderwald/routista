@@ -8,9 +8,9 @@ trigger: always_on
 
 **BEFORE starting ANY task in the Routista codebase, you MUST:**
 
-1. **Read `docs/CONTEXT_MAP.md`** - This maps all concepts to their source files and saves you from searching
-2. **Check `docs/ARCHITECTURE.md`** - Understand the system architecture and data flow  
-3. **Review relevant docs** - Check `docs/` for task-specific guides (AUTOMATED_TESTING.md, DEBUGGING.md, etc.)
+1. **Read `docs/technical/CONTEXT_MAP.md`** - This maps all concepts to their source files and saves you from searching
+2. **Check `docs/technical/ARCHITECTURE.md`** - Understand the system architecture and data flow  
+3. **Review relevant docs** - Check `docs/features/` for feature guides and `docs/technical/` for dev guides
 
 **DO NOT** start searching or grepping the codebase until you've consulted these documents.
 
@@ -107,8 +107,10 @@ After completing any coding task:
 1. **Run All Tests** - Ensure full test suite passes
 2. **Check README.md** - Update if changes affect features/setup/usage (max 200 lines)
 3. **Update Documentation**:
-   - Architecture changes → update `docs/ARCHITECTURE.md`
-   - New dependencies/complex logic → update `docs/DEBUGGING.md`
+   - Architecture changes → update `docs/technical/ARCHITECTURE.md`
+   - New dependencies/complex logic → update `docs/technical/DEBUGGING.md`
+   - New features → add/update doc in `docs/features/`
+   - New files → update `docs/technical/CONTEXT_MAP.md`
    - New/modified exports in `src/lib` → add JSDoc comments
 
 ## 🧪 Testing & Automation
@@ -116,7 +118,7 @@ After completing any coding task:
 - **NO FILE PICKERS**: Cannot interact with OS file dialogs
 - **USE HELPERS**: For image upload tests, use `window.__routistaTestHelpers.loadTestImage("star.png")`
 - **CONTROLS**: Use `data-testid` attributes (e.g., `test-load-star`, `upload-next-button`)
-- **REFERENCE**: See `docs/AUTOMATED_TESTING.md` for complete automation protocol
+- **REFERENCE**: See `docs/technical/AUTOMATED_TESTING.md` for complete automation protocol
 
 ## 💻 Tech Stack
 

@@ -5,7 +5,7 @@
  * can be loaded, processed, and used in the create flow.
  * 
  * Note: These tests require a browser automation tool (Playwright, Puppeteer, or Antigravity)
- * and a running dev server. See docs/AUTOMATED_TESTING.md for setup instructions.
+ * and a running dev server. See docs/technical/AUTOMATED_TESTING.md for setup instructions.
  */
 
 import { describe, it, expect } from 'vitest';

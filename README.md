@@ -16,8 +16,9 @@ Turn any shape into a real-world GPS route! Routista is a fun, free tool for run
 
 **🚨 START HERE before working on this codebase:**
 
-1. **Read [`docs/CONTEXT_MAP.md`](docs/CONTEXT_MAP.md)** - Maps all concepts to their source files
-2. **Check [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** - System architecture overview
+1. **Read [`docs/technical/CONTEXT_MAP.md`](docs/technical/CONTEXT_MAP.md)** - Maps all concepts to their source files
+2. **Check [`docs/technical/ARCHITECTURE.md`](docs/technical/ARCHITECTURE.md)** - System architecture overview
+3. **Browse [`docs/features/`](docs/features/)** - Feature-specific documentation
 
 These documents will save you significant time by showing exactly where to find what you need.
 
@@ -80,7 +81,7 @@ git push origin feature/my-feature
 # → Vercel creates: https://routista-git-feature-my-feature-*.vercel.app
 ```
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#deployment--hosting) for full deployment details.
+See [`docs/technical/ARCHITECTURE.md`](docs/technical/ARCHITECTURE.md#deployment--hosting) for full deployment details.
 
 ### Testing
 
@@ -88,7 +89,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#deployment--hosting) for full 
 # Run automated tests
 npm test
 
-# Run browser automation tests (see docs/AUTOMATED_TESTING.md)
+# Run browser automation tests (see docs/technical/AUTOMATED_TESTING.md)
 npm run test:e2e
 ```
 

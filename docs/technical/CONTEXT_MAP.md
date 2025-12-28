@@ -14,7 +14,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Image Upload** | `src/components/ImageUpload.tsx` | Handles file drop and preview. **See Testing Note below.** |
 | **Area Selection** | `src/components/AreaSelector.tsx` | Map interface for choosing center point and radius. |
 | **GPX Export** | `src/lib/gpxGenerator.ts` | Converts Route data to GPX XML format. |
-| **Social Sharing** | `src/components/ShareModal.tsx`, `src/lib/shareImageGenerator.ts` | Branded image generation for social media. See `docs/SHARE_FEATURE.md`. |
+| **Social Sharing** | `src/components/ShareModal.tsx`, `src/lib/shareImageGenerator.ts` | Branded image generation for social media. See `docs/features/SHARE.md`. |
 | **Route Caching** | `src/lib/radarService.ts` | Caches routes in Upstash Redis (24h TTL). |
 | **Rate Limiting** | `middleware.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis. |
 | **Error Tracking** | `sentry.*.config.ts`, `src/app/global-error.tsx` | Sentry SDK for client/server/edge error capture. |
@@ -22,9 +22,9 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Translations** | `messages/[locale].json` | i18n strings for all pages. Supported locales: `en` (English), `de` (German), `pl` (Polish), `da` (Danish). |
 | **Page Structure** | `src/app/[locale]/[page]/page.tsx` | All pages support dynamic locale routing via Next.js App Router with next-intl. |
 | **Page Layouts** | `src/app/[locale]/layout.tsx` | Root layout that sets up i18n providers and metadata. |
-| **UI Variant Config** | `src/config.ts`, `src/components/ABTestProvider.tsx` | Feature flag for UI variant (A or B). See `docs/AB_TEST.md`. |
+| **UI Variant Config** | `src/config.ts`, `src/components/ABTestProvider.tsx` | Feature flag for UI variant (A or B). See `docs/features/UI_VARIANTS.md`. |
 | **App Configuration** | `src/config.ts`, `src/config/` | Centralized config: routing tolerances, API settings, geo constants, image processing. |
-| **Deployment & Hosting** | `docs/ARCHITECTURE.md` (Deployment section) | Vercel setup, environments (Production/Preview), env vars. |
+| **Deployment & Hosting** | `docs/technical/ARCHITECTURE.md` (Deployment section) | Vercel setup, environments (Production/Preview), env vars. |
 
 ## 📂 File Tree & Purpose
 
@@ -51,8 +51,10 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `sentry.edge.config.ts`: Edge runtime Sentry initialization.
 *   `next.config.ts`: Next.js config wrapped with Sentry.
 
-### Documentation (root)
-*   `README.md`: **CHECK ON EVERY CHANGE** - Update if features/setup/usage affected.
+### Documentation (`docs/`)
+*   `README.md`: Documentation index and overview.
+*   `features/`: Feature-specific documentation (user-facing features).
+*   `technical/`: Technical documentation (architecture, testing, debugging).
 
 ### Components (`src/components/`)
 *   `CreateClient.tsx`: **CRITICAL**. The main page logic. Has UI variant conditional rendering.
@@ -61,7 +63,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `ResultMap.tsx`: Final output display. Exposes `getMap()` ref for sharing.
 *   `ModeSelector.tsx`: Walking/Cycling/Driving cards. Used in variant A only.
 *   `ShareModal.tsx`: Social sharing UI. Platform selection, copy/download/share actions.
-*   `ABTestProvider.tsx`: UI variant context provider. See `docs/AB_TEST.md`.
+*   `ABTestProvider.tsx`: UI variant context provider. See `docs/features/UI_VARIANTS.md`.
 
 ### Pages (`src/app/`)
 *   `[locale]/create/page.tsx`: Wrapper for `CreateClient`.
@@ -73,7 +75,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   **NEVER** try to interact with the OS file picker.
 *   **ALWAYS** use the hidden test controls in `CreateClient.tsx` for image uploads.
 *   **USE** `window.__routistaTestHelpers.loadTestImage()` or `loadImageFromDataURL()`.
-*   **REFER** to `docs/AUTOMATED_TESTING.md` for the full protocol.
+*   **REFER** to `docs/technical/AUTOMATED_TESTING.md` for the full protocol.
 
 ### Architecture
 *   **Data Flow**: Image -> Points (0-1) -> Scaled Geo Points (Lat/Lng) -> Route (LineString).
@@ -91,3 +93,29 @@ Use Context7 MCP for current documentation on project dependencies:
 | Lucide | `/lucide-icons/lucide` | Icon names, React usage |
 
 **Usage**: `mcp_context7_get-library-docs` with `context7CompatibleLibraryID` and `topic`.
+
+## 📚 Documentation Structure
+
+### Feature Documentation (`docs/features/`)
+User-facing feature descriptions with implementation details:
+
+| Document | Feature |
+| :--- | :--- |
+| `IMAGE_UPLOAD.md` | Image upload, shape extraction |
+| `AREA_SELECTION.md` | Map-based location selection |
+| `TRANSPORT_MODES.md` | Walking, cycling, driving modes |
+| `ROUTE_GENERATION.md` | Shape-to-route matching algorithm |
+| `ROUTE_EXPORT.md` | GPX download functionality |
+| `SHARE.md` | Social media sharing |
+| `UI_VARIANTS.md` | A/B test variants configuration |
+
+### Technical Documentation (`docs/technical/`)
+Architecture and developer guides:
+
+| Document | Purpose |
+| :--- | :--- |
+| `ARCHITECTURE.md` | System overview, data flow, infrastructure |
+| `AUTOMATED_TESTING.md` | Browser automation, test helpers |
+| `DEBUGGING.md` | Console logs, troubleshooting |
+| `CONTEXT_MAP.md` | This file - concept-to-file mapping |
+

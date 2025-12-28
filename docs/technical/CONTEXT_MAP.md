@@ -15,6 +15,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Area Selection** | `src/components/AreaSelector.tsx` | Map interface for choosing center point and radius. |
 | **GPX Export** | `src/lib/gpxGenerator.ts` | Converts Route data to GPX XML format. |
 | **Social Sharing** | `src/components/ShareModal.tsx`, `src/lib/shareImageGenerator.ts` | Branded image generation for social media. See `docs/features/SHARE.md`. |
+| **Strava Integration** | `src/components/StravaButton.tsx`, `src/lib/stravaService.ts`, `src/app/api/strava/` | Direct route upload to Strava. See `docs/features/STRAVA_INTEGRATION.md`. |
 | **Route Caching** | `src/lib/radarService.ts` | Caches routes in Upstash Redis (24h TTL). |
 | **Rate Limiting** | `middleware.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis. |
 | **Error Tracking** | `sentry.*.config.ts`, `src/app/global-error.tsx` | Sentry SDK for client/server/edge error capture. |
@@ -43,6 +44,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `imageProcessing.ts`: **CRITICAL**. Computer vision lite.
 *   `gpxGenerator.ts`: Utility for file export.
 *   `shareImageGenerator.ts`: Branded image generation for social sharing. Uses `leaflet-image` + Canvas API.
+*   `stravaService.ts`: Strava OAuth and API integration. Token management, route upload.
 
 ### Infrastructure (root)
 *   `middleware.ts`: Rate limiting for `/api/radar/*` routes, i18n routing.
@@ -63,6 +65,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `ResultMap.tsx`: Final output display. Exposes `getMap()` ref for sharing.
 *   `ModeSelector.tsx`: Walking/Cycling/Driving cards. Used in variant A only.
 *   `ShareModal.tsx`: Social sharing UI. Platform selection, copy/download/share actions.
+*   `StravaButton.tsx`: Strava connect/upload button. OAuth popup flow, upload status.
 *   `ABTestProvider.tsx`: UI variant context provider. See `docs/features/UI_VARIANTS.md`.
 
 ### Pages (`src/app/`)
@@ -107,6 +110,7 @@ User-facing feature descriptions with implementation details:
 | `ROUTE_GENERATION.md` | Shape-to-route matching algorithm |
 | `ROUTE_EXPORT.md` | GPX download functionality |
 | `SHARE.md` | Social media sharing |
+| `STRAVA_INTEGRATION.md` | Direct Strava route upload |
 | `UI_VARIANTS.md` | A/B test variants configuration |
 
 ### Technical Documentation (`docs/technical/`)

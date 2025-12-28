@@ -212,6 +212,15 @@
         "title": "Routista - Zamień kształty w trasy",
         "description": "Generuj prawdziwe trasy GPS z dowolnego kształtu lub obrazu."
     },
+    "StravaButton": {
+        "connect": "Połącz ze Stravą",
+        "connecting": "Łączenie...",
+        "push": "Wyślij do Stravy",
+        "uploading": "Przesyłanie...",
+        "success": "Zobacz na Stravie",
+        "error": "Błąd - Spróbuj ponownie",
+        "disconnect": "Rozłącz"
+    },
     "ShareModal": {
         "title": "Udostępnij trasę",
         "subtitle": "Wybierz format zoptymalizowany dla Twojej platformy",

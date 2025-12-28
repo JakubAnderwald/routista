@@ -212,6 +212,15 @@
         "title": "Routista - Turn Shapes into Routes",
         "description": "Generate real-world GPS routes from any shape or image."
     },
+    "StravaButton": {
+        "connect": "Connect Strava",
+        "connecting": "Connecting...",
+        "push": "Push to Strava",
+        "uploading": "Uploading...",
+        "success": "View on Strava",
+        "error": "Failed - Retry",
+        "disconnect": "Disconnect"
+    },
     "ShareModal": {
         "title": "Share Your Route",
         "subtitle": "Choose a format optimized for your favorite platform",

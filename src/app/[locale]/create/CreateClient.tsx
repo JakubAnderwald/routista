@@ -13,6 +13,7 @@ import { useTranslations } from 'next-intl';
 import { TransportMode } from "@/config";
 import { useABVariant } from "@/components/ABTestProvider";
 import { ShareModal } from "@/components/ShareModal";
+import { StravaButton } from "@/components/StravaButton";
 import type { ResultMapRef } from "@/components/ResultMap";
 
 // Actually, react-leaflet components can be imported directly, but they must be rendered inside MapContainer.
@@ -364,8 +365,9 @@ export default function CreateClient() {
                             </div>
                             <div className="flex justify-between mt-6">
                                 <Button data-testid="result-back-button" variant="outline" onClick={() => setStep(variant === 'A' ? "mode" : "area")}>{t('result.back')}</Button>
-                                <div className="flex gap-3">
+                                <div className="flex gap-3 items-center">
                                     <Button data-testid="result-share-button" variant="outline" onClick={() => setIsShareModalOpen(true)}>{t('result.share')}</Button>
+                                    <StravaButton routeData={routeData} mode={mode || 'foot-walking'} />
                                     <Button data-testid="result-download-button" onClick={handleDownload}>{t('result.download')}</Button>
                                 </div>
                             </div>

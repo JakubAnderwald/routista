@@ -212,6 +212,15 @@
         "title": "Routista - Lav Former om til Ruter",
         "description": "Generer GPS-ruter i den virkelige verden fra enhver form eller billede."
     },
+    "StravaButton": {
+        "connect": "Forbind til Strava",
+        "connecting": "Forbinder...",
+        "push": "Send til Strava",
+        "uploading": "Uploader...",
+        "success": "Se på Strava",
+        "error": "Fejl - Prøv igen",
+        "disconnect": "Afbryd"
+    },
     "ShareModal": {
         "title": "Del din rute",
         "subtitle": "Vælg et format optimeret til din yndlingsplatform",

@@ -212,6 +212,15 @@
         "title": "Routista - Formen in Routen verwandeln",
         "description": "Generiere echte GPS-Routen aus jeder Form oder jedem Bild."
     },
+    "StravaButton": {
+        "connect": "Mit Strava verbinden",
+        "connecting": "Verbinde...",
+        "push": "Zu Strava senden",
+        "uploading": "Wird hochgeladen...",
+        "success": "Auf Strava ansehen",
+        "error": "Fehlgeschlagen - Erneut versuchen",
+        "disconnect": "Trennen"
+    },
     "ShareModal": {
         "title": "Route teilen",
         "subtitle": "Wähle ein Format für deine bevorzugte Plattform",

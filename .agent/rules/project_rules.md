@@ -43,8 +43,16 @@ Before pushing any changes to GitHub, you MUST run these checks locally:
 1. **Security Audit**: `npm audit --audit-level=high`
 2. **Linting**: `npm run lint`
 3. **Tests**: `npm test`
+4. **Lockfile sync** (if packages changed): `rm -rf node_modules package-lock.json && npm install`
 
 **CRITICAL**: If any check fails, fix issues before pushing. The CI/CD pipeline will fail otherwise.
+
+### After Adding/Removing Packages
+
+When you run `npm install <package>` or modify `package.json`:
+1. Regenerate lockfile: `rm -rf node_modules package-lock.json && npm install`
+2. Commit both `package.json` AND `package-lock.json` together
+3. This ensures CI's `npm ci` won't fail due to npm version differences
 
 ## 📱 Mobile Testing (Preview Deployments)
 

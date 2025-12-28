@@ -70,11 +70,20 @@ Tokens are automatically refreshed when expired during upload.
 | `STRAVA_CLIENT_SECRET` | Server | Strava app client secret |
 | `NEXT_PUBLIC_STRAVA_CLIENT_ID` | Client | Same as above, for OAuth URL |
 | `NEXT_PUBLIC_STRAVA_REDIRECT_URI` | Client | OAuth callback URL |
-| `NEXT_PUBLIC_STRAVA_ENABLED` | Client | Feature toggle - set to `true` when Strava grants production API access |
 
 ## Feature Toggle
 
-The Strava button is controlled by `NEXT_PUBLIC_STRAVA_ENABLED`. Set to `true` when Strava approves production API access for route creation. Currently pending approval (see Troubleshooting below).
+The Strava button is controlled by `APP_CONFIG.stravaEnabled` in `src/config.ts`. 
+
+```typescript
+// src/config.ts
+export const APP_CONFIG: AppConfig = {
+    uiVariant: 'B',
+    stravaEnabled: false, // Set to true when Strava grants API access
+} as const;
+```
+
+Currently set to `false` - pending Strava production API approval for route creation (see Troubleshooting below).
 
 ## Strava API Limits
 
@@ -91,7 +100,7 @@ Token expired and refresh failed. User needs to re-authorize.
 Strava's Routes API (`POST /routes`) requires **production API access**. New apps are in testing mode with limited functionality. To fix:
 1. Email developers@strava.com requesting production access
 2. Include your Client ID and app description
-3. Once approved, set `NEXT_PUBLIC_STRAVA_ENABLED=true` in Vercel
+3. Once approved, set `stravaEnabled: true` in `src/config.ts`
 
 Error from Strava: `{"message":"Authorization Error","errors":[{"resource":"Application","field":"internal","code":"invalid"}]}`
 

@@ -10,6 +10,7 @@ import {
   isConnected,
   buildOAuthUrl,
 } from '@/lib/stravaService';
+import { APP_CONFIG } from '@/config';
 
 // ============================================================================
 // Types
@@ -29,12 +30,6 @@ interface StravaButtonProps {
   className?: string;
 }
 
-// ============================================================================
-// Feature Toggle
-// ============================================================================
-
-// Strava API access pending approval - set to true when Strava grants production access
-const STRAVA_ENABLED = process.env.NEXT_PUBLIC_STRAVA_ENABLED === 'true';
 
 // ============================================================================
 // Component
@@ -212,7 +207,7 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
   // ============================================================================
 
   // Feature toggle - hide button until Strava API access is approved
-  if (!STRAVA_ENABLED) {
+  if (!APP_CONFIG.stravaEnabled) {
     return null;
   }
 

@@ -25,7 +25,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Page Structure** | `src/app/[locale]/[page]/page.tsx` | All pages support dynamic locale routing via Next.js App Router with next-intl. |
 | **Page Layouts** | `src/app/[locale]/layout.tsx` | Root layout that sets up i18n providers and metadata. |
 | **UI Variant Config** | `src/config.ts`, `src/components/ABTestProvider.tsx` | Feature flag for UI variant (A or B). See `docs/features/UI_VARIANTS.md`. |
-| **App Configuration** | `src/config.ts`, `src/config/` | Centralized config: routing tolerances, API settings, geo constants, image processing. |
+| **App Configuration** | `src/config.ts`, `src/config/` | Centralized config: routing tolerances, API settings, geo constants, image processing, feature toggles (`stravaEnabled`, `uiVariant`). |
 | **Deployment & Hosting** | `docs/technical/ARCHITECTURE.md` (Deployment section) | Vercel setup, environments (Production/Preview), env vars. |
 
 ## 📂 File Tree & Purpose

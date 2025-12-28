@@ -3,6 +3,9 @@
  * 
  * This endpoint accepts a GeoJSON route and uploads it to Strava.
  * Requires valid Strava access tokens passed in the request body.
+ * 
+ * NOTE: Route creation requires Strava API production access.
+ * Currently pending approval from Strava.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -32,9 +35,6 @@ interface UploadRequest {
 
 export async function POST(request: NextRequest) {
   console.log('[Strava Upload] Received upload request');
-  // #region agent log
-  const log = (msg: string, data: Record<string, unknown>, hyp: string) => console.log(`[DEBUG ${hyp}] ${msg}:`, JSON.stringify(data));
-  // #endregion
 
   let body: UploadRequest;
   try {
@@ -47,10 +47,6 @@ export async function POST(request: NextRequest) {
   }
 
   const { routeData, tokens, mode, name, description } = body;
-
-  // #region agent log
-  log('request received', {hasTokens:!!tokens,expiresAt:tokens?.expires_at,now:Math.floor(Date.now()/1000),mode}, 'H1');
-  // #endregion
 
   // Validate request
   if (!routeData || !tokens || !mode) {
@@ -70,25 +66,14 @@ export async function POST(request: NextRequest) {
   // Check if tokens need refresh
   let currentTokens = tokens;
   const now = Math.floor(Date.now() / 1000);
-  
-  // #region agent log
-  log('token expiry check', {expiresAt:tokens.expires_at,now,needsRefresh:tokens.expires_at<=now+60}, 'H1,H4');
-  // #endregion
 
   if (tokens.expires_at <= now + 60) {
     console.log('[Strava Upload] Tokens expired, refreshing...');
     
     const clientId = process.env.STRAVA_CLIENT_ID;
     const clientSecret = process.env.STRAVA_CLIENT_SECRET;
-    
-    // #region agent log
-    log('refresh attempt', {hasClientId:!!clientId,hasClientSecret:!!clientSecret}, 'H1');
-    // #endregion
 
     if (!clientId || !clientSecret) {
-      // #region agent log
-      log('missing env vars', {hasClientId:!!clientId,hasClientSecret:!!clientSecret}, 'H1');
-      // #endregion
       return NextResponse.json(
         { error: 'Server configuration error' },
         { status: 500 }
@@ -97,13 +82,7 @@ export async function POST(request: NextRequest) {
 
     try {
       currentTokens = await refreshTokens(tokens.refresh_token, clientId, clientSecret);
-      // #region agent log
-      log('refresh success', {newExpiresAt:currentTokens.expires_at}, 'H1,H3');
-      // #endregion
     } catch (error) {
-      // #region agent log
-      log('refresh failed', {error:error instanceof Error?error.message:String(error)}, 'H1,H3');
-      // #endregion
       console.error('[Strava Upload] Token refresh failed:', error);
       return NextResponse.json(
         { error: 'Token refresh failed. Please reconnect to Strava.', needsReauth: true },
@@ -129,10 +108,6 @@ export async function POST(request: NextRequest) {
   const routeDescription = description || 'Generated with Routista (routista.eu)';
 
   try {
-    // #region agent log
-    log('calling createStravaRoute', {coordCount:coordinates.length,type,sub_type}, 'H2,H5');
-    // #endregion
-
     // Upload to Strava
     const stravaRoute = await createStravaRoute(
       currentTokens.access_token,
@@ -145,10 +120,6 @@ export async function POST(request: NextRequest) {
 
     console.log('[Strava Upload] Route created successfully:', stravaRoute.id);
 
-    // #region agent log
-    log('route created successfully', {routeId:stravaRoute.id}, 'success');
-    // #endregion
-
     // Return success with route URL and updated tokens
     return NextResponse.json({
       success: true,
@@ -160,21 +131,17 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[Strava Upload] Upload failed:', error);
     const message = error instanceof Error ? error.message : 'Upload failed';
-    
-    // #region agent log
-    log('upload failed', {message,includes401:message.includes('401'),includesUnauth:message.includes('unauthorized')}, 'H2,H5');
-    // #endregion
 
-    // Check for auth errors - include actual Strava error for debugging
-    if (message.includes('401') || message.includes('unauthorized')) {
+    // Check for auth errors
+    if (message.includes('401') || message.includes('unauthorized') || message.includes('Authorization Error')) {
       return NextResponse.json(
-        { error: 'Authorization failed. Please reconnect to Strava.', needsReauth: true, stravaError: message },
+        { error: 'Authorization failed. Please reconnect to Strava.', needsReauth: true },
         { status: 401 }
       );
     }
     
     return NextResponse.json(
-      { error: message, stravaError: message },
+      { error: message },
       { status: 500 }
     );
   }
@@ -245,9 +212,7 @@ async function createStravaRoute(
 
   if (!response.ok) {
     const errorText = await response.text();
-    // #region agent log
-    console.error('[DEBUG H2] Strava API raw error:', {status: response.status, body: errorText, waypointCount: waypoints.length});
-    // #endregion
+    console.error('[Strava Upload] API error:', response.status, errorText);
     throw new Error(`Strava API error: ${response.status} - ${errorText}`);
   }
 
@@ -275,4 +240,3 @@ function simplifyToWaypoints(
 
   return result;
 }
-

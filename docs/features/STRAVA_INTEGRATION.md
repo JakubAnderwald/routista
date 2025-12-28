@@ -70,6 +70,11 @@ Tokens are automatically refreshed when expired during upload.
 | `STRAVA_CLIENT_SECRET` | Server | Strava app client secret |
 | `NEXT_PUBLIC_STRAVA_CLIENT_ID` | Client | Same as above, for OAuth URL |
 | `NEXT_PUBLIC_STRAVA_REDIRECT_URI` | Client | OAuth callback URL |
+| `NEXT_PUBLIC_STRAVA_ENABLED` | Client | Feature toggle - set to `true` when Strava grants production API access |
+
+## Feature Toggle
+
+The Strava button is controlled by `NEXT_PUBLIC_STRAVA_ENABLED`. Set to `true` when Strava approves production API access for route creation. Currently pending approval (see Troubleshooting below).
 
 ## Strava API Limits
 
@@ -82,7 +87,15 @@ Tokens are automatically refreshed when expired during upload.
 ### "Please reconnect to Strava"
 Token expired and refresh failed. User needs to re-authorize.
 
-### Route creation fails
+### Route creation fails with "Authorization Error"
+Strava's Routes API (`POST /routes`) requires **production API access**. New apps are in testing mode with limited functionality. To fix:
+1. Email developers@strava.com requesting production access
+2. Include your Client ID and app description
+3. Once approved, set `NEXT_PUBLIC_STRAVA_ENABLED=true` in Vercel
+
+Error from Strava: `{"message":"Authorization Error","errors":[{"resource":"Application","field":"internal","code":"invalid"}]}`
+
+### Route creation fails (other)
 Strava's route API has strict requirements. Common issues:
 - Route must have at least 2 waypoints
 - Waypoints must be valid lat/lng coordinates

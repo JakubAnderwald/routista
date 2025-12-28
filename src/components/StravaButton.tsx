@@ -30,6 +30,13 @@ interface StravaButtonProps {
 }
 
 // ============================================================================
+// Feature Toggle
+// ============================================================================
+
+// Strava API access pending approval - set to true when Strava grants production access
+const STRAVA_ENABLED = process.env.NEXT_PUBLIC_STRAVA_ENABLED === 'true';
+
+// ============================================================================
 // Component
 // ============================================================================
 
@@ -131,9 +138,6 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
     }
 
     const tokens = getStoredTokens();
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleUpload',message:'tokens retrieved',data:{hasTokens:!!tokens,expiresAt:tokens?.expires_at,now:Math.floor(Date.now()/1000),isExpired:tokens?tokens.expires_at<=Math.floor(Date.now()/1000)+60:null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H4'})}).catch(()=>{});
-    // #endregion
     if (!tokens) {
       setState('disconnected');
       return;
@@ -157,14 +161,7 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
 
       const data = await response.json();
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleUpload:response',message:'API response received',data:{status:response.status,ok:response.ok,needsReauth:data.needsReauth,error:data.error,hasRouteUrl:!!data.routeUrl},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H2,H3'})}).catch(()=>{});
-      // #endregion
-
       if (!response.ok) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleUpload:error',message:'Response not OK',data:{needsReauth:data.needsReauth,error:data.error,fullData:data},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H2,H3,H5'})}).catch(()=>{});
-        // #endregion
         if (data.needsReauth) {
           clearTokens();
           setState('disconnected');
@@ -186,9 +183,6 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
       console.log('[StravaButton] Upload successful:', data.routeUrl);
 
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleUpload:catch',message:'Fetch exception',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'network'})}).catch(()=>{});
-      // #endregion
       console.error('[StravaButton] Upload failed:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Upload failed');
       setState('error');
@@ -216,6 +210,11 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
   // ============================================================================
   // Render
   // ============================================================================
+
+  // Feature toggle - hide button until Strava API access is approved
+  if (!STRAVA_ENABLED) {
+    return null;
+  }
 
   // Strava brand orange color
   const stravaOrange = '#FC4C02';

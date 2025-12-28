@@ -165,16 +165,16 @@ export async function POST(request: NextRequest) {
     log('upload failed', {message,includes401:message.includes('401'),includesUnauth:message.includes('unauthorized')}, 'H2,H5');
     // #endregion
 
-    // Check for auth errors
+    // Check for auth errors - include actual Strava error for debugging
     if (message.includes('401') || message.includes('unauthorized')) {
       return NextResponse.json(
-        { error: 'Authorization failed. Please reconnect to Strava.', needsReauth: true },
+        { error: 'Authorization failed. Please reconnect to Strava.', needsReauth: true, stravaError: message },
         { status: 401 }
       );
     }
     
     return NextResponse.json(
-      { error: message },
+      { error: message, stravaError: message },
       { status: 500 }
     );
   }

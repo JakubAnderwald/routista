@@ -380,9 +380,9 @@ export async function captureMapToCanvas(map: L.Map, routeCoordinates?: [number,
             if (routeCoordinates && routeCoordinates.length > 1) {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
-                    // Get map container size and bounds
+                    // Get map container size (bounds not needed currently but kept for future use)
                     const mapSize = map.getSize();
-                    const bounds = map.getBounds();
+                    // const bounds = map.getBounds();
                     
                     // Calculate scale factors
                     const scaleX = canvas.width / mapSize.x;

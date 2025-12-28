@@ -32,9 +32,9 @@ const PUBLIC_ROOT_DIR = path.resolve(__dirname, '../public');
 // Images in public/examples/
 const EXAMPLE_IMAGES = fs.readdirSync(PUBLIC_EXAMPLES_DIR).filter(file => file.endsWith('.png'));
 // Images in public/ root (star, heart)
-const ROOT_IMAGES = ['star.png', 'heart-v2.png'].filter(file => 
-    fs.existsSync(path.join(PUBLIC_ROOT_DIR, file))
-);
+const ROOT_IMAGE_NAMES = ['star.png', 'heart-v2.png'];
+// eslint-disable-next-line security/detect-non-literal-fs-filename
+const ROOT_IMAGES = ROOT_IMAGE_NAMES.filter(file => fs.existsSync(path.join(PUBLIC_ROOT_DIR, file)));
 
 // Combined test images with their full paths
 const TEST_IMAGES: { name: string; path: string }[] = [

@@ -132,7 +132,7 @@ export function ShareModal({ isOpen, onClose, getMap, routeData, stats, mode }: 
         } finally {
             setIsGenerating(false);
         }
-    }, [getMap, selectedPlatform, stats, mode, t, generatedBlob]);
+    }, [getMap, selectedPlatform, stats, mode, t, generatedBlob, routeData]);
 
     // Reset generated blob when platform changes
     const handlePlatformChange = (platform: SharePlatform) => {

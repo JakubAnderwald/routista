@@ -100,6 +100,44 @@ gh run rerun <run-id>
 
 **Always use `required_permissions: ["all"]`** for `gh` commands to avoid SSL issues.
 
+## 🔺 Vercel CLI
+
+**Use Vercel CLI (`vercel`) instead of browser** for all Vercel operations:
+
+```bash
+# List recent deployments
+vercel ls
+
+# View deployment logs
+vercel logs [deployment-url]
+
+# Inspect deployment details
+vercel inspect [deployment-id]
+
+# Manage environment variables
+vercel env ls                    # List all
+vercel env add [name]            # Add new
+vercel env pull                  # Sync to .env.local
+
+# Deploy (manual)
+vercel                           # Preview deployment
+vercel --prod                    # Production deployment
+
+# Rollback/promote
+vercel rollback [url]            # Revert to previous
+vercel promote [url]             # Promote to production
+
+# Open dashboard
+vercel open
+
+# Find buggy deployment
+vercel bisect
+```
+
+**Always use `required_permissions: ["all"]`** for `vercel` commands to avoid SSL cert issues.
+
+**Project is linked**: `routista` → https://www.routista.eu
+
 ## 📝 Post-Work Verification
 
 After completing any coding task:

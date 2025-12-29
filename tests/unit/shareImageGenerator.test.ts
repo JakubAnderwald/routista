@@ -102,6 +102,85 @@ describe('shareImageGenerator', () => {
             expect(url).toBe('https://www.instagram.com/');
         });
     });
+
+    describe('formatLength', () => {
+        it('should format meters for values under 1000m', async () => {
+            const { formatLength } = await getShareImageModule();
+            
+            expect(formatLength(0)).toBe('0 m');
+            expect(formatLength(100)).toBe('100 m');
+            expect(formatLength(500)).toBe('500 m');
+            expect(formatLength(999)).toBe('999 m');
+        });
+
+        it('should format as kilometers for values 1000m and over', async () => {
+            const { formatLength } = await getShareImageModule();
+            
+            expect(formatLength(1000)).toBe('1.0 km');
+            expect(formatLength(1500)).toBe('1.5 km');
+            expect(formatLength(2500)).toBe('2.5 km');
+            expect(formatLength(10000)).toBe('10.0 km');
+        });
+
+        it('should round meters to nearest integer', async () => {
+            const { formatLength } = await getShareImageModule();
+            
+            expect(formatLength(100.4)).toBe('100 m');
+            expect(formatLength(100.6)).toBe('101 m');
+            expect(formatLength(999.9)).toBe('1000 m');
+        });
+
+        it('should format kilometers to one decimal place', async () => {
+            const { formatLength } = await getShareImageModule();
+            
+            expect(formatLength(1234)).toBe('1.2 km');
+            expect(formatLength(1250)).toBe('1.3 km'); // 1.25 rounds to 1.3
+            expect(formatLength(2500)).toBe('2.5 km');
+            expect(formatLength(42195)).toBe('42.2 km'); // Marathon distance
+        });
+
+        it('should handle edge case at 1000m boundary', async () => {
+            const { formatLength } = await getShareImageModule();
+            
+            expect(formatLength(999.9)).toBe('1000 m');
+            expect(formatLength(1000)).toBe('1.0 km');
+            expect(formatLength(1000.1)).toBe('1.0 km');
+        });
+    });
+
+    describe('getModeEmoji', () => {
+        it('should return walking emoji for foot-walking mode', async () => {
+            const { getModeEmoji } = await getShareImageModule();
+            expect(getModeEmoji('foot-walking')).toBe('🚶');
+        });
+
+        it('should return cycling emoji for cycling-regular mode', async () => {
+            const { getModeEmoji } = await getShareImageModule();
+            expect(getModeEmoji('cycling-regular')).toBe('🚴');
+        });
+
+        it('should return car emoji for driving-car mode', async () => {
+            const { getModeEmoji } = await getShareImageModule();
+            expect(getModeEmoji('driving-car')).toBe('🚗');
+        });
+
+        it('should return running emoji for unknown mode', async () => {
+            const { getModeEmoji } = await getShareImageModule();
+            expect(getModeEmoji('unknown-mode')).toBe('🏃');
+        });
+
+        it('should return running emoji for empty string', async () => {
+            const { getModeEmoji } = await getShareImageModule();
+            expect(getModeEmoji('')).toBe('🏃');
+        });
+
+        it('should be case-sensitive', async () => {
+            const { getModeEmoji } = await getShareImageModule();
+            // Different case should not match
+            expect(getModeEmoji('FOOT-WALKING')).toBe('🏃');
+            expect(getModeEmoji('Foot-Walking')).toBe('🏃');
+        });
+    });
 });
 
 describe('shareImageGenerator helpers (internal)', () => {
@@ -111,5 +190,10 @@ describe('shareImageGenerator helpers (internal)', () => {
         expect(shareModule.isMobile).toBeDefined();
         expect(shareModule.getPlatformShareUrl).toBeDefined();
     });
-});
 
+    it('should export formatLength and getModeEmoji', async () => {
+        const shareModule = await getShareImageModule();
+        expect(shareModule.formatLength).toBeDefined();
+        expect(shareModule.getModeEmoji).toBeDefined();
+    });
+});

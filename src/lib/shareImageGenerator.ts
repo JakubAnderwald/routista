@@ -75,8 +75,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 /**
  * Formats route length for display
+ * @internal Exported for testing purposes
  */
-function formatLength(meters: number): string {
+export function formatLength(meters: number): string {
     if (meters >= 1000) {
         return `${(meters / 1000).toFixed(1)} km`;
     }
@@ -85,8 +86,9 @@ function formatLength(meters: number): string {
 
 /**
  * Gets mode emoji
+ * @internal Exported for testing purposes
  */
-function getModeEmoji(mode: string): string {
+export function getModeEmoji(mode: string): string {
     switch (mode) {
         case 'foot-walking':
             return '🚶';

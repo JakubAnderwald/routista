@@ -13,7 +13,7 @@ interface MapProps {
     children?: React.ReactNode;
 }
 
-export default function Map({ center = [51.505, -0.09], zoom = 13, className = "h-full w-full", children }: MapProps) {
+export default function LeafletMap({ center = [51.505, -0.09], zoom = 13, className = "h-full w-full", children }: MapProps) {
     return (
         <MapContainer center={center} zoom={zoom} scrollWheelZoom={true} className={`${className} dark:invert dark:hue-rotate-180 dark:brightness-95 dark:contrast-90`}>
             <TileLayer

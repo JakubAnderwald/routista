@@ -136,16 +136,18 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     const radarMode = MODE_TO_RADAR[mode as TransportMode] || "car";
 
     // Batching logic - Radar supports up to 25 coordinates per request
+    // Each chunk overlaps by 1 point so segments connect properly
     const chunkSize = RADAR_API.chunkSize;
     const chunks = [];
-    for (let i = 0; i < simplifiedCoordinates.length; i += chunkSize) {
-        // Ensure overlap so segments connect
-        const chunk = simplifiedCoordinates.slice(i, i + chunkSize + 1);
+    let startIndex = 0;
+    while (startIndex < simplifiedCoordinates.length) {
+        const endIndex = Math.min(startIndex + chunkSize + 1, simplifiedCoordinates.length);
+        const chunk = simplifiedCoordinates.slice(startIndex, endIndex);
         chunks.push(chunk);
-        // Adjust index to overlap the last point of this chunk with first of next
-        if (i + chunkSize < simplifiedCoordinates.length) {
-            i--;
-        }
+        // Move forward by chunkSize - 1 to overlap last point with next chunk's first
+        startIndex += chunkSize - 1;
+        // Ensure we exit if we've processed all coordinates
+        if (endIndex >= simplifiedCoordinates.length) break;
     }
     
     console.log(`[RadarService] Routing ${simplifiedCoordinates.length} waypoints in ${chunks.length} chunk(s)`);

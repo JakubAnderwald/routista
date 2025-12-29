@@ -109,7 +109,7 @@ State is primarily managed in the parent page (`src/app/create/page.tsx` or simi
 - Static code analysis on every push/PR to main
 - Coverage reports uploaded from Vitest (lcov format)
 - Quality gate checks for code smells, bugs, vulnerabilities
-- Dashboard: https://sonarcloud.io/project/overview?id=jakubanderwald_routista
+- Dashboard: https://sonarcloud.io/project/overview?id=JakubAnderwald_routista
 
 **Files:** `sonar-project.properties`, `.github/workflows/security.yml`
 

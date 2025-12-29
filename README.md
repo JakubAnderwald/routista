@@ -1,5 +1,7 @@
 # Routista 🏃‍♂️🎨
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=jakubanderwald_routista&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jakubanderwald_routista)
+
 Turn any shape into a real-world GPS route! Routista is a fun, free tool for runners, cyclists, and explorers who want to create GPS art or just spice up their training.
 
 ## Features ✨

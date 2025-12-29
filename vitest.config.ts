@@ -10,7 +10,7 @@ export default defineConfig({
             // Use v8 provider (built-in, no extra deps needed)
             provider: 'v8',
             // Generate multiple report formats
-            reporter: ['text', 'text-summary', 'html', 'json'],
+            reporter: ['text', 'text-summary', 'html', 'json', 'lcov'],
             // Output directory for coverage reports
             reportsDirectory: './coverage',
             // Include only source files

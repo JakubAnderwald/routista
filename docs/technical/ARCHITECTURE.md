@@ -102,8 +102,16 @@ State is primarily managed in the parent page (`src/app/create/page.tsx` or simi
 
 ### Platform
 - **Hosting**: Vercel (Hobby plan)
-- **CI/CD**: Vercel Git Integration (no GitHub Actions)
+- **CI/CD**: Vercel Git Integration + GitHub Actions (security checks, SonarCloud)
 - **Repository**: Connected via Vercel Dashboard, auto-deploys on push
+
+### Code Quality (SonarCloud)
+- Static code analysis on every push/PR to main
+- Coverage reports uploaded from Vitest (lcov format)
+- Quality gate checks for code smells, bugs, vulnerabilities
+- Dashboard: https://sonarcloud.io/project/overview?id=jakubanderwald_routista
+
+**Files:** `sonar-project.properties`, `.github/workflows/security.yml`
 
 ### Environments
 

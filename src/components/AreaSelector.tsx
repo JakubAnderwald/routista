@@ -19,7 +19,7 @@ const TRANSPORT_MODES = [
 ] as const;
 
 // Dynamic import for Map to avoid SSR issues
-const Map = dynamic(() => import("@/components/Map"), {
+const DynamicMap = dynamic(() => import("@/components/Map"), {
     ssr: false,
     loading: () => <div className="w-full h-full bg-gray-100 animate-pulse" />
 });
@@ -187,11 +187,11 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
         <div className="flex flex-col w-full h-full">
             {/* Map Container */}
             <div className="relative flex-1 min-h-0">
-                <Map center={center} zoom={13} className="w-full h-full">
+                <DynamicMap center={center} zoom={13} className="w-full h-full">
                     <MapController onCenterChange={setCenter} isProgrammaticMoveRef={isProgrammaticMoveRef} />
                     <RecenterMap center={center} radius={radius} isProgrammaticMoveRef={isProgrammaticMoveRef} />
                     <Circle center={center} radius={radius} pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }} />
-                </Map>
+                </DynamicMap>
 
                 {/* Search Bar - overlaid on map */}
                 <div className="absolute top-4 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-96 z-[1000]">

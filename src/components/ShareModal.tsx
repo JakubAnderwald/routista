@@ -87,6 +87,20 @@ export function ShareModal({ isOpen, onClose, getMap, routeData, stats, mode }: 
         }
     }, [isOpen]);
 
+    // Handle Escape key to close modal
+    useEffect(() => {
+        if (!isOpen) return;
+        
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
+
     const generateImage = useCallback(async (): Promise<Blob | null> => {
         // Return cached blob if already generated for same platform
         if (generatedBlob) {

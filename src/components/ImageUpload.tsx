@@ -66,6 +66,8 @@ export function ImageUpload({ onImageSelect, className, testId = "image-upload" 
             {!preview ? (
                 <div
                     data-testid={`${testId}-dropzone`}
+                    role="button"
+                    tabIndex={0}
                     className={cn(
                         "border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors cursor-pointer min-h-[300px]",
                         isDragging
@@ -76,6 +78,12 @@ export function ImageUpload({ onImageSelect, className, testId = "image-upload" 
                     onDragLeave={onDragLeave}
                     onDrop={onDrop}
                     onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            fileInputRef.current?.click();
+                        }
+                    }}
                 >
                     <div className="w-16 h-16 bg-blue-100 dark:bg-blue-950/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4">
                         <Upload className="w-8 h-8" />

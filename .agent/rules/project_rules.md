@@ -43,9 +43,12 @@ Before pushing any changes to GitHub, you MUST run these checks locally:
 1. **Security Audit**: `npm audit --audit-level=high`
 2. **Linting**: `npm run lint`
 3. **Tests**: `npm test`
-4. **Lockfile sync** (if packages changed): `rm -rf node_modules package-lock.json && npm install`
+4. **TypeScript**: `npx tsc --noEmit` (catches type errors in ALL .ts files including configs)
+5. **Lockfile sync** (if packages changed): `rm -rf node_modules package-lock.json && npm install`
 
 **CRITICAL**: If any check fails, fix issues before pushing. The CI/CD pipeline will fail otherwise.
+
+**Why TypeScript check is needed**: `npm test` and `npm run lint` do NOT type-check config files like `vitest.config.ts`. Only `next build` or `tsc` will catch type errors in these files.
 
 ### After Adding/Removing Packages
 

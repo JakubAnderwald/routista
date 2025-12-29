@@ -1,6 +1,29 @@
 import { describe, it, expect } from 'vitest';
 import { generateGPX } from '../../src/lib/gpxGenerator';
-import { FeatureCollection } from 'geojson';
+import { Feature, FeatureCollection, Geometry, GeoJsonProperties } from 'geojson';
+
+/**
+ * Helper to create a LineString feature with given coordinates
+ * Reduces duplication of Feature boilerplate in tests
+ */
+function createLineStringFeature(
+    coordinates: number[][]
+): Feature<Geometry, GeoJsonProperties> {
+    return {
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates },
+    };
+}
+
+/**
+ * Helper to create a FeatureCollection from an array of features
+ */
+function createFeatureCollection(
+    features: Feature<Geometry, GeoJsonProperties>[]
+): FeatureCollection {
+    return { type: 'FeatureCollection', features };
+}
 
 describe('gpxGenerator', () => {
     describe('generateGPX', () => {
@@ -20,12 +43,7 @@ describe('gpxGenerator', () => {
         });
 
         it('should generate valid GPX for empty features array', () => {
-            const geoJson: FeatureCollection = {
-                type: 'FeatureCollection',
-                features: [],
-            };
-
-            const gpx = generateGPX(geoJson);
+            const gpx = generateGPX(createFeatureCollection([]));
 
             expect(gpx).toContain('<?xml version="1.0" encoding="UTF-8"?>');
             expect(gpx).toContain('<gpx version="1.1" creator="Routista"');
@@ -38,24 +56,14 @@ describe('gpxGenerator', () => {
         });
 
         it('should generate GPX with track points from LineString', () => {
-            const geoJson: FeatureCollection = {
-                type: 'FeatureCollection',
-                features: [
-                    {
-                        type: 'Feature',
-                        properties: {},
-                        geometry: {
-                            type: 'LineString',
-                            // GeoJSON is [lng, lat]
-                            coordinates: [
-                                [-0.09, 51.505],
-                                [-0.08, 51.506],
-                                [-0.07, 51.507],
-                            ],
-                        },
-                    },
-                ],
-            };
+            // GeoJSON is [lng, lat]
+            const geoJson = createFeatureCollection([
+                createLineStringFeature([
+                    [-0.09, 51.505],
+                    [-0.08, 51.506],
+                    [-0.07, 51.507],
+                ]),
+            ]);
 
             const gpx = generateGPX(geoJson);
 
@@ -66,33 +74,16 @@ describe('gpxGenerator', () => {
         });
 
         it('should handle multiple LineString features', () => {
-            const geoJson: FeatureCollection = {
-                type: 'FeatureCollection',
-                features: [
-                    {
-                        type: 'Feature',
-                        properties: {},
-                        geometry: {
-                            type: 'LineString',
-                            coordinates: [
-                                [1.0, 10.0],
-                                [2.0, 20.0],
-                            ],
-                        },
-                    },
-                    {
-                        type: 'Feature',
-                        properties: {},
-                        geometry: {
-                            type: 'LineString',
-                            coordinates: [
-                                [3.0, 30.0],
-                                [4.0, 40.0],
-                            ],
-                        },
-                    },
-                ],
-            };
+            const geoJson = createFeatureCollection([
+                createLineStringFeature([
+                    [1.0, 10.0],
+                    [2.0, 20.0],
+                ]),
+                createLineStringFeature([
+                    [3.0, 30.0],
+                    [4.0, 40.0],
+                ]),
+            ]);
 
             const gpx = generateGPX(geoJson);
 
@@ -103,27 +94,14 @@ describe('gpxGenerator', () => {
         });
 
         it('should ignore non-LineString geometry types', () => {
-            const geoJson: FeatureCollection = {
-                type: 'FeatureCollection',
-                features: [
-                    {
-                        type: 'Feature',
-                        properties: {},
-                        geometry: {
-                            type: 'Point',
-                            coordinates: [1.0, 2.0],
-                        },
-                    },
-                    {
-                        type: 'Feature',
-                        properties: {},
-                        geometry: {
-                            type: 'LineString',
-                            coordinates: [[5.0, 50.0]],
-                        },
-                    },
-                ],
-            };
+            const geoJson = createFeatureCollection([
+                {
+                    type: 'Feature',
+                    properties: {},
+                    geometry: { type: 'Point', coordinates: [1.0, 2.0] },
+                },
+                createLineStringFeature([[5.0, 50.0]]),
+            ]);
 
             const gpx = generateGPX(geoJson);
 
@@ -134,19 +112,9 @@ describe('gpxGenerator', () => {
         });
 
         it('should handle coordinates with high precision', () => {
-            const geoJson: FeatureCollection = {
-                type: 'FeatureCollection',
-                features: [
-                    {
-                        type: 'Feature',
-                        properties: {},
-                        geometry: {
-                            type: 'LineString',
-                            coordinates: [[-0.123456789, 51.505123456]],
-                        },
-                    },
-                ],
-            };
+            const geoJson = createFeatureCollection([
+                createLineStringFeature([[-0.123456789, 51.505123456]]),
+            ]);
 
             const gpx = generateGPX(geoJson);
 

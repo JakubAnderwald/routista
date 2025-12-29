@@ -29,8 +29,6 @@ export default defineConfig({
                 'src/app/apple-icon.tsx',
                 'src/i18n/**',
             ],
-            // Show uncovered lines in terminal output
-            all: true,
         },
     },
     resolve: {

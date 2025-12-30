@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 # CodeRabbit AI Code Review Configuration
 # Docs: https://docs.coderabbit.ai/reference/configuration
+# Project: Routista - Shape-based route generator
 
 language: "en-US"
 enable_free_tier: true

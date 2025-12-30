@@ -105,13 +105,23 @@ State is primarily managed in the parent page (`src/app/create/page.tsx` or simi
 - **CI/CD**: Vercel Git Integration + GitHub Actions (security checks, SonarCloud)
 - **Repository**: Connected via Vercel Dashboard, auto-deploys on push
 
-### Code Quality (SonarCloud)
+### Code Quality
+
+#### SonarCloud
 - Static code analysis on every push/PR to main
 - Coverage reports uploaded from Vitest (lcov format)
 - Quality gate checks for code smells, bugs, vulnerabilities
 - Dashboard: https://sonarcloud.io/project/overview?id=JakubAnderwald_routista
 
 **Files:** `sonar-project.properties`, `.github/workflows/security.yml`
+
+#### CodeRabbit (AI Code Review)
+- AI-powered code review on every PR
+- Generates PR summaries, walkthroughs, and sequence diagrams
+- Context-aware feedback on code changes
+- Free for open source projects
+
+**Files:** `.coderabbit.yaml`
 
 ### Environments
 

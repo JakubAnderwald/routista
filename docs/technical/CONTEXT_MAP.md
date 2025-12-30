@@ -24,6 +24,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Unit Tests** | `tests/unit/*.test.ts` | Pure function tests for `src/lib/` modules. Run with `npm test`. |
 | **Test Coverage** | `vitest.config.ts` | Coverage config. Run `npm run test:coverage` for reports. |
 | **Code Quality (SonarCloud)** | `sonar-project.properties`, `.github/workflows/security.yml` | Static analysis, coverage tracking. Dashboard: sonarcloud.io |
+| **Code Quality (CodeRabbit)** | `.coderabbit.yaml` | AI-powered PR code reviews. Free for open source. |
 | **Translations** | `messages/[locale].json` | i18n strings for all pages. Supported locales: `en` (English), `de` (German), `pl` (Polish), `da` (Danish). |
 | **Page Structure** | `src/app/[locale]/[page]/page.tsx` | All pages support dynamic locale routing via Next.js App Router with next-intl. |
 | **Page Layouts** | `src/app/[locale]/layout.tsx` | Root layout that sets up i18n providers and metadata. |

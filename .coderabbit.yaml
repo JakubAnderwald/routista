@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit AI Code Review Configuration
+# Docs: https://docs.coderabbit.ai/reference/configuration
+
+language: "en-US"
+enable_free_tier: true
+
+reviews:
+  # Chill profile = less strict, avoids nitpicky comments
+  profile: "chill"
+  
+  # Generate high-level summary in PR description
+  high_level_summary: true
+  
+  # Auto-review settings
+  auto_review:
+    enabled: true
+    drafts: false
+  
+  # Generate walkthrough with file changes summary
+  changed_files_summary: true
+  sequence_diagrams: true
+  
+  # Link to related issues/PRs
+  related_issues: true
+  related_prs: true
+  
+  # Tools integration
+  tools:
+    eslint:
+      enabled: true
+

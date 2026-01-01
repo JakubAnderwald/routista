@@ -74,6 +74,48 @@ When the user needs to test on mobile, use Vercel Preview Deployments:
 
 **Note:** Preview environment uses different Radar API key (configured in Vercel Dashboard).
 
+## 🔀 Git Workflow - Always Use PRs
+
+**NEVER push directly to main.** Always use feature branches and Pull Requests.
+
+This enables:
+- CodeRabbit AI code reviews on every change
+- Vercel preview deployments for testing
+- Clean git history with squash merges
+
+### Workflow for Every Task:
+
+1. **Start**: Create feature branch
+   ```bash
+   git checkout main && git pull
+   git checkout -b feature/[task-name]
+   ```
+
+2. **Work**: Commit changes normally
+   ```bash
+   git add -A && git commit -m "descriptive message"
+   ```
+
+3. **Review**: Push and create PR
+   ```bash
+   git push origin HEAD
+   gh pr create --fill
+   ```
+   → Wait for CodeRabbit review, address any feedback
+
+4. **Merge**: Squash merge and cleanup
+   ```bash
+   gh pr merge --squash --delete-branch
+   git checkout main && git pull
+   ```
+
+**When user says:** "implement X", "fix Y", "add Z"
+→ Start with step 1, end with step 4
+
+**When user says:** "push", "deploy", "ship it"
+→ If on feature branch: create PR (step 3)
+→ If PR exists: merge it (step 4)
+
 ## 🔧 Git Push - Required Permissions
 
 When pushing to GitHub, **always use `required_permissions: ["all"]`** to avoid SSL certificate errors.

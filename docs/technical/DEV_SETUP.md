@@ -66,6 +66,53 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## Working with Git Worktrees
+
+For feature branch development, use git worktrees to maintain isolated environments. This enables parallel work on multiple features and supports multi-agent development.
+
+### Creating a Worktree for a New Feature
+
+From your main repo directory:
+
+```bash
+# Create worktree with new feature branch
+git worktree add ../routista-[feature-name] -b feature/[feature-name] main
+
+# Navigate to worktree and set up
+cd ../routista-[feature-name]
+npm install
+vercel env pull .env.local
+
+# Start dev server (use different port if main is running)
+npm run dev -- -p 3001
+```
+
+### Naming Convention
+
+- **Worktree location**: `../routista-[feature-name]` (sibling to main repo)
+- **Branch name**: `feature/[descriptive-name]`
+- **Example**: `../routista-dark-mode` → `feature/dark-mode`
+
+### Managing Worktrees
+
+```bash
+# List all worktrees
+git worktree list
+
+# Remove a worktree (after PR merged)
+git worktree remove ../routista-[feature-name]
+
+# Prune stale worktree references
+git worktree prune
+```
+
+### Why Worktrees?
+
+- **Isolation**: Each worktree has its own `node_modules`, `.next` cache, `.env.local`
+- **Parallel work**: Run multiple dev servers on different ports
+- **Multi-agent**: Multiple AI agents can work on different features simultaneously
+- **Quick switching**: No need to stash/commit changes when switching features
+
 ## Environment Variables
 
 ### Required for Full Functionality

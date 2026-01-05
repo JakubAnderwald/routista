@@ -45,3 +45,6 @@ next-env.d.ts
 .firebase/
 test_output*.txt
 .env*.local
+
+# worktrees (if created as subdirectories)
+/worktrees/

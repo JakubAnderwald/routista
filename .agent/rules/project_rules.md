@@ -74,6 +74,46 @@ When the user needs to test on mobile, use Vercel Preview Deployments:
 
 **Note:** Preview environment uses different Radar API key (configured in Vercel Dashboard).
 
+## 🌿 Feature Branch Worktree Workflow
+
+**ALWAYS use worktrees for feature branch work.** This ensures isolation between branches and enables multiple agents to work in parallel.
+
+**When user says:** "implement X", "fix Y", "add feature Z", "work on", "new branch"
+→ Create a new worktree (not just a branch)
+
+### Creating a New Worktree
+
+From the main repo directory:
+```bash
+git worktree add ../routista-[feature-name] -b feature/[feature-name] main
+cd ../routista-[feature-name]
+npm install
+vercel env pull .env.local
+```
+
+### Worktree Naming Convention
+- **Location**: Sibling to main repo (`../routista-[feature-name]`)
+- **Branch**: `feature/[descriptive-name]`
+- **Example**: `../routista-dark-mode` with branch `feature/dark-mode`
+
+### Per-Worktree Setup Checklist
+1. `npm install` - Each worktree needs its own `node_modules`
+2. `vercel env pull .env.local` - Pull environment variables
+3. Dev server port - Use `-p 3001`, `-p 3002`, etc. to avoid conflicts
+
+### Cleanup After Merge
+
+From the main repo directory:
+```bash
+git worktree remove ../routista-[feature-name]
+```
+
+### Listing Active Worktrees
+
+```bash
+git worktree list
+```
+
 ## 🔀 Git Workflow - Always Use PRs
 
 **NEVER push directly to main.** Always use feature branches and Pull Requests.
@@ -85,11 +125,7 @@ This enables:
 
 ### Workflow for Every Task:
 
-1. **Start**: Create feature branch
-   ```bash
-   git checkout main && git pull
-   git checkout -b feature/[task-name]
-   ```
+1. **Start**: Create worktree with feature branch (see above)
 
 2. **Work**: Commit changes normally
    ```bash
@@ -106,7 +142,7 @@ This enables:
 4. **Merge**: Squash merge and cleanup
    ```bash
    gh pr merge --squash --delete-branch
-   git checkout main && git pull
+   git worktree remove ../routista-[feature-name]
    ```
 
 **When user says:** "implement X", "fix Y", "add Z"

@@ -35,10 +35,8 @@ vercel --version  # Optional, for pulling env vars
 
 ```bash
 git clone https://github.com/jakubanderwald/routista.git
-cd routista/routista
+cd routista
 ```
-
-> **Note:** The Next.js app is in the `routista/` subdirectory.
 
 ### 2. Install Dependencies
 

@@ -320,12 +320,10 @@ Before pushing, run all checks:
 npm audit --audit-level=high
 npm run lint
 npm test
+npx tsc --noEmit
 ```
 
-Or use the pre-push script:
-```bash
-./scripts/pre-push-check.sh
-```
+See `.agent/rules/project_rules.md` for the complete workflow.
 
 ## Next Steps
 

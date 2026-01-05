@@ -36,26 +36,6 @@ When modifying any user-facing text:
 - Never commit changes to only one locale file
 - **NEVER use hardcoded strings** in components. Always use `useTranslations` or similar i18n hooks immediately when adding new text.
 
-## ✅ Pre-Deployment Checks
-
-Before pushing any changes to GitHub, you MUST run these checks locally:
-
-1. **Security Audit**: `npm audit --audit-level=high`
-2. **Linting**: `npm run lint`
-3. **Tests**: `npm test`
-4. **TypeScript**: `npx tsc --noEmit` (catches type errors in ALL .ts files including configs)
-5. **Lockfile sync** (if packages changed): `rm -rf node_modules package-lock.json && npm install`
-
-**CRITICAL**: If any check fails, fix issues before pushing. The CI/CD pipeline will fail otherwise.
-
-**Why TypeScript check is needed**: `npm test` and `npm run lint` do NOT type-check config files like `vitest.config.ts`. Only `next build` or `tsc` will catch type errors in these files.
-
-### After Adding/Removing Packages
-
-When you run `npm install <package>` or modify `package.json`:
-1. Regenerate lockfile: `rm -rf node_modules package-lock.json && npm install`
-2. Commit both `package.json` AND `package-lock.json` together
-3. This ensures CI's `npm ci` won't fail due to npm version differences
 
 ## 📱 Mobile Testing (Preview Deployments)
 
@@ -132,25 +112,41 @@ This enables:
    git add -A && git commit -m "descriptive message"
    ```
 
-3. **Review**: Push and create PR
+3. **Pre-Push Checks (MANDATORY)**: Run ALL before pushing - CI will fail otherwise
+   ```bash
+   npm audit --audit-level=high
+   npm run lint
+   npm test
+   npx tsc --noEmit
+   ```
+   
+   **If packages changed**, regenerate lockfile FIRST:
+   ```bash
+   rm -rf node_modules package-lock.json && npm install
+   ```
+   
+   **README check**: If changes affect features/setup/usage, update README.md
+
+4. **Push**: Create PR
    ```bash
    git push origin HEAD
    gh pr create --fill
    ```
    → Wait for CodeRabbit review, address any feedback
 
-4. **Merge**: Squash merge and cleanup
+5. **Merge**: Squash merge and cleanup
    ```bash
    gh pr merge --squash --delete-branch
    git worktree remove ../routista-[feature-name]
    ```
 
 **When user says:** "implement X", "fix Y", "add Z"
-→ Start with step 1, end with step 4
+→ Start with step 1, end with step 5
 
 **When user says:** "push", "deploy", "ship it"
-→ If on feature branch: create PR (step 3)
-→ If PR exists: merge it (step 4)
+→ Run pre-push checks (step 3) first
+→ If on feature branch: create PR (step 4)
+→ If PR exists: merge it (step 5)
 
 ## 🔧 Git Push - Required Permissions
 
@@ -227,18 +223,13 @@ vercel bisect
 
 **Project is linked**: `routista` → https://www.routista.eu
 
-## 📝 Post-Work Verification
+## 📝 Documentation Updates
 
-After completing any coding task:
-
-1. **Run All Tests** - Ensure full test suite passes
-2. **Check README.md** - Update if changes affect features/setup/usage (max 200 lines)
-3. **Update Documentation**:
-   - Architecture changes → update `docs/technical/ARCHITECTURE.md`
-   - New dependencies/complex logic → update `docs/technical/DEBUGGING.md`
-   - New features → add/update doc in `docs/features/`
-   - New files → update `docs/technical/CONTEXT_MAP.md`
-   - New/modified exports in `src/lib` → add JSDoc comments
+When making changes, update relevant docs:
+- Architecture changes → `docs/technical/ARCHITECTURE.md`
+- New features → `docs/features/`
+- New files → `docs/technical/CONTEXT_MAP.md`
+- New/modified exports in `src/lib` → add JSDoc comments
 
 ## 🧪 Testing & Automation
 

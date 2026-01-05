@@ -95,7 +95,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   **NEVER** try to interact with the OS file picker.
 *   **ALWAYS** use the hidden test controls in `CreateClient.tsx` for image uploads.
 *   **USE** `window.__routistaTestHelpers.loadTestImage()` or `loadImageFromDataURL()`.
-*   **REFER** to `docs/technical/AUTOMATED_TESTING.md` for the full protocol.
+*   **REFER** to `docs/technical/TESTING_STRATEGY.md` for the full testing guide.
 
 ### Architecture
 *   **Data Flow**: Image -> Points (0-1) -> Scaled Geo Points (Lat/Lng) -> Route (LineString).
@@ -137,7 +137,7 @@ Architecture and developer guides:
 | :--- | :--- |
 | `DEV_SETUP.md` | **Start here** - Complete dev environment setup |
 | `ARCHITECTURE.md` | System overview, data flow, infrastructure |
-| `AUTOMATED_TESTING.md` | Browser automation, test helpers |
+| `TESTING_STRATEGY.md` | Test pyramid, coverage requirements, browser automation |
 | `DEBUGGING.md` | Console logs, troubleshooting |
 | `CONTEXT_MAP.md` | This file - concept-to-file mapping |
 

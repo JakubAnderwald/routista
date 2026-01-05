@@ -10,7 +10,7 @@ Documentation for the Routista GPS art route generator.
 | Understand the system architecture | [Architecture](technical/ARCHITECTURE.md) |
 | Find where code lives for a feature | [Context Map](technical/CONTEXT_MAP.md) |
 | Debug an issue | [Debugging Guide](technical/DEBUGGING.md) |
-| Write automated tests | [Automated Testing](technical/AUTOMATED_TESTING.md) |
+| Write tests | [Testing Strategy](technical/TESTING_STRATEGY.md) |
 
 ## Feature Documentation
 
@@ -35,7 +35,7 @@ Architecture, infrastructure, and developer guides:
 | **Architecture** | System overview, data flow, deployment | [ARCHITECTURE.md](technical/ARCHITECTURE.md) |
 | **Context Map** | Concept-to-file mapping for quick navigation | [CONTEXT_MAP.md](technical/CONTEXT_MAP.md) |
 | **Debugging** | Console logs, troubleshooting common issues | [DEBUGGING.md](technical/DEBUGGING.md) |
-| **Automated Testing** | Browser automation, test helpers, E2E examples | [AUTOMATED_TESTING.md](technical/AUTOMATED_TESTING.md) |
+| **Testing Strategy** | Test pyramid, coverage requirements, browser automation | [TESTING_STRATEGY.md](technical/TESTING_STRATEGY.md) |
 
 ## Project Overview
 
@@ -83,7 +83,7 @@ If you're an AI assistant working on this codebase:
 1. **Start with** `docs/technical/CONTEXT_MAP.md` to find relevant files
 2. **Read** `docs/technical/ARCHITECTURE.md` to understand data flow
 3. **Check** feature docs in `docs/features/` for specific feature details
-4. **For testing**, see `docs/technical/AUTOMATED_TESTING.md` - never use OS file pickers
+4. **For testing**, see `docs/technical/TESTING_STRATEGY.md` - 80% coverage required for new code
 5. **Follow** `.agent/rules/project_rules.md` for development rules
 
 ## Test Images

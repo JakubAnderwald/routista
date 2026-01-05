@@ -231,12 +231,36 @@ When making changes, update relevant docs:
 - New files → `docs/technical/CONTEXT_MAP.md`
 - New/modified exports in `src/lib` → add JSDoc comments
 
-## 🧪 Testing & Automation
+## 🧪 Testing Requirements
 
+**Quality Gate:** All new code must have **80% test coverage** (SonarCloud enforced).
+
+### When Adding/Modifying Code:
+
+| Code Location | Test Requirement | Test Location |
+|---------------|------------------|---------------|
+| `src/lib/*.ts` | Unit tests **required** | `tests/unit/[filename].test.ts` |
+| `src/components/*.tsx` | Component tests if complex logic | `tests/components/[filename].test.tsx` |
+| `src/app/api/**` | API route tests **required** | `tests/api/[route].test.ts` |
+
+### Test Patterns:
+- **Unit tests**: Test pure functions with edge cases (null, empty, boundary values)
+- **Component tests**: Test user interactions, not implementation details
+- **API tests**: Test request/response contracts, error states
+- **E2E tests**: Only for critical user journeys (use Cursor browser)
+
+### Before Merging:
+1. Run `npm run test:coverage`
+2. Verify new code meets 80% coverage threshold
+3. No skipped or placeholder tests
+
+### Browser Automation:
 - **NO FILE PICKERS**: Cannot interact with OS file dialogs
 - **USE HELPERS**: For image upload tests, use `window.__routistaTestHelpers.loadTestImage("star.png")`
 - **CONTROLS**: Use `data-testid` attributes (e.g., `test-load-star`, `upload-next-button`)
-- **REFERENCE**: See `docs/technical/AUTOMATED_TESTING.md` for complete automation protocol
+
+### Reference:
+See `docs/technical/TESTING_STRATEGY.md` for complete testing guide.
 
 ## 💻 Tech Stack
 

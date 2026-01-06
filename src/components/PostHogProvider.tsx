@@ -5,12 +5,20 @@ import { PostHogProvider as PHProvider, usePostHog } from 'posthog-js/react';
 import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
+/** Module-scoped flag to prevent double initialization in React Strict Mode */
+let posthogInitialized = false;
+
 /**
  * PostHog analytics provider for Next.js App Router.
  * Handles initialization and automatic pageview tracking.
+ * Uses a module-scoped flag to ensure idempotent initialization.
  */
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
+    if (posthogInitialized) {
+      return;
+    }
+
     const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
     if (!key) {
       console.warn('[PostHog] NEXT_PUBLIC_POSTHOG_KEY not set, analytics disabled');
@@ -24,6 +32,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       capture_pageleave: true,
     });
 
+    posthogInitialized = true;
     console.log('[PostHog] Initialized');
   }, []);
 

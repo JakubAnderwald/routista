@@ -7,4 +7,3 @@ alwaysApply: true
 # Your Rules Start Here
 
 - Always follow rules from `<workspace_root>/.agent/rules/project_rules.md` file
-- Note: The workspace root is `/Users/jakubanderwald/code/routista/`, so the full path is `/Users/jakubanderwald/code/routista/.agent/rules/project_rules.md`

@@ -1,0 +1,230 @@
+/**
+ * @vitest-environment jsdom
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// Mock next/navigation before importing the component
+vi.mock('next/navigation', () => ({
+  usePathname: vi.fn(() => '/en/create'),
+  useSearchParams: vi.fn(() => ({
+    toString: () => 'step=1',
+  })),
+}));
+
+// Mock posthog-js
+const mockInit = vi.fn();
+const mockCapture = vi.fn();
+const mockPosthog = {
+  init: mockInit,
+  capture: mockCapture,
+};
+
+vi.mock('posthog-js', () => ({
+  default: mockPosthog,
+}));
+
+// Mock posthog-js/react
+const mockUsePostHog = vi.fn(() => mockPosthog);
+vi.mock('posthog-js/react', () => ({
+  PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
+  usePostHog: () => mockUsePostHog(),
+}));
+
+describe('PostHogProvider', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Reset module state between tests
+    vi.resetModules();
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  describe('initialization', () => {
+    it('should warn and skip init when NEXT_PUBLIC_POSTHOG_KEY is not set', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+
+      // Re-import to get fresh module state
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      
+      const { render } = await import('@testing-library/react');
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      // Wait for useEffect
+      await vi.waitFor(() => {
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          '[PostHog] NEXT_PUBLIC_POSTHOG_KEY not set, analytics disabled'
+        );
+      });
+
+      expect(mockInit).not.toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should initialize PostHog when key is provided', async () => {
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+      process.env.NEXT_PUBLIC_POSTHOG_HOST = 'https://eu.i.posthog.com';
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(mockInit).toHaveBeenCalledWith('phc_test_key', {
+          api_host: 'https://eu.i.posthog.com',
+          person_profiles: 'identified_only',
+          capture_pageview: false,
+          capture_pageleave: true,
+        });
+      });
+
+      expect(consoleLogSpy).toHaveBeenCalledWith('[PostHog] Initialized');
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should use default host when NEXT_PUBLIC_POSTHOG_HOST is not set', async () => {
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+      delete process.env.NEXT_PUBLIC_POSTHOG_HOST;
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(mockInit).toHaveBeenCalledWith('phc_test_key', expect.objectContaining({
+          api_host: 'https://eu.i.posthog.com',
+        }));
+      });
+    });
+
+    it('should only initialize once (idempotent)', async () => {
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      const { unmount: unmount1 } = render(
+        <PostHogProvider>
+          <div>Test 1</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(mockInit).toHaveBeenCalledTimes(1);
+      });
+
+      // Unmount and remount - should NOT call init again
+      unmount1();
+      
+      render(
+        <PostHogProvider>
+          <div>Test 2</div>
+        </PostHogProvider>
+      );
+
+      // Still only called once due to module-scoped flag
+      expect(mockInit).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('pageview tracking', () => {
+    it('should capture pageview with correct URL', async () => {
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+
+      // Mock window.origin
+      Object.defineProperty(window, 'origin', {
+        value: 'https://routista.eu',
+        writable: true,
+      });
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(mockCapture).toHaveBeenCalledWith('$pageview', {
+          $current_url: 'https://routista.eu/en/create?step=1',
+        });
+      });
+    });
+
+    it('should capture pageview without search params when empty', async () => {
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+
+      // Mock empty search params
+      const { useSearchParams } = await import('next/navigation');
+      vi.mocked(useSearchParams).mockReturnValue({
+        toString: () => '',
+      } as ReturnType<typeof useSearchParams>);
+
+      Object.defineProperty(window, 'origin', {
+        value: 'https://routista.eu',
+        writable: true,
+      });
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(mockCapture).toHaveBeenCalledWith('$pageview', {
+          $current_url: 'https://routista.eu/en/create',
+        });
+      });
+    });
+  });
+
+  describe('children rendering', () => {
+    it('should render children correctly', async () => {
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render, screen } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div data-testid="child">Hello World</div>
+        </PostHogProvider>
+      );
+
+      expect(screen.getByTestId('child')).toBeDefined();
+      expect(screen.getByText('Hello World')).toBeDefined();
+    });
+  });
+});
+

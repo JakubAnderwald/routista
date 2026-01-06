@@ -97,6 +97,8 @@ State is primarily managed in the parent page (`src/app/create/page.tsx` or simi
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry error tracking |
 | `SENTRY_AUTH_TOKEN` | Source map uploads |
 | `SENTRY_ORG` / `SENTRY_PROJECT` | Sentry project identifiers |
+| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog project API key (analytics) |
+| `NEXT_PUBLIC_POSTHOG_HOST` | PostHog API host (eu.i.posthog.com) |
 
 ## Deployment & Hosting
 

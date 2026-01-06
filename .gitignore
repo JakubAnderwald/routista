@@ -48,3 +48,4 @@ test_output*.txt
 
 # worktrees (if created as subdirectories)
 /worktrees/
+.cursor/

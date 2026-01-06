@@ -1,9 +1,0 @@
----
-description: Global rules for the project
-globs: 
-alwaysApply: true
----
-
-# Your Rules Start Here
-
-- Always follow rules from `.agent/rules/project_rules.md` file (relative to project root)

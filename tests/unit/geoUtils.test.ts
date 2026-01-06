@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { 
     calculateDistance, 
     calculateRouteLength, 
+    calculateRouteAccuracy,
     scalePointsToGeo,
     simplifyPoints 
 } from '../../src/lib/geoUtils';
@@ -274,6 +275,218 @@ describe('geoUtils', () => {
 
             // Should preserve all 3 points due to significant deviation
             expect(result.length).toBe(3);
+        });
+    });
+
+    describe('calculateRouteAccuracy', () => {
+        // Suppress console.log during tests
+        beforeEach(() => {
+            vi.spyOn(console, 'log').mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it('should return 0 for empty original points', () => {
+            const geoJson: FeatureCollection = {
+                type: 'FeatureCollection',
+                features: [
+                    {
+                        type: 'Feature',
+                        properties: {},
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [[0, 0], [0, 1]],
+                        },
+                    },
+                ],
+            };
+
+            const result = calculateRouteAccuracy([], geoJson, 1000);
+            expect(result).toBe(0);
+        });
+
+        it('should return 0 for null geoJson', () => {
+            const originalPoints: [number, number][] = [[51.5, -0.1], [51.51, -0.1]];
+            
+            // @ts-expect-error - testing null input
+            const result = calculateRouteAccuracy(originalPoints, null, 1000);
+            expect(result).toBe(0);
+        });
+
+        it('should return 0 for undefined geoJson', () => {
+            const originalPoints: [number, number][] = [[51.5, -0.1], [51.51, -0.1]];
+            
+            // @ts-expect-error - testing undefined input
+            const result = calculateRouteAccuracy(originalPoints, undefined, 1000);
+            expect(result).toBe(0);
+        });
+
+        it('should return 0 for geoJson without features', () => {
+            const originalPoints: [number, number][] = [[51.5, -0.1], [51.51, -0.1]];
+            
+            // @ts-expect-error - testing invalid geoJson
+            const result = calculateRouteAccuracy(originalPoints, {}, 1000);
+            expect(result).toBe(0);
+        });
+
+        it('should return 0 for empty features array', () => {
+            const originalPoints: [number, number][] = [[51.5, -0.1], [51.51, -0.1]];
+            const geoJson: FeatureCollection = {
+                type: 'FeatureCollection',
+                features: [],
+            };
+
+            const result = calculateRouteAccuracy(originalPoints, geoJson, 1000);
+            expect(result).toBe(0);
+        });
+
+        it('should return 0 for geoJson with no LineString features', () => {
+            const originalPoints: [number, number][] = [[51.5, -0.1], [51.51, -0.1]];
+            const geoJson: FeatureCollection = {
+                type: 'FeatureCollection',
+                features: [
+                    {
+                        type: 'Feature',
+                        properties: {},
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [0, 0],
+                        },
+                    },
+                ],
+            };
+
+            const result = calculateRouteAccuracy(originalPoints, geoJson, 1000);
+            expect(result).toBe(0);
+        });
+
+        it('should return high accuracy when route matches original points exactly', () => {
+            // Original points
+            const originalPoints: [number, number][] = [
+                [0, 0],
+                [0, 0.001],
+                [0, 0.002],
+            ];
+
+            // Route that exactly follows the original points
+            const geoJson: FeatureCollection = {
+                type: 'FeatureCollection',
+                features: [
+                    {
+                        type: 'Feature',
+                        properties: {},
+                        geometry: {
+                            type: 'LineString',
+                            // GeoJSON is [lng, lat]
+                            coordinates: [
+                                [0, 0],
+                                [0.001, 0],
+                                [0.002, 0],
+                            ],
+                        },
+                    },
+                ],
+            };
+
+            const result = calculateRouteAccuracy(originalPoints, geoJson, 1000);
+            
+            // Should be high accuracy (route is very close to original)
+            expect(result).toBeGreaterThan(80);
+        });
+
+        it('should return lower accuracy when route deviates from original', () => {
+            // Original points forming a straight line
+            const originalPoints: [number, number][] = [
+                [0, 0],
+                [0, 0.01],
+                [0, 0.02],
+            ];
+
+            // Route that deviates significantly
+            const geoJson: FeatureCollection = {
+                type: 'FeatureCollection',
+                features: [
+                    {
+                        type: 'Feature',
+                        properties: {},
+                        geometry: {
+                            type: 'LineString',
+                            // GeoJSON is [lng, lat] - this route is far from original
+                            coordinates: [
+                                [0.1, 0],    // Far east of original
+                                [0.1, 0.01],
+                                [0.1, 0.02],
+                            ],
+                        },
+                    },
+                ],
+            };
+
+            const result = calculateRouteAccuracy(originalPoints, geoJson, 1000);
+            
+            // Should be low accuracy due to deviation
+            expect(result).toBeLessThan(50);
+        });
+
+        it('should handle multiple LineString features', () => {
+            const originalPoints: [number, number][] = [
+                [0, 0],
+                [0.0001, 0],
+            ];
+
+            const geoJson: FeatureCollection = {
+                type: 'FeatureCollection',
+                features: [
+                    {
+                        type: 'Feature',
+                        properties: {},
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [[0, 0], [0, 0.00005]],
+                        },
+                    },
+                    {
+                        type: 'Feature',
+                        properties: {},
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [[0, 0.00005], [0, 0.0001]],
+                        },
+                    },
+                ],
+            };
+
+            const result = calculateRouteAccuracy(originalPoints, geoJson, 1000);
+            
+            // Should calculate accuracy across both features
+            expect(result).toBeGreaterThanOrEqual(0);
+            expect(result).toBeLessThanOrEqual(100);
+        });
+
+        it('should clamp result to 0-100 range', () => {
+            // Original and route are identical - should be capped at 100
+            const originalPoints: [number, number][] = [[0, 0]];
+
+            const geoJson: FeatureCollection = {
+                type: 'FeatureCollection',
+                features: [
+                    {
+                        type: 'Feature',
+                        properties: {},
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [[0, 0], [0, 0]],
+                        },
+                    },
+                ],
+            };
+
+            const result = calculateRouteAccuracy(originalPoints, geoJson, 1000);
+            
+            expect(result).toBeLessThanOrEqual(100);
+            expect(result).toBeGreaterThanOrEqual(0);
         });
     });
 });

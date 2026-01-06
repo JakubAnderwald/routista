@@ -7,6 +7,7 @@ import { ReportIssueButton } from "@/components/ReportIssueButton";
 import { NextIntlClientProvider } from 'next-intl';
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ABTestProvider } from "@/components/ABTestProvider";
+import { PostHogProvider } from "@/components/PostHogProvider";
 import { getMessages, setRequestLocale } from 'next-intl/server';
 
 const geistSans = Geist({
@@ -72,21 +73,23 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ABTestProvider>
-            <NextIntlClientProvider messages={messages}>
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-              <ReportIssueButton />
-            </NextIntlClientProvider>
-          </ABTestProvider>
-        </ThemeProvider>
+        <PostHogProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ABTestProvider>
+              <NextIntlClientProvider messages={messages}>
+                <Header />
+                <main className="flex-1">{children}</main>
+                <Footer />
+                <ReportIssueButton />
+              </NextIntlClientProvider>
+            </ABTestProvider>
+          </ThemeProvider>
+        </PostHogProvider>
         <Analytics />
         <SpeedInsights />
       </body>

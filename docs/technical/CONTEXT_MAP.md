@@ -20,6 +20,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Route Caching** | `src/lib/radarService.ts` | Caches routes in Upstash Redis (24h TTL). |
 | **Rate Limiting** | `middleware.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis. |
 | **Error Tracking** | `sentry.*.config.ts`, `src/app/global-error.tsx` | Sentry SDK for client/server/edge error capture. |
+| **Product Analytics** | `src/components/PostHogProvider.tsx` | PostHog analytics with automatic pageview tracking. |
 | **Testing Hooks** | `src/app/[locale]/create/CreateClient.tsx` | Contains hidden `data-testid` controls and `window.__routistaTestHelpers`. |
 | **Unit Tests** | `tests/unit/*.test.ts` | Pure function tests for `src/lib/` modules. Run with `npm test`. |
 | **Test Coverage** | `vitest.config.ts` | Coverage config. Run `npm run test:coverage` for reports. |
@@ -58,6 +59,9 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `sentry.server.config.ts`: Server-side Sentry initialization.
 *   `sentry.edge.config.ts`: Edge runtime Sentry initialization.
 *   `next.config.ts`: Next.js config wrapped with Sentry.
+
+### Analytics (`src/components/`)
+*   `PostHogProvider.tsx`: PostHog initialization and pageview tracking for App Router.
 
 ### Documentation (`docs/`)
 *   `README.md`: Documentation index and overview.

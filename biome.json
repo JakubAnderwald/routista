@@ -81,9 +81,9 @@
   },
   "files": {
     "includes": [
-      "**/src/**",
-      "**/tests/**",
-      "**/messages/**",
+      "src/**",
+      "tests/**",
+      "messages/**",
       "**/*.ts",
       "**/*.tsx",
       "**/*.js",

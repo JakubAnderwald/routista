@@ -106,6 +106,18 @@ describe('analytics', () => {
             expect(posthog.capture).not.toHaveBeenCalled();
         });
 
+        it('should skip tracking on IPv6 localhost (::1)', () => {
+            vi.stubGlobal('window', {
+                location: {
+                    hostname: '::1',
+                },
+            });
+
+            track('wizard_started', {});
+
+            expect(posthog.capture).not.toHaveBeenCalled();
+        });
+
         it('should track gpx_exported event with all properties', () => {
             track('gpx_exported', {
                 route_length_km: 10.5,

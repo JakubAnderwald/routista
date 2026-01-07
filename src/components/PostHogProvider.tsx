@@ -11,11 +11,12 @@ let posthogInitialized = false;
 /**
  * Check if we're running on localhost.
  * We skip analytics initialization on localhost to avoid polluting production data.
+ * Handles IPv4 (127.0.0.1), IPv6 (::1), and hostname (localhost).
  */
 function isLocalhost(): boolean {
   if (typeof window === 'undefined') return true;
   const hostname = window.location.hostname;
-  return hostname === 'localhost' || hostname === '127.0.0.1';
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
 }
 
 /**

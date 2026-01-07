@@ -3,7 +3,7 @@
  * 
  * Provides:
  * - Typed event names and properties
- * - Localhost protection to avoid polluting data
+ * - Localhost protection to avoid polluting production data
  * - Latency measurement helpers
  * 
  * @see https://posthog.com/docs/product-analytics/capture-events
@@ -82,11 +82,12 @@ export interface AnalyticsEvents {
 /**
  * Check if we're running on localhost.
  * We skip analytics on localhost to avoid polluting production data.
+ * Handles IPv4 (127.0.0.1), IPv6 (::1), and hostname (localhost).
  */
 function isLocalhost(): boolean {
   if (typeof window === 'undefined') return true;
   const hostname = window.location.hostname;
-  return hostname === 'localhost' || hostname === '127.0.0.1';
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
 }
 
 /**

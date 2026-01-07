@@ -207,6 +207,33 @@ describe('PostHogProvider', () => {
       expect(mockInit).not.toHaveBeenCalled();
       consoleLogSpy.mockRestore();
     });
+
+    it('should skip initialization on IPv6 localhost (::1)', async () => {
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+      
+      // Mock IPv6 localhost
+      Object.defineProperty(window, 'location', {
+        value: { hostname: '::1' },
+        writable: true,
+      });
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(consoleLogSpy).toHaveBeenCalledWith('[PostHog] Skipped (localhost)');
+      });
+
+      expect(mockInit).not.toHaveBeenCalled();
+      consoleLogSpy.mockRestore();
+    });
   });
 
   describe('pageview tracking', () => {

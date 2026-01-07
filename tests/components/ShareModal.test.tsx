@@ -215,12 +215,9 @@ describe('ShareModal', () => {
     });
 
     describe('mobile actions', () => {
-        it('should render share button on mobile', async () => {
-            // Note: The component reads isMobile() at render time
-            // The default mock returns false (desktop), so this test just
-            // validates that the mobile code path exists in the component
-            // Full mobile testing would require re-importing the component with different mock
-            expect(true).toBe(true);
+        it.skip('should render share button on mobile', () => {
+            // Mobile testing requires dynamic re-import with mocked isMobile().
+            // Covered by integration tests instead.
         });
     });
 

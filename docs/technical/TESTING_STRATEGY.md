@@ -69,13 +69,13 @@ We follow the test pyramid approach, with more tests at the bottom (unit) and fe
 
 **Current unit test files:**
 
-| Test File | Tests | Purpose |
-|-----------|-------|---------|
+| Test File | Purpose |
+|-----------|---------|
 | `geoUtils.test.ts` | Distance, scaling, simplification |
 | `gpxGenerator.test.ts` | GPX XML generation |
 | `imageProcessingCore.test.ts` | Otsu algorithm, boundary tracing |
 | `radarService.test.ts` | API calls, caching, hashing |
-| `rateLimit.test.ts` | Rate limiting logic |
+| `rateLimit.test.ts` | Rate-limiting logic |
 | `routeGenerator.test.ts` | Route generation client |
 | `shareImageGenerator.test.ts` | Share functionality |
 | `stravaService.test.ts` | Strava integration |

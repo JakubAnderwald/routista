@@ -1,8 +1,6 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "organizeImports": {
-    "enabled": true
-  },
+  "$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,
     "rules": {
@@ -37,9 +35,9 @@
         "useNamingConvention": "off"
       },
       "suspicious": {
-        "noConsoleLog": "off",
         "noExplicitAny": "warn",
-        "noArrayIndexKey": "warn"
+        "noArrayIndexKey": "warn",
+        "noConsole": { "level": "off", "options": { "allow": ["log"] } }
       },
       "nursery": {
         "useSortedClasses": {
@@ -82,28 +80,26 @@
     }
   },
   "files": {
-    "ignore": [
-      ".next/**",
-      "node_modules/**",
-      "coverage/**",
-      "out/**",
-      "build/**",
-      ".vercel/**",
-      ".worktrees/**",
-      "*.min.js",
-      "*.min.css",
-      "public/**"
-    ],
-    "include": [
-      "src/**",
-      "tests/**",
-      "messages/**",
-      "*.ts",
-      "*.tsx",
-      "*.js",
-      "*.mjs",
-      "*.json",
-      "*.css"
+    "includes": [
+      "**/src/**",
+      "**/tests/**",
+      "**/messages/**",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.mjs",
+      "**/*.json",
+      "**/*.css",
+      "!**/.next/**",
+      "!**/node_modules/**",
+      "!**/coverage/**",
+      "!**/out/**",
+      "!**/build/**",
+      "!**/.vercel/**",
+      "!**/.worktrees/**",
+      "!**/*.min.js",
+      "!**/*.min.css",
+      "!**/public/**"
     ]
   },
   "vcs": {
@@ -112,4 +108,3 @@
     "useIgnoreFile": true
   }
 }
-

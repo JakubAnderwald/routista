@@ -11,7 +11,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('posthog-js', () => ({
     default: {
         capture: vi.fn(),
-        get_distinct_id: vi.fn(() => 'test-distinct-id'),
     },
 }));
 
@@ -207,19 +206,5 @@ describe('analytics edge cases', () => {
         // Should not throw
         expect(() => track('wizard_started', {})).not.toThrow();
         expect(posthog.capture).not.toHaveBeenCalled();
-    });
-
-    it('should handle PostHog not being initialized', () => {
-        vi.stubGlobal('window', {
-            location: {
-                hostname: 'routista.eu',
-            },
-        });
-
-        // Mock PostHog as not initialized
-        vi.mocked(posthog.get_distinct_id).mockReturnValue(undefined as unknown as string);
-
-        // Should not throw, just skip
-        expect(() => track('wizard_started', {})).not.toThrow();
     });
 });

@@ -83,26 +83,12 @@ export interface AnalyticsEvents {
  * Check if we're running on localhost.
  * We skip analytics on localhost to avoid polluting production data.
  * Handles IPv4 (127.0.0.1), IPv6 (::1), and hostname (localhost).
+ * Also returns true for SSR environments.
  */
 function isLocalhost(): boolean {
   if (typeof window === 'undefined') return true;
   const hostname = window.location.hostname;
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-}
-
-/**
- * Check if PostHog is available and initialized.
- */
-function isPostHogReady(): boolean {
-  // PostHog doesn't have a direct "isInitialized" check, but we can check
-  // if the capture function exists and won't throw
-  try {
-    return typeof posthog.capture === 'function' && 
-           typeof posthog.get_distinct_id === 'function' &&
-           posthog.get_distinct_id() !== undefined;
-  } catch {
-    return false;
-  }
 }
 
 // ============================================================================
@@ -111,6 +97,9 @@ function isPostHogReady(): boolean {
 
 /**
  * Track an analytics event with type-safe properties.
+ * 
+ * PostHog automatically queues events if not yet initialized,
+ * so we don't need to check readiness before capturing.
  * 
  * @param event - Event name (must be a key of AnalyticsEvents)
  * @param properties - Event properties (typed per event)
@@ -132,12 +121,8 @@ export function track<E extends keyof AnalyticsEvents>(
     return;
   }
 
-  // Check if PostHog is ready
-  if (!isPostHogReady()) {
-    console.warn(`[Analytics] PostHog not ready, skipping: ${event}`);
-    return;
-  }
-
+  // PostHog queues events internally if not yet initialized
+  // No need to check readiness - just capture
   console.log(`[Analytics] ${event}`, properties);
   posthog.capture(event, properties);
 }

@@ -46,5 +46,5 @@ next-env.d.ts
 test_output*.txt
 .env*.local
 
-# worktrees (if created as subdirectories)
-/worktrees/
+# worktrees (kept inside workspace to avoid Cursor "outside workspace" prompts)
+/.worktrees/

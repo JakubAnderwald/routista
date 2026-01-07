@@ -1,0 +1,3 @@
+# Worktrees have their own node_modules, .next, etc. - don't index them
+.worktrees/
+

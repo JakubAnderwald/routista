@@ -65,16 +65,18 @@ When the user needs to test on mobile, use Vercel Preview Deployments:
 
 From the main repo directory:
 ```bash
-git worktree add ../routista-[feature-name] -b feature/[feature-name] main
-cd ../routista-[feature-name]
+git worktree add .worktrees/[feature-name] -b feature/[feature-name] main
+cd .worktrees/[feature-name]
 npm install
 vercel env pull .env.local
 ```
 
 ### Worktree Naming Convention
-- **Location**: Sibling to main repo (`../routista-[feature-name]`)
+- **Location**: Inside repo in `.worktrees/` folder (`.worktrees/[feature-name]`)
 - **Branch**: `feature/[descriptive-name]`
-- **Example**: `../routista-dark-mode` with branch `feature/dark-mode`
+- **Example**: `.worktrees/dark-mode` with branch `feature/dark-mode`
+
+**Why inside the workspace?** Cursor treats sibling directories as "outside workspace" and prompts for confirmation on every edit. Keeping worktrees inside `.worktrees/` avoids this friction.
 
 ### Per-Worktree Setup Checklist
 1. `npm install` - Each worktree needs its own `node_modules`
@@ -85,7 +87,7 @@ vercel env pull .env.local
 
 From the main repo directory:
 ```bash
-git worktree remove ../routista-[feature-name]
+git worktree remove .worktrees/[feature-name]
 ```
 
 ### Listing Active Worktrees

@@ -2,6 +2,7 @@ import { Link } from '@/i18n/routing';
 import { Button } from "@/components/ui/Button";
 import { Map, Share2, Download, Coffee } from "lucide-react";
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { SupportButton } from "@/components/SupportButton";
 
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -75,20 +76,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
               {t('support.description')}
             </p>
-            <a
-              href="https://buymeacoffee.com/jakubanderwald"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block"
-            >
-              <Button
-                size="md"
-                className="px-5 py-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
-              >
-                <Coffee className="w-4 h-4 mr-2" />
-                {t('support.button')}
-              </Button>
-            </a>
+            <SupportButton location="home" label={t('support.button')} />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
               {t('support.footer')}
             </p>

@@ -20,7 +20,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Route Caching** | `src/lib/radarService.ts` | Caches routes in Upstash Redis (24h TTL). |
 | **Rate Limiting** | `middleware.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis. |
 | **Error Tracking** | `sentry.*.config.ts`, `src/app/global-error.tsx` | Sentry SDK for client/server/edge error capture. |
-| **Product Analytics** | `src/components/PostHogProvider.tsx` | PostHog analytics with automatic pageview tracking. |
+| **Product Analytics** | `src/lib/analytics.ts`, `src/components/PostHogProvider.tsx` | PostHog analytics with typed events and automatic pageview tracking. |
 | **Testing Hooks** | `src/app/[locale]/create/CreateClient.tsx` | Contains hidden `data-testid` controls and `window.__routistaTestHelpers`. |
 | **Unit Tests** | `tests/unit/*.test.ts` | Pure function tests for `src/lib/` modules. Run with `npm test`. |
 | **Test Coverage** | `vitest.config.ts` | Coverage config. Run `npm run test:coverage` for reports. |
@@ -52,6 +52,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `gpxGenerator.ts`: Utility for file export.
 *   `shareImageGenerator.ts`: Branded image generation for social sharing. Uses `leaflet-image` + Canvas API.
 *   `stravaService.ts`: Strava OAuth and API integration. Token management, route upload.
+*   `analytics.ts`: Type-safe PostHog analytics wrapper. See Analytics Events below.
 
 ### Infrastructure (root)
 *   `middleware.ts`: Rate limiting for `/api/radar/*` routes, i18n routing.
@@ -60,8 +61,10 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `sentry.edge.config.ts`: Edge runtime Sentry initialization.
 *   `next.config.ts`: Next.js config wrapped with Sentry.
 
-### Analytics (`src/components/`)
+### Analytics (`src/lib/`, `src/components/`)
+*   `analytics.ts`: Type-safe event tracking with localhost protection and timing utilities.
 *   `PostHogProvider.tsx`: PostHog initialization and pageview tracking for App Router.
+*   `SupportButton.tsx`: Client component for Buy Me a Coffee with analytics tracking.
 
 ### Documentation (`docs/`)
 *   `README.md`: Documentation index and overview.
@@ -80,6 +83,7 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `rateLimit.test.ts`: Rate limiting logic tests.
     *   `routeGenerator.test.ts`: Route generation client tests.
     *   `utils.test.ts`: Utility function tests.
+    *   `analytics.test.ts`: Analytics service tests (tracking, localhost, timing).
 *   `components/`: Component tests using React Testing Library.
     *   `ImageUpload.test.tsx`: File upload, drag-drop, preview tests.
     *   `ModeSelector.test.tsx`: Transport mode selection tests.
@@ -102,10 +106,28 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `ShareModal.tsx`: Social sharing UI. Platform selection, copy/download/share actions.
 *   `StravaButton.tsx`: Strava connect/upload button. OAuth popup flow, upload status.
 *   `ABTestProvider.tsx`: UI variant context provider. See `docs/features/UI_VARIANTS.md`.
+*   `SupportButton.tsx`: Buy Me a Coffee button with analytics tracking.
 
 ### Pages (`src/app/`)
 *   `[locale]/create/page.tsx`: Wrapper for `CreateClient`.
 *   `[locale]/page.tsx`: Landing page.
+
+## 📊 Analytics Events
+
+The following custom events are tracked via PostHog (see `src/lib/analytics.ts`):
+
+| Event | Trigger Location | Properties |
+| :--- | :--- | :--- |
+| `wizard_started` | `CreateClient.tsx` mount | - |
+| `shape_selected` | Image upload, example select, shape draw | `source`, `point_count` |
+| `area_selected` | Generate button click | `radius_meters`, `transport_mode` |
+| `generation_request` | Start of route generation | `point_count`, `radius_meters`, `transport_mode` |
+| `generation_result` | Route generation complete | `status`, `latency_ms`, `route_length_km?`, `accuracy_percent?`, `error_message?` |
+| `gpx_exported` | Download button click | `route_length_km`, `accuracy_percent`, `transport_mode` |
+| `social_share` | Share modal actions | `platform`, `action` |
+| `support_click` | Buy Me a Coffee button | `location` |
+
+**Note**: Events are skipped on localhost to keep production data clean.
 
 ## 🤖 Agent Instructions
 
@@ -158,4 +180,3 @@ Architecture and developer guides:
 | `TESTING_STRATEGY.md` | Test pyramid, coverage requirements, browser automation |
 | `DEBUGGING.md` | Console logs, troubleshooting |
 | `CONTEXT_MAP.md` | This file - concept-to-file mapping |
-

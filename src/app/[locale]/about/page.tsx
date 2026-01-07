@@ -2,6 +2,7 @@ import { Link } from '@/i18n/routing';
 import { Button } from "@/components/ui/Button";
 import { Heart, Coffee, Github } from "lucide-react";
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { SupportButton } from "@/components/SupportButton";
 
 export default async function About({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;
@@ -137,16 +138,7 @@ export default async function About({ params }: { params: Promise<{ locale: stri
                             {t('support.description')}
                         </p>
                         <div className="flex flex-wrap gap-4">
-                            <a
-                                href="https://buymeacoffee.com/jakubanderwald"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                <Button className="px-6 py-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5">
-                                    <Coffee className="w-4 h-4 mr-2" />
-                                    {t('support.button')}
-                                </Button>
-                            </a>
+                            <SupportButton location="about" label={t('support.button')} />
                             <a
                                 href="https://github.com/JakubAnderwald/routista"
                                 target="_blank"

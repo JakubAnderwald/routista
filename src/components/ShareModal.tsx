@@ -15,6 +15,7 @@ import {
     getPlatformShareUrl,
     isMobile,
 } from "@/lib/shareImageGenerator";
+import { track } from "@/lib/analytics";
 import type L from "leaflet";
 import type { FeatureCollection } from "geojson";
 import { useEffect } from "react";
@@ -162,19 +163,29 @@ export function ShareModal({ isOpen, onClose, getMap, routeData, stats, mode }: 
         const success = await copyImageToClipboard(blob);
         if (success) {
             setCopied(true);
+            // Track social share - copy action
+            track('social_share', {
+                platform: selectedPlatform,
+                action: 'copy',
+            });
             // Reset after 2 seconds
             setTimeout(() => setCopied(false), 2000);
         } else {
             // Fallback to download if clipboard fails
             setError(t("clipboardFailed"));
         }
-    }, [generateImage, t]);
+    }, [generateImage, selectedPlatform, t]);
 
     const handleDownload = useCallback(async () => {
         const blob = await generateImage();
         if (!blob) return;
 
         downloadImage(blob, selectedPlatform);
+        // Track social share - download action
+        track('social_share', {
+            platform: selectedPlatform,
+            action: 'download',
+        });
     }, [generateImage, selectedPlatform]);
 
     const handleShare = useCallback(async () => {
@@ -183,6 +194,11 @@ export function ShareModal({ isOpen, onClose, getMap, routeData, stats, mode }: 
 
         const shared = await shareNative(blob, selectedPlatform);
         if (shared) {
+            // Track social share - native share action
+            track('social_share', {
+                platform: selectedPlatform,
+                action: 'native_share',
+            });
             onClose();
         }
     }, [generateImage, selectedPlatform, onClose]);
@@ -387,5 +403,3 @@ export function ShareModal({ isOpen, onClose, getMap, routeData, stats, mode }: 
         </div>
     );
 }
-
-

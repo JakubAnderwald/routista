@@ -38,6 +38,11 @@ describe('PostHogProvider', () => {
     // Reset module state between tests
     vi.resetModules();
     process.env = { ...originalEnv };
+    // Mock non-localhost hostname for most tests
+    Object.defineProperty(window, 'location', {
+      value: { hostname: 'routista.eu' },
+      writable: true,
+    });
   });
 
   afterEach(() => {
@@ -90,6 +95,7 @@ describe('PostHogProvider', () => {
           person_profiles: 'identified_only',
           capture_pageview: false,
           capture_pageleave: true,
+          persistence: 'localStorage+cookie',
         });
       });
 
@@ -146,6 +152,87 @@ describe('PostHogProvider', () => {
 
       // Still only called once due to module-scoped flag
       expect(mockInit).toHaveBeenCalledTimes(1);
+    });
+
+    it('should skip initialization on localhost', async () => {
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+      
+      // Mock localhost
+      Object.defineProperty(window, 'location', {
+        value: { hostname: 'localhost' },
+        writable: true,
+      });
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(consoleLogSpy).toHaveBeenCalledWith('[PostHog] Skipped (localhost)');
+      });
+
+      expect(mockInit).not.toHaveBeenCalled();
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should skip initialization on 127.0.0.1', async () => {
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+      
+      // Mock 127.0.0.1
+      Object.defineProperty(window, 'location', {
+        value: { hostname: '127.0.0.1' },
+        writable: true,
+      });
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(consoleLogSpy).toHaveBeenCalledWith('[PostHog] Skipped (localhost)');
+      });
+
+      expect(mockInit).not.toHaveBeenCalled();
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should skip initialization on IPv6 localhost (::1)', async () => {
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+      
+      // Mock IPv6 localhost
+      Object.defineProperty(window, 'location', {
+        value: { hostname: '::1' },
+        writable: true,
+      });
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(consoleLogSpy).toHaveBeenCalledWith('[PostHog] Skipped (localhost)');
+      });
+
+      expect(mockInit).not.toHaveBeenCalled();
+      consoleLogSpy.mockRestore();
     });
   });
 
@@ -206,6 +293,36 @@ describe('PostHogProvider', () => {
         });
       });
     });
+
+    it('should skip pageview tracking on localhost', async () => {
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+
+      // Mock localhost
+      Object.defineProperty(window, 'location', {
+        value: { hostname: 'localhost' },
+        writable: true,
+      });
+
+      Object.defineProperty(window, 'origin', {
+        value: 'http://localhost:3000',
+        writable: true,
+      });
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      // Wait a bit to ensure no calls are made
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      expect(mockCapture).not.toHaveBeenCalled();
+    });
   });
 
   describe('children rendering', () => {
@@ -227,4 +344,3 @@ describe('PostHogProvider', () => {
     });
   });
 });
-

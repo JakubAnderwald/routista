@@ -9,13 +9,36 @@ import { usePathname, useSearchParams } from 'next/navigation';
 let posthogInitialized = false;
 
 /**
+ * Check if we're running on localhost.
+ * We skip analytics initialization on localhost to avoid polluting production data.
+ * Handles IPv4 (127.0.0.1), IPv6 (::1), and hostname (localhost).
+ */
+function isLocalhost(): boolean {
+  if (typeof window === 'undefined') return true;
+  const hostname = window.location.hostname;
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+}
+
+/**
  * PostHog analytics provider for Next.js App Router.
  * Handles initialization and automatic pageview tracking.
  * Uses a module-scoped flag to ensure idempotent initialization.
+ * 
+ * Features:
+ * - Skips initialization on localhost to keep data clean
+ * - Uses localStorage+cookie persistence for reliable tracking
+ * - Captures pageviews manually for SPA navigation
  */
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (posthogInitialized) {
+      return;
+    }
+
+    // Skip on localhost to avoid polluting production data
+    if (isLocalhost()) {
+      console.log('[PostHog] Skipped (localhost)');
+      posthogInitialized = true;
       return;
     }
 
@@ -30,6 +53,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       person_profiles: 'identified_only',
       capture_pageview: false, // We capture manually for App Router SPA navigation
       capture_pageleave: true,
+      persistence: 'localStorage+cookie', // More reliable cross-session tracking
     });
 
     posthogInitialized = true;
@@ -56,6 +80,9 @@ function PostHogPageviewTracker() {
   const posthogClient = usePostHog();
 
   useEffect(() => {
+    // Skip on localhost
+    if (isLocalhost()) return;
+    
     if (pathname && posthogClient) {
       let url = window.origin + pathname;
       const search = searchParams?.toString();
@@ -68,4 +95,3 @@ function PostHogPageviewTracker() {
 
   return null;
 }
-

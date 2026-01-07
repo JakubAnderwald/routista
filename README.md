@@ -14,6 +14,15 @@ Turn any shape into a real-world GPS route! Routista is a fun, free tool for run
 - **Privacy Focused**: All processing happens in your browser (client-side) or securely.
 - **Completely Free**: No paywalls or subscriptions. Supported by coffee! ☕
 
+## Privacy & Analytics 🔒
+
+Routista respects your privacy:
+
+- **Images stay on your device**: Shape extraction happens entirely in your browser. Your images are never uploaded to any server.
+- **Anonymous analytics**: We use [PostHog](https://posthog.com) to collect anonymous usage data (page views, feature usage) to improve the app. No personal data is collected.
+- **No tracking on localhost**: Analytics are disabled during development.
+- **EU-hosted**: Analytics data is stored in PostHog's EU region for GDPR compliance.
+
 ## 📚 For Developers & AI Agents
 
 **🚨 START HERE before working on this codebase:**
@@ -43,6 +52,7 @@ Built with modern web technologies:
 -   **Maps**: [Leaflet](https://leafletjs.com/) & [React-Leaflet](https://react-leaflet.js.org/)
 -   **Caching**: [Upstash Redis](https://upstash.com/) (optional)
 -   **Error Tracking**: [Sentry](https://sentry.io/) (optional)
+-   **Analytics**: [PostHog](https://posthog.com/) (anonymous usage data)
 -   **Testing**: [Vitest](https://vitest.dev/) & [Puppeteer](https://pptr.dev/) (E2E)
 -   **Deployment**: [Vercel](https://vercel.com/)
 -   **Internationalization**: [next-intl](https://next-intl-docs.vercel.app/)

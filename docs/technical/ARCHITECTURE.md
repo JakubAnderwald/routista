@@ -87,6 +87,39 @@ State is primarily managed in the parent page (`src/app/create/page.tsx` or simi
 
 **Files:** `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/app/global-error.tsx`
 
+### Product Analytics (PostHog)
+
+Anonymous product analytics to understand user behavior and improve the app.
+
+**Features:**
+- Automatic pageview tracking for SPA navigation
+- Custom event tracking with type-safe properties
+- Localhost protection (events skipped on localhost)
+- localStorage+cookie persistence for reliable tracking
+
+**Event Flow:**
+```
+User Action → track() → isLocalhost? → PostHog API
+                         ↓ (if localhost)
+                         Console log only
+```
+
+**Key Events:**
+| Event | Purpose |
+|-------|---------|
+| `wizard_started` | Track create page visits |
+| `shape_selected` | Measure shape input methods (upload/example/draw) |
+| `area_selected` | Track area configuration |
+| `generation_request` | Track route generation attempts |
+| `generation_result` | Measure success rate, latency, accuracy |
+| `gpx_exported` | Primary conversion metric |
+| `social_share` | Track sharing engagement |
+| `support_click` | Track donation interest |
+
+**Files:** `src/lib/analytics.ts`, `src/components/PostHogProvider.tsx`
+
+**Dashboard:** PostHog Cloud (EU instance)
+
 ### Environment Variables
 | Variable | Purpose |
 |----------|---------|
@@ -184,4 +217,3 @@ Push my changes to the feature branch so I can test on mobile
 - Testing: `docs/technical/AUTOMATED_TESTING.md`
 - Debugging: `docs/technical/DEBUGGING.md`
 - File locations: `docs/technical/CONTEXT_MAP.md`
-

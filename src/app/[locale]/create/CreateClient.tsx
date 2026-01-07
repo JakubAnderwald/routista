@@ -14,6 +14,7 @@ import { TransportMode } from "@/config";
 import { useABVariant } from "@/components/ABTestProvider";
 import { ShareModal } from "@/components/ShareModal";
 import { StravaButton } from "@/components/StravaButton";
+import { track, startTiming, type ShapeSource } from "@/lib/analytics";
 import type { ResultMapRef } from "@/components/ResultMap";
 
 // Actually, react-leaflet components can be imported directly, but they must be rendered inside MapContainer.
@@ -61,8 +62,23 @@ export default function CreateClient() {
     const resultMapRef = useRef<ResultMapRef>(null);
 
     const tImageUpload = useTranslations('ImageUpload');
+
+    // Track wizard_started on component mount
+    useEffect(() => {
+        track('wizard_started', {});
+    }, []);
+
+    /**
+     * Track shape selection with source and point count
+     */
+    const trackShapeSelected = (source: ShapeSource, pointCount: number) => {
+        track('shape_selected', {
+            source,
+            point_count: pointCount,
+        });
+    };
     
-    const handleImageSelect = async (file: File) => {
+    const handleImageSelect = async (file: File, source: ShapeSource = 'upload') => {
         setImage(file);
         setShapeWarning(false);
         try {
@@ -70,6 +86,7 @@ export default function CreateClient() {
             const result = await extractShapeFromImage(file, 150);
             setShapePoints(result.points);
             setShapeWarning(result.isLikelyNoise);
+            trackShapeSelected(source, result.points.length);
         } catch (e) {
             console.error("Failed to extract shape", e);
             alert(t('upload.error'));
@@ -82,7 +99,7 @@ export default function CreateClient() {
             const response = await fetch(`/${filename}`);
             const blob = await response.blob();
             const file = new File([blob], filename, { type: "image/png" });
-            handleImageSelect(file);
+            handleImageSelect(file, 'upload');
         } catch (e) {
             console.error("Failed to load test image", e);
         }
@@ -96,7 +113,7 @@ export default function CreateClient() {
             const blob = await response.blob();
             const mimeType = blob.type || "image/png";
             const file = new File([blob], filename, { type: mimeType });
-            handleImageSelect(file);
+            handleImageSelect(file, 'upload');
         } catch (e) {
             console.error("Failed to load image from data URL", e);
         }
@@ -107,13 +124,23 @@ export default function CreateClient() {
             const response = await fetch(filename);
             const blob = await response.blob();
             const file = new File([blob], filename.split('/').pop() || "example.png", { type: "image/png" });
-            handleImageSelect(file);
+            // Pass 'example' as source to track analytics correctly
+            handleImageSelect(file, 'example');
         } catch (e) {
             console.error("Failed to load example image", e);
             alert(t('upload.error'));
         }
     };
 
+    /**
+     * Handle shape save from ShapeEditor
+     */
+    const handleShapeSave = (points: { x: number, y: number }[]) => {
+        const shapeArray: [number, number][] = points.map(p => [p.x, p.y]);
+        setShapePoints(shapeArray);
+        setIsEditing(false);
+        trackShapeSelected('draw', shapeArray.length);
+    };
 
 
     // Expose helper functions globally for browser automation
@@ -138,6 +165,22 @@ export default function CreateClient() {
     const handleGenerate = async () => {
         if (!shapePoints || !mode) return;
 
+        // Track area_selected when user clicks Generate
+        track('area_selected', {
+            radius_meters: radius,
+            transport_mode: mode,
+        });
+
+        // Track generation_request at start
+        track('generation_request', {
+            point_count: shapePoints.length,
+            radius_meters: radius,
+            transport_mode: mode,
+        });
+
+        // Start timing for latency measurement
+        const getLatency = startTiming();
+
         setStep("processing");
         console.log(`[CreateClient] Starting route generation...`);
         console.log(`[CreateClient] Input: ${shapePoints.length} shape points, center: [${center[0].toFixed(4)}, ${center[1].toFixed(4)}], radius: ${radius}m, mode: ${mode}`);
@@ -158,10 +201,26 @@ export default function CreateClient() {
             setStats({ length, accuracy });
             console.log(`[CreateClient] Route complete: ${(length / 1000).toFixed(2)}km, ${accuracy.toFixed(0)}% accuracy`);
 
+            // Track successful generation
+            track('generation_result', {
+                status: 'success',
+                latency_ms: getLatency(),
+                route_length_km: length / 1000,
+                accuracy_percent: accuracy,
+            });
+
             setStep("result");
 
         } catch (error) {
             console.error("Route generation failed:", error);
+
+            // Track failed generation
+            track('generation_result', {
+                status: 'error',
+                latency_ms: getLatency(),
+                error_message: error instanceof Error ? error.message : 'Unknown error',
+            });
+
             const errorKey = variant === 'A' ? 'mode.error' : 'area.error';
             let message = t(errorKey);
             if (error instanceof Error) {
@@ -178,9 +237,16 @@ export default function CreateClient() {
     };
 
     const handleDownload = () => {
-        if (routeData) {
+        if (routeData && stats && mode) {
             const gpx = generateGPX(routeData);
             downloadGPX(gpx, "routista-route.gpx");
+            
+            // Track GPX export
+            track('gpx_exported', {
+                route_length_km: stats.length / 1000,
+                accuracy_percent: stats.accuracy,
+                transport_mode: mode,
+            });
         }
     };
 
@@ -232,7 +298,7 @@ export default function CreateClient() {
                                     <p className="text-gray-500 dark:text-gray-400 mb-8 text-center">
                                         {t('upload.description')}
                                     </p>
-                                    <ImageUpload onImageSelect={handleImageSelect} className="max-w-xl mb-8" testId="create-image-upload" />
+                                    <ImageUpload onImageSelect={(file) => handleImageSelect(file, 'upload')} className="max-w-xl mb-8" testId="create-image-upload" />
 
                                     {shapeWarning && (
                                         <div className="max-w-xl mb-6 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
@@ -271,10 +337,7 @@ export default function CreateClient() {
                                     <ShapeEditor
                                         imageSrc={image ? URL.createObjectURL(image) : null}
                                         initialPoints={shapePoints?.map(p => ({ x: p[0], y: p[1] })) || []}
-                                        onSave={(points: { x: number, y: number }[]) => {
-                                            setShapePoints(points.map(p => [p.x, p.y]));
-                                            setIsEditing(false);
-                                        }}
+                                        onSave={handleShapeSave}
                                         onCancel={() => setIsEditing(false)}
                                     />
                                 </div>

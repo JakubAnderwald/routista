@@ -6,6 +6,10 @@ export default defineConfig({
         testTimeout: 60000,
         // Limit concurrent tests to avoid Radar API rate limiting
         maxConcurrency: 2,
+        // Use jsdom for component tests
+        environment: 'jsdom',
+        // Setup file for testing-library matchers
+        setupFiles: ['./tests/setup.ts'],
         coverage: {
             // Use v8 provider (built-in, no extra deps needed)
             provider: 'v8',

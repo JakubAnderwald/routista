@@ -73,11 +73,25 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `unit/`: Unit tests for pure functions in `src/lib/`.
     *   `gpxGenerator.test.ts`: GPX XML generation tests.
     *   `geoUtils.test.ts`: Distance, route length, simplification tests.
+    *   `imageProcessingCore.test.ts`: Otsu algorithm, boundary tracing tests.
     *   `stravaService.test.ts`: Strava mode mapping tests.
     *   `shareImageGenerator.test.ts`: Mobile detection, platform URL tests.
     *   `radarService.test.ts`: Coordinate hashing tests.
+    *   `rateLimit.test.ts`: Rate limiting logic tests.
+    *   `routeGenerator.test.ts`: Route generation client tests.
+    *   `utils.test.ts`: Utility function tests.
+*   `components/`: Component tests using React Testing Library.
+    *   `ImageUpload.test.tsx`: File upload, drag-drop, preview tests.
+    *   `ModeSelector.test.tsx`: Transport mode selection tests.
+    *   `ShareModal.test.tsx`: Social sharing modal tests.
+    *   `StravaButton.test.tsx`: Strava OAuth and upload tests.
+*   `api/`: API route tests.
+    *   `radar-autocomplete.test.ts`: Autocomplete endpoint tests.
+    *   `radar-directions.test.ts`: Directions endpoint tests.
+    *   `strava-callback.test.ts`: OAuth callback tests.
+    *   `strava-upload.test.ts`: Route upload tests.
 *   `utils/nodeImageProcessing.ts`: Node.js wrapper for image processing (uses Sharp + core).
-*   `e2e/`: Placeholder E2E test templates.
+*   `e2e/`: E2E test templates.
 
 ### Components (`src/components/`)
 *   `CreateClient.tsx`: **CRITICAL**. The main page logic. Has UI variant conditional rendering.

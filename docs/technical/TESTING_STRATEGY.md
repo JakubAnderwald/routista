@@ -69,19 +69,17 @@ We follow the test pyramid approach, with more tests at the bottom (unit) and fe
 
 **Current unit test files:**
 
-| Test File | Tests | Purpose |
-|-----------|-------|---------|
+| Test File | Purpose |
+|-----------|---------|
 | `geoUtils.test.ts` | Distance, scaling, simplification |
 | `gpxGenerator.test.ts` | GPX XML generation |
+| `imageProcessingCore.test.ts` | Otsu algorithm, boundary tracing |
 | `radarService.test.ts` | API calls, caching, hashing |
-| `rateLimit.test.ts` | Rate limiting logic |
+| `rateLimit.test.ts` | Rate-limiting logic |
 | `routeGenerator.test.ts` | Route generation client |
 | `shareImageGenerator.test.ts` | Share functionality |
 | `stravaService.test.ts` | Strava integration |
-
-**Missing (to be added):**
-- `imageProcessingCore.test.ts` - Otsu algorithm, boundary tracing
-- `utils.test.ts` - Utility functions
+| `utils.test.ts` | Utility functions |
 
 ---
 
@@ -103,17 +101,24 @@ We follow the test pyramid approach, with more tests at the bottom (unit) and fe
 - Error states and loading states
 - Accessibility (ARIA attributes, keyboard navigation)
 
-**Priority components:**
+**Current component test files:**
+
+| Test File | Coverage | Test Focus |
+|-----------|----------|------------|
+| `ImageUpload.test.tsx` | 97% | Dropzone, file handling, preview, drag-drop, keyboard a11y |
+| `ModeSelector.test.tsx` | 100% | Mode selection, selected state styling |
+| `ShareModal.test.tsx` | 82% | Platform selection, copy/download, close behavior |
+| `StravaButton.test.tsx` | 81% | OAuth flow, upload, error handling, states |
+
+**Priority components (remaining):**
 
 | Component | Priority | Test Focus |
 |-----------|----------|------------|
-| `ImageUpload.tsx` | P0 | File handling, preview, error states |
-| `ModeSelector.tsx` | P1 | Mode selection, button states |
-| `ShareModal.tsx` | P1 | Platform selection, link generation |
-| `StravaButton.tsx` | P1 | Auth flow, connection state |
 | `AreaSelector.tsx` | P2 | Map interactions, search |
+| `ResultMap.tsx` | P2 | Route display |
+| `ShapeEditor.tsx` | P2 | Shape manipulation |
 
-**Setup required:**
+**Setup (already configured):**
 ```bash
 npm install -D @testing-library/react @testing-library/jest-dom jsdom
 ```

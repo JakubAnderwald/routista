@@ -87,13 +87,11 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
   const handleConnect = useCallback(() => {
     // #region agent log
     console.log('[DEBUG] handleConnect called', { currentState: state });
-    fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleConnect:entry',message:'handleConnect called',data:{currentState:state},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
     try {
       const authUrl = buildOAuthUrl();
       // #region agent log
       console.log('[DEBUG] Built OAuth URL', { authUrl });
-      fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleConnect:authUrl',message:'Built OAuth URL',data:{authUrl},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       
       // Open OAuth popup
@@ -128,7 +126,6 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
     } catch (error) {
       // #region agent log
       console.error('[DEBUG] handleConnect error', error);
-      fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleConnect:error',message:'OAuth failed',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       console.error('[StravaButton] Failed to start OAuth:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Failed to connect');
@@ -140,13 +137,11 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
   const handleUpload = useCallback(async () => {
     // #region agent log
     console.log('[DEBUG] handleUpload called', { hasRouteData: !!routeData, routeDataFeatures: routeData?.features?.length, mode, currentState: state });
-    fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleUpload:entry',message:'handleUpload called',data:{hasRouteData:!!routeData,routeDataFeatures:routeData?.features?.length,mode,currentState:state},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
 
     if (!routeData) {
       // #region agent log
       console.log('[DEBUG] No routeData - setting error');
-      fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleUpload:noRouteData',message:'No routeData - setting error',data:{routeData},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
       // #endregion
       setErrorMessage('No route to upload');
       setState('error');
@@ -156,7 +151,6 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
     const tokens = getStoredTokens();
     // #region agent log
     console.log('[DEBUG] Retrieved tokens', { hasTokens: !!tokens, hasAccessToken: !!tokens?.access_token, expiresAt: tokens?.expires_at });
-    fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleUpload:tokens',message:'Retrieved tokens',data:{hasTokens:!!tokens,hasAccessToken:!!tokens?.access_token,hasRefreshToken:!!tokens?.refresh_token,expiresAt:tokens?.expires_at},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
 
     if (!tokens) {
@@ -170,7 +164,6 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
     try {
       // #region agent log
       console.log('[DEBUG] About to call /api/strava/upload', { featureCount: routeData.features.length, mode });
-      fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleUpload:beforeFetch',message:'About to call /api/strava/upload',data:{featureCount:routeData.features.length,mode},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
 
       const response = await fetch('/api/strava/upload', {
@@ -189,7 +182,6 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
 
       // #region agent log
       console.log('[DEBUG] Received response from /api/strava/upload', { ok: response.ok, status: response.status, hasRouteUrl: !!data.routeUrl, error: data.error, needsReauth: data.needsReauth });
-      fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleUpload:afterFetch',message:'Received response from /api/strava/upload',data:{ok:response.ok,status:response.status,hasRouteUrl:!!data.routeUrl,error:data.error,needsReauth:data.needsReauth},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
 
       if (!response.ok) {
@@ -216,7 +208,6 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
     } catch (error) {
       // #region agent log
       console.error('[DEBUG] Upload threw exception', error);
-      fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:handleUpload:catch',message:'Upload threw exception',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
       console.error('[StravaButton] Upload failed:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Upload failed');
@@ -302,7 +293,6 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
   if (state === 'connected') {
     // #region agent log
     console.log('[DEBUG] Rendering connected state', { hasRouteData: !!routeData, routeDataFeatures: routeData?.features?.length, buttonDisabled: !routeData });
-    fetch('http://127.0.0.1:7242/ingest/6d97b2b0-5c87-44fd-a20b-62981eb6471d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StravaButton.tsx:render:connected',message:'Rendering connected state',data:{hasRouteData:!!routeData,routeDataFeatures:routeData?.features?.length,buttonDisabled:!routeData},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
     return (
       <div className="flex items-center gap-2">

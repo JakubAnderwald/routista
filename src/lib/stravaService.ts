@@ -186,6 +186,17 @@ export async function exchangeCodeForTokens(
   }
   
   const data = await response.json();
+  // #region agent log
+  const now = Math.floor(Date.now() / 1000);
+  console.log('[DEBUG] Token exchange response from Strava', { 
+    expires_at: data.expires_at, 
+    now,
+    expiresInSeconds: data.expires_at - now,
+    hasAccessToken: !!data.access_token,
+    hasRefreshToken: !!data.refresh_token,
+    athleteId: data.athlete?.id
+  });
+  // #endregion
   console.log('[StravaService] Token exchange successful');
   
   return {

@@ -70,6 +70,15 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
       
       if (data.type === 'STRAVA_AUTH_SUCCESS') {
         console.log('[StravaButton] Received auth success');
+        // #region agent log
+        const now = Math.floor(Date.now() / 1000);
+        console.log('[DEBUG] Tokens received via postMessage', { 
+          expires_at: data.tokens?.expires_at, 
+          now,
+          expiresInSeconds: data.tokens?.expires_at ? data.tokens.expires_at - now : 'N/A',
+          hasAccessToken: !!data.tokens?.access_token 
+        });
+        // #endregion
         storeTokens(data.tokens);
         setState('connected');
       } else if (data.type === 'STRAVA_AUTH_ERROR') {

@@ -146,10 +146,14 @@ export async function POST(request: NextRequest) {
     console.error('[Strava Upload] Upload failed:', error);
     const message = error instanceof Error ? error.message : 'Upload failed';
 
-    // Check for auth errors
+    // #region agent log
+    console.error('[DEBUG] Route creation error', { message });
+    // #endregion
+
+    // Check for auth errors - but include actual Strava error for debugging
     if (message.includes('401') || message.includes('unauthorized') || message.includes('Authorization Error')) {
       return NextResponse.json(
-        { error: 'Authorization failed. Please reconnect to Strava.', needsReauth: true },
+        { error: `Strava API: ${message}`, needsReauth: true },
         { status: 401 }
       );
     }

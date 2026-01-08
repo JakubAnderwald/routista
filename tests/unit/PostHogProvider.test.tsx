@@ -14,9 +14,11 @@ vi.mock('next/navigation', () => ({
 // Mock posthog-js
 const mockInit = vi.fn();
 const mockCapture = vi.fn();
+const mockRegister = vi.fn();
 const mockPosthog = {
   init: mockInit,
   capture: mockCapture,
+  register: mockRegister,
 };
 
 vi.mock('posthog-js', () => ({
@@ -79,6 +81,7 @@ describe('PostHogProvider', () => {
       const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
       process.env.NEXT_PUBLIC_POSTHOG_HOST = 'https://eu.i.posthog.com';
+      process.env.NEXT_PUBLIC_VERCEL_ENV = 'production';
 
       const { PostHogProvider } = await import('@/components/PostHogProvider');
       const { render } = await import('@testing-library/react');
@@ -99,8 +102,55 @@ describe('PostHogProvider', () => {
         });
       });
 
-      expect(consoleLogSpy).toHaveBeenCalledWith('[PostHog] Initialized');
+      // Should register environment as super property
+      expect(mockRegister).toHaveBeenCalledWith({
+        $environment: 'production',
+      });
+
+      expect(consoleLogSpy).toHaveBeenCalledWith('[PostHog] Initialized (env: production)');
       consoleLogSpy.mockRestore();
+    });
+
+    it('should register preview environment on Vercel preview deployments', async () => {
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+      process.env.NEXT_PUBLIC_VERCEL_ENV = 'preview';
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(mockRegister).toHaveBeenCalledWith({
+          $environment: 'preview',
+        });
+      });
+    });
+
+    it('should register unknown environment when NEXT_PUBLIC_VERCEL_ENV is not set', async () => {
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+      delete process.env.NEXT_PUBLIC_VERCEL_ENV;
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(mockRegister).toHaveBeenCalledWith({
+          $environment: 'unknown',
+        });
+      });
     });
 
     it('should use default host when NEXT_PUBLIC_POSTHOG_HOST is not set', async () => {

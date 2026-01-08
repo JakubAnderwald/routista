@@ -20,12 +20,28 @@ function isLocalhost(): boolean {
 }
 
 /**
+ * Get the current Vercel environment.
+ * Returns 'production', 'preview', or 'development'.
+ * Falls back to 'unknown' if not running on Vercel.
+ * 
+ * @see https://vercel.com/docs/projects/environment-variables/system-environment-variables
+ */
+function getVercelEnv(): 'production' | 'preview' | 'development' | 'unknown' {
+  const env = process.env.NEXT_PUBLIC_VERCEL_ENV;
+  if (env === 'production' || env === 'preview' || env === 'development') {
+    return env;
+  }
+  return 'unknown';
+}
+
+/**
  * PostHog analytics provider for Next.js App Router.
  * Handles initialization and automatic pageview tracking.
  * Uses a module-scoped flag to ensure idempotent initialization.
  * 
  * Features:
  * - Skips initialization on localhost to keep data clean
+ * - Registers environment as super property for filtering production vs preview
  * - Uses localStorage+cookie persistence for reliable tracking
  * - Captures pageviews manually for SPA navigation
  */
@@ -48,6 +64,8 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const vercelEnv = getVercelEnv();
+
     posthog.init(key, {
       api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com',
       person_profiles: 'identified_only',
@@ -56,8 +74,14 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       persistence: 'localStorage+cookie', // More reliable cross-session tracking
     });
 
+    // Register environment as a super property - automatically attached to ALL events
+    // This allows filtering dashboards by $environment = 'production' to exclude preview data
+    posthog.register({
+      $environment: vercelEnv,
+    });
+
     posthogInitialized = true;
-    console.log('[PostHog] Initialized');
+    console.log(`[PostHog] Initialized (env: ${vercelEnv})`);
   }, []);
 
   return (

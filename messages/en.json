@@ -9,8 +9,8 @@
                 "description": "Upload a heart, a star, or your logo. We'll find the best matching roads in your chosen area."
             },
             "export": {
-                "title": "Export to GPX",
-                "description": "Download your route as a GPX file and use it with your favorite fitness app or GPS device."
+                "title": "Export & Strava",
+                "description": "Download as GPX or push directly to Strava with one click."
             },
             "share": {
                 "title": "Share the Fun",
@@ -66,6 +66,10 @@
                 "export": {
                     "title": "GPX Export:",
                     "description": " Compatible with Strava, Garmin, and other fitness apps"
+                },
+                "strava": {
+                    "title": "Strava Integration:",
+                    "description": " Push routes directly to Strava with one click - no GPX download needed"
                 },
                 "pwa": {
                     "title": "Install as App:",

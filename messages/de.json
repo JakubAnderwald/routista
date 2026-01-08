@@ -9,8 +9,8 @@
                 "description": "Ob Herz, Stern oder eigenes Logo: Wir finden die passenden Straßen in deinem Wunschgebiet."
             },
             "export": {
-                "title": "GPX-Export",
-                "description": "Lade deine Route als GPX-Datei herunter – kompatibel mit deiner Lieblings-Fitness-App oder deinem GPS-Gerät."
+                "title": "Export & Strava",
+                "description": "Als GPX herunterladen oder direkt mit einem Klick zu Strava senden."
             },
             "share": {
                 "title": "Teile deine Kunst",
@@ -66,6 +66,10 @@
                 "export": {
                     "title": "GPX-Export:",
                     "description": " Kompatibel mit Strava, Garmin und anderen Apps."
+                },
+                "strava": {
+                    "title": "Strava-Integration:",
+                    "description": " Routen direkt mit einem Klick zu Strava senden – kein GPX-Download nötig"
                 },
                 "pwa": {
                     "title": "Als App installieren:",

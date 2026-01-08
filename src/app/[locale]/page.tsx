@@ -39,21 +39,21 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
                 {t('features.anyShape.description')}
               </p>
             </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-950/30 rounded-2xl flex items-center justify-center text-green-600 dark:text-green-400 mb-3">
-                <Download className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold mb-2 dark:text-white">{t('features.export.title')}</h3>
-              <p className="text-sm text-gray-600">
-                {t('features.export.description')}
-              </p>
-            </div>
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950/30 rounded-2xl flex items-center justify-center text-orange-600 dark:text-orange-400 mb-3">
+                                <Download className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-lg font-bold mb-2 dark:text-white">{t('features.export.title')}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {t('features.export.description')}
+                            </p>
+                        </div>
             <div className="flex flex-col items-center text-center">
               <div className="w-12 h-12 bg-purple-100 dark:bg-purple-950/30 rounded-2xl flex items-center justify-center text-purple-600 dark:text-purple-400 mb-3">
                 <Share2 className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold mb-2 dark:text-white">{t('features.share.title')}</h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {t('features.share.description')}
               </p>
             </div>

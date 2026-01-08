@@ -9,8 +9,8 @@
                 "description": "Wgraj serce, gwiazdę lub swoje logo. Znajdziemy najlepiej pasujące drogi w wybranym przez Ciebie obszarze."
             },
             "export": {
-                "title": "Eksport do GPX",
-                "description": "Pobierz trasę jako plik GPX i użyj jej w swojej ulubionej aplikacji fitness lub urządzeniu GPS."
+                "title": "Eksport i Strava",
+                "description": "Pobierz jako GPX lub wyślij bezpośrednio do Stravy jednym kliknięciem."
             },
             "share": {
                 "title": "Podziel się zabawą",
@@ -66,6 +66,10 @@
                 "export": {
                     "title": "Eksport GPX:",
                     "description": " Kompatybilne ze Strava, Garmin i innymi aplikacjami fitness"
+                },
+                "strava": {
+                    "title": "Integracja ze Stravą:",
+                    "description": " Wyślij trasy bezpośrednio do Stravy jednym kliknięciem – bez pobierania GPX"
                 },
                 "pwa": {
                     "title": "Zainstaluj jako aplikację:",

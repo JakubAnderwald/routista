@@ -75,9 +75,10 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Register environment as a super property - automatically attached to ALL events
-    // This allows filtering dashboards by $environment = 'production' to exclude preview data
+    // This allows filtering dashboards by environment = 'production' to exclude preview data
+    // Note: Using 'environment' (not '$environment') since $ prefix is reserved by PostHog
     posthog.register({
-      $environment: vercelEnv,
+      environment: vercelEnv,
     });
 
     posthogInitialized = true;

@@ -102,9 +102,9 @@ describe('PostHogProvider', () => {
         });
       });
 
-      // Should register environment as super property
+      // Should register environment as super property (without $ prefix - reserved by PostHog)
       expect(mockRegister).toHaveBeenCalledWith({
-        $environment: 'production',
+        environment: 'production',
       });
 
       expect(consoleLogSpy).toHaveBeenCalledWith('[PostHog] Initialized (env: production)');
@@ -127,7 +127,28 @@ describe('PostHogProvider', () => {
 
       await vi.waitFor(() => {
         expect(mockRegister).toHaveBeenCalledWith({
-          $environment: 'preview',
+          environment: 'preview',
+        });
+      });
+    });
+
+    it('should register development environment when using vercel dev', async () => {
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+      process.env.NEXT_PUBLIC_VERCEL_ENV = 'development';
+
+      const { PostHogProvider } = await import('@/components/PostHogProvider');
+      const { render } = await import('@testing-library/react');
+      
+      render(
+        <PostHogProvider>
+          <div>Test</div>
+        </PostHogProvider>
+      );
+
+      await vi.waitFor(() => {
+        expect(mockRegister).toHaveBeenCalledWith({
+          environment: 'development',
         });
       });
     });
@@ -148,7 +169,7 @@ describe('PostHogProvider', () => {
 
       await vi.waitFor(() => {
         expect(mockRegister).toHaveBeenCalledWith({
-          $environment: 'unknown',
+          environment: 'unknown',
         });
       });
     });

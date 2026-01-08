@@ -31,7 +31,7 @@ interface AppConfig {
      * When false: Strava button is hidden
      * When true: Strava button is shown, users can push routes to Strava
      * 
-     * Rate limits (approved Jan 2026):
+     * Routista's approved rate limits (Jan 2026) - higher than defaults:
      * - Overall: 600 requests/15min, 6,000/day
      * - Read: 300 requests/15min, 3,000/day
      * - Athlete Capacity: 999

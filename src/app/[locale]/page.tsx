@@ -53,7 +53,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
                 <Share2 className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold mb-2 dark:text-white">{t('features.share.title')}</h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {t('features.share.description')}
               </p>
             </div>

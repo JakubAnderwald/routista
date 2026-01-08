@@ -83,12 +83,16 @@ export const APP_CONFIG: AppConfig = {
 } as const;
 ```
 
-## Strava API Limits (Approved Jan 2026)
+## Strava API Limits (Routista App-Specific, Approved Jan 2026)
+
+These are Routista's approved limits from Strava (higher than default API limits):
 
 - **Overall Rate Limit**: 600 requests every 15 min, up to 6,000 requests per day
 - **Read Rate Limit**: 300 requests every 15 min, up to 3,000 requests per day
 - **Athlete Capacity**: 999 connected athletes
 - Route creation limited to 25 waypoints (auto-simplified)
+
+> Note: Default Strava API limits are 200/15min and 2,000/day. Routista has elevated limits.
 
 ## Troubleshooting
 

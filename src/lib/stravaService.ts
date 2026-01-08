@@ -221,6 +221,9 @@ export async function refreshTokens(
   
   if (!response.ok) {
     const errorText = await response.text();
+    // #region agent log
+    console.error('[DEBUG] Strava token refresh API failed', { status: response.status, errorText, clientId });
+    // #endregion
     console.error('[StravaService] Token refresh failed:', response.status, errorText);
     throw new Error(`Token refresh failed: ${response.status}`);
   }

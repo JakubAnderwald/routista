@@ -67,11 +67,19 @@ export async function POST(request: NextRequest) {
   let currentTokens = tokens;
   const now = Math.floor(Date.now() / 1000);
 
+  // #region agent log
+  console.log('[DEBUG] Token check', { expiresAt: tokens.expires_at, now, needsRefresh: tokens.expires_at <= now + 60 });
+  // #endregion
+
   if (tokens.expires_at <= now + 60) {
     console.log('[Strava Upload] Tokens expired, refreshing...');
     
     const clientId = process.env.STRAVA_CLIENT_ID;
     const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+
+    // #region agent log
+    console.log('[DEBUG] Refresh config', { hasClientId: !!clientId, hasClientSecret: !!clientSecret });
+    // #endregion
 
     if (!clientId || !clientSecret) {
       return NextResponse.json(
@@ -82,7 +90,13 @@ export async function POST(request: NextRequest) {
 
     try {
       currentTokens = await refreshTokens(tokens.refresh_token, clientId, clientSecret);
+      // #region agent log
+      console.log('[DEBUG] Token refresh succeeded', { newExpiresAt: currentTokens.expires_at });
+      // #endregion
     } catch (error) {
+      // #region agent log
+      console.error('[DEBUG] Token refresh failed', error);
+      // #endregion
       console.error('[Strava Upload] Token refresh failed:', error);
       return NextResponse.json(
         { error: 'Token refresh failed. Please reconnect to Strava.', needsReauth: true },
@@ -212,6 +226,9 @@ async function createStravaRoute(
 
   if (!response.ok) {
     const errorText = await response.text();
+    // #region agent log
+    console.error('[DEBUG] Strava Route API failed', { status: response.status, errorText });
+    // #endregion
     console.error('[Strava Upload] API error:', response.status, errorText);
     throw new Error(`Strava API error: ${response.status} - ${errorText}`);
   }

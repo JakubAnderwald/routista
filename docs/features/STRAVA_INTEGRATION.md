@@ -2,6 +2,11 @@
 
 Push generated routes directly to Strava, eliminating the need to download GPX and manually import.
 
+> ⚠️ **STATUS: Disabled (Jan 2026)**  
+> Feature is currently disabled pending Routes API write access from Strava.  
+> Standard API approval (rate limits) does not include route creation permission.  
+> See [Issue #22](https://github.com/JakubAnderwald/routista/issues/22) for tracking.
+
 ## Overview
 
 Users can connect their Strava account and upload routes with a single click. The integration uses OAuth 2.0 for secure authorization and the Strava Routes API for uploads.
@@ -79,9 +84,13 @@ The Strava button is controlled by `APP_CONFIG.stravaEnabled` in `src/config.ts`
 // src/config.ts
 export const APP_CONFIG: AppConfig = {
     uiVariant: 'B',
-    stravaEnabled: true, // Strava API access approved Jan 2026
+    stravaEnabled: false, // Disabled: awaiting Routes API write access from Strava
 } as const;
 ```
+
+### Why is it disabled?
+
+Strava's Routes API (`POST /api/v3/routes`) requires **special application-level permission** beyond standard API access. The Jan 2026 approval only covered rate limits and athlete capacity. Routes API write access was requested separately.
 
 ## Strava API Limits (Routista App-Specific, Approved Jan 2026)
 
@@ -99,7 +108,13 @@ These are Routista's approved limits from Strava (higher than default API limits
 ### "Please reconnect to Strava"
 Token expired and refresh failed. User needs to re-authorize.
 
-### Route creation fails
+### Route creation fails with 401
+**Most likely cause:** App lacks Routes API permission.  
+Error: `{"message":"Authorization Error","field":"internal","code":"invalid"}`
+
+This is an **app-level** issue, not a user token issue. Strava must grant Routes API write access.
+
+### Route creation fails (other)
 Strava's route API has strict requirements. Common issues:
 - Route must have at least 2 waypoints
 - Waypoints must be valid lat/lng coordinates
@@ -107,6 +122,17 @@ Strava's route API has strict requirements. Common issues:
 
 ### Popup blocked
 If OAuth popup is blocked, the code falls back to redirect flow.
+
+## Debug Instrumentation
+
+> ⚠️ **Tech Debt:** Debug logs are currently in place. See [Issue #44](https://github.com/JakubAnderwald/routista/issues/44).
+
+Files with `[DEBUG]` logging:
+- `src/components/StravaButton.tsx` - client-side console.logs
+- `src/lib/stravaService.ts` - token exchange logging  
+- `src/app/api/strava/upload/route.ts` - server-side logging
+
+Remove after Routes API is approved and verified working.
 
 ## Future Enhancements
 

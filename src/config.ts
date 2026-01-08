@@ -41,7 +41,7 @@ interface AppConfig {
 
 export const APP_CONFIG: AppConfig = {
     uiVariant: 'B',
-    stravaEnabled: true, // Strava API access approved Jan 2026
+    stravaEnabled: false, // Disabled: awaiting Routes API write access from Strava (requested Jan 2026)
 } as const;
 
 /**

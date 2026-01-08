@@ -93,6 +93,13 @@ export default async function About({ params }: { params: Promise<{ locale: stri
                                 </div>
                             </li>
                             <li className="flex items-start gap-3">
+                                <span className="text-orange-500 text-xl">🔗</span>
+                                <div>
+                                    <span className="font-semibold text-gray-900 dark:text-white">{t('features.items.strava.title')}</span>
+                                    <span className="text-gray-600 dark:text-gray-300">{t('features.items.strava.description')}</span>
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-3">
                                 <span className="text-blue-600 text-xl">📱</span>
                                 <div>
                                     <span className="font-semibold text-gray-900 dark:text-white">{t('features.items.pwa.title')}</span>

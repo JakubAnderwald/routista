@@ -28,18 +28,20 @@ interface AppConfig {
     /**
      * Strava integration feature toggle.
      * 
-     * Set to true when Strava grants production API access for route creation.
-     * Currently pending approval - the Routes API requires special app permissions.
-     * 
      * When false: Strava button is hidden
      * When true: Strava button is shown, users can push routes to Strava
+     * 
+     * Rate limits (approved Jan 2026):
+     * - Overall: 600 requests/15min, 6,000/day
+     * - Read: 300 requests/15min, 3,000/day
+     * - Athlete Capacity: 999
      */
     stravaEnabled: boolean;
 }
 
 export const APP_CONFIG: AppConfig = {
     uiVariant: 'B',
-    stravaEnabled: false, // Pending Strava API approval
+    stravaEnabled: true, // Strava API access approved Jan 2026
 } as const;
 
 /**

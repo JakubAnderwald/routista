@@ -9,8 +9,8 @@
                 "description": "Upload et hjerte, en stjerne eller dit logo. Vi finder de bedst matchende veje i dit valgte område."
             },
             "export": {
-                "title": "Eksporter til GPX",
-                "description": "Download din rute som en GPX-fil og brug den med din foretrukne fitness-app eller GPS-enhed."
+                "title": "Eksport & Strava",
+                "description": "Download som GPX eller send direkte til Strava med et klik."
             },
             "share": {
                 "title": "Del det Sjove",
@@ -66,6 +66,10 @@
                 "export": {
                     "title": "GPX Eksport:",
                     "description": " Kompatibel med Strava, Garmin og andre fitness-apps"
+                },
+                "strava": {
+                    "title": "Strava Integration:",
+                    "description": " Send ruter direkte til Strava med et klik – ingen GPX download nødvendig"
                 },
                 "pwa": {
                     "title": "Installer som app:",

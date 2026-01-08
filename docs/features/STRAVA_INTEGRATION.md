@@ -79,16 +79,15 @@ The Strava button is controlled by `APP_CONFIG.stravaEnabled` in `src/config.ts`
 // src/config.ts
 export const APP_CONFIG: AppConfig = {
     uiVariant: 'B',
-    stravaEnabled: false, // Set to true when Strava grants API access
+    stravaEnabled: true, // Strava API access approved Jan 2026
 } as const;
 ```
 
-Currently set to `false` - pending Strava production API approval for route creation (see Troubleshooting below).
+## Strava API Limits (Approved Jan 2026)
 
-## Strava API Limits
-
-- 100 requests per 15 minutes
-- 1000 requests per day per app
+- **Overall Rate Limit**: 600 requests every 15 min, up to 6,000 requests per day
+- **Read Rate Limit**: 300 requests every 15 min, up to 3,000 requests per day
+- **Athlete Capacity**: 999 connected athletes
 - Route creation limited to 25 waypoints (auto-simplified)
 
 ## Troubleshooting
@@ -96,15 +95,7 @@ Currently set to `false` - pending Strava production API approval for route crea
 ### "Please reconnect to Strava"
 Token expired and refresh failed. User needs to re-authorize.
 
-### Route creation fails with "Authorization Error"
-Strava's Routes API (`POST /routes`) requires **production API access**. New apps are in testing mode with limited functionality. To fix:
-1. Email developers@strava.com requesting production access
-2. Include your Client ID and app description
-3. Once approved, set `stravaEnabled: true` in `src/config.ts`
-
-Error from Strava: `{"message":"Authorization Error","errors":[{"resource":"Application","field":"internal","code":"invalid"}]}`
-
-### Route creation fails (other)
+### Route creation fails
 Strava's route API has strict requirements. Common issues:
 - Route must have at least 2 waypoints
 - Waypoints must be valid lat/lng coordinates

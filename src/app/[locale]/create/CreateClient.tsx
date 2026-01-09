@@ -430,7 +430,7 @@ export default function CreateClient() {
                                 <Button data-testid="result-back-button" variant="outline" onClick={() => setStep(variant === 'A' ? "mode" : "area")}>{t('result.back')}</Button>
                                 <div className="flex gap-3 items-center">
                                     <Button data-testid="result-share-button" variant="outline" onClick={() => setIsShareModalOpen(true)}>{t('result.share')}</Button>
-                                    <StravaButton routeData={routeData} mode={mode || 'foot-walking'} />
+                                    <StravaButton routeData={routeData} />
                                     <Button data-testid="result-download-button" onClick={handleDownload}>{t('result.download')}</Button>
                                 </div>
                             </div>

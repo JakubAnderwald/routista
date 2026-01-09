@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { FeatureCollection } from 'geojson';
 import { generateGPX, downloadGPX } from '@/lib/gpxGenerator';
@@ -13,8 +13,8 @@ import { APP_CONFIG } from '@/config';
 type ButtonState = 'ready' | 'processing';
 
 interface StravaButtonProps {
-  routeData: FeatureCollection | null;
-  className?: string;
+  readonly routeData: FeatureCollection | null;
+  readonly className?: string;
 }
 
 // Strava route import page URL
@@ -38,6 +38,16 @@ export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
   
   const [state, setState] = useState<ButtonState>('ready');
   const [showInstruction, setShowInstruction] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   // Handle export button click
   const handleExport = useCallback(() => {
@@ -63,7 +73,7 @@ export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
       setShowInstruction(true);
       
       // Hide instruction after 8 seconds
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setShowInstruction(false);
       }, 8000);
 

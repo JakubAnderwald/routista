@@ -154,6 +154,10 @@ describe('StravaButton', () => {
     });
 
     describe('instruction tooltip', () => {
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
         it('should hide instruction tooltip after timeout', async () => {
             vi.useFakeTimers();
             
@@ -172,8 +176,6 @@ describe('StravaButton', () => {
 
             // Instruction should be hidden after timeout
             expect(screen.queryByTestId('strava-instruction')).not.toBeInTheDocument();
-
-            vi.useRealTimers();
         });
     });
 });

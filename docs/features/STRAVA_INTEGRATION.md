@@ -38,7 +38,7 @@ After export, an instruction tooltip appears for 8 seconds confirming the GPX wa
 
 ### Export Flow
 
-```
+```text
 User clicks "Export to Strava"
          ↓
 Generate GPX from route data

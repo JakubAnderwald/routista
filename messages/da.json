@@ -217,13 +217,9 @@
         "description": "Generer GPS-ruter i den virkelige verden fra enhver form eller billede."
     },
     "StravaButton": {
-        "connect": "Forbind til Strava",
-        "connecting": "Forbinder...",
-        "push": "Send til Strava",
-        "uploading": "Uploader...",
-        "success": "Se på Strava",
-        "error": "Fejl - Prøv igen",
-        "disconnect": "Afbryd"
+        "exportToStrava": "Eksporter til Strava",
+        "exporting": "Eksporterer...",
+        "importInstruction": "GPX downloadet! Importer den på Stravas ruteside."
     },
     "ShareModal": {
         "title": "Del din rute",

@@ -1,33 +1,31 @@
 # Strava Integration
 
-Push generated routes directly to Strava, eliminating the need to download GPX and manually import.
-
-> ⚠️ **STATUS: Disabled (Jan 2026)**  
-> Feature is currently disabled pending Routes API write access from Strava.  
-> Standard API approval (rate limits) does not include route creation permission.  
-> See [Issue #22](https://github.com/JakubAnderwald/routista/issues/22) for tracking.
+Export generated routes to Strava via a streamlined manual import experience.
 
 ## Overview
 
-Users can connect their Strava account and upload routes with a single click. The integration uses OAuth 2.0 for secure authorization and the Strava Routes API for uploads.
+Since Strava doesn't provide a public API for route creation, Routista uses a manual import approach that:
+1. Downloads the GPX file automatically
+2. Opens Strava's route import page in a new tab
+3. Shows a brief instruction message to guide the user
+
+This provides a seamless experience while working within Strava's API limitations.
 
 ## User Flow
 
 1. **Generate Route** - Complete the normal Routista workflow
-2. **Connect Strava** (first time only) - Click "Connect Strava" button, authorize in popup
-3. **Push to Strava** - Click "Push to Strava" to upload
-4. **View on Strava** - Success shows link to the route on Strava
+2. **Click "Export to Strava"** - Downloads GPX and opens Strava's import page
+3. **Import on Strava** - Upload the downloaded GPX file on Strava's page
+4. **Done!** - Route is now in your Strava library
 
 ## Button States
 
 | State | Appearance | Action |
 |-------|-----------|--------|
-| Disconnected | "Connect Strava" (orange) | Opens OAuth popup |
-| Connecting | Spinner + "Connecting..." | Waiting for OAuth |
-| Connected | "Push to Strava" (orange) | Upload route |
-| Uploading | Spinner + "Uploading..." | API call in progress |
-| Success | "View on Strava" (green) ✓ | Opens Strava route |
-| Error | "Failed - Retry" (red) | Retry upload |
+| Ready | "Export to Strava" (orange) | Downloads GPX + Opens Strava |
+| Processing | Spinner + "Exporting..." | Brief processing state |
+
+After export, an instruction tooltip appears for 8 seconds confirming the GPX was downloaded and guiding the user to import it on Strava.
 
 ## Technical Implementation
 
@@ -35,109 +33,68 @@ Users can connect their Strava account and upload routes with a single click. Th
 
 | File | Purpose |
 |------|---------|
-| `src/lib/stravaService.ts` | Token management, OAuth helpers, API types |
-| `src/app/api/strava/callback/route.ts` | OAuth code exchange, token handling |
-| `src/app/api/strava/upload/route.ts` | Route upload to Strava API |
-| `src/components/StravaButton.tsx` | UI component with state management |
+| `src/components/StravaButton.tsx` | Export button with GPX download + Strava redirect |
+| `src/lib/gpxGenerator.ts` | GPX generation and download utilities |
 
-### OAuth Flow
+### Export Flow
 
 ```
-User → StravaButton → Popup Window → Strava OAuth
-                                          ↓
-Strava → /api/strava/callback → Exchange Code → Tokens
-                                          ↓
-Callback Page → postMessage → StravaButton → localStorage
+User clicks "Export to Strava"
+         ↓
+Generate GPX from route data
+         ↓
+Download GPX file (routista-route.gpx)
+         ↓
+Open https://www.strava.com/routes/new in new tab
+         ↓
+Show instruction tooltip
 ```
 
-### Token Storage
+### Feature Toggle
 
-Tokens are stored in `localStorage` under key `routista_strava_tokens`:
-- `access_token` - For API calls
-- `refresh_token` - For refreshing expired tokens
-- `expires_at` - Unix timestamp of expiration
-
-Tokens are automatically refreshed when expired during upload.
-
-### Mode Mapping
-
-| Routista Mode | Strava Type | Strava Sub-Type |
-|---------------|-------------|-----------------|
-| foot-walking | Run (2) | Road (1) |
-| cycling-regular | Ride (1) | Road (1) |
-| driving-car | Ride (1) | Road (1) |
-
-## Environment Variables
-
-| Variable | Location | Description |
-|----------|----------|-------------|
-| `STRAVA_CLIENT_ID` | Server | Strava app client ID |
-| `STRAVA_CLIENT_SECRET` | Server | Strava app client secret |
-| `NEXT_PUBLIC_STRAVA_CLIENT_ID` | Client | Same as above, for OAuth URL |
-| `NEXT_PUBLIC_STRAVA_REDIRECT_URI` | Client | OAuth callback URL |
-
-## Feature Toggle
-
-The Strava button is controlled by `APP_CONFIG.stravaEnabled` in `src/config.ts`. 
+The Strava button is controlled by `APP_CONFIG.stravaEnabled` in `src/config.ts`:
 
 ```typescript
 // src/config.ts
 export const APP_CONFIG: AppConfig = {
     uiVariant: 'B',
-    stravaEnabled: false, // Disabled: awaiting Routes API write access from Strava
+    stravaEnabled: true, // Enabled: Uses manual import flow
 } as const;
 ```
 
-### Why is it disabled?
+## Why Manual Import?
 
-Strava's Routes API (`POST /api/v3/routes`) requires **special application-level permission** beyond standard API access. The Jan 2026 approval only covered rate limits and athlete capacity. Routes API write access was requested separately.
+In January 2026, we contacted Strava to request access to their Routes API for programmatic route creation. Their response confirmed that **no public endpoint exists for creating routes**:
 
-## Strava API Limits (Routista App-Specific, Approved Jan 2026)
+> "Unfortunately we cannot provide access to a routes creation endpoint at this time."
+> — Strava API Team
 
-These are Routista's approved limits from Strava (higher than default API limits):
+The available Routes API endpoints are read-only:
+- Export Route GPX (GET)
+- Export Route TCX (GET)
+- Get Route (GET)
+- List Athlete Routes (GET)
 
-- **Overall Rate Limit**: 600 requests every 15 min, up to 6,000 requests per day
-- **Read Rate Limit**: 300 requests every 15 min, up to 3,000 requests per day
-- **Athlete Capacity**: 999 connected athletes
-- Route creation limited to 25 waypoints (auto-simplified)
+See [Strava API Routes Documentation](https://developers.strava.com/docs/reference/#api-Routes) for details.
 
-> Note: Default Strava API limits are 200/15min and 2,000/day. Routista has elevated limits.
+## Historical Context
 
-## Troubleshooting
+The original implementation attempted to use OAuth and a `POST /api/v3/routes` endpoint, which:
+- Required full OAuth 2.0 flow with token management
+- Attempted to call an undocumented/partner-only endpoint
+- Failed with 401 Authorization errors for all users
 
-### "Please reconnect to Strava"
-Token expired and refresh failed. User needs to re-authorize.
+The current manual import approach:
+- Requires no OAuth or API keys
+- Works for all users immediately
+- Leverages Strava's existing web-based route import feature
+- Provides a simple, reliable user experience
 
-### Route creation fails with 401
-**Most likely cause:** App lacks Routes API permission.  
-Error: `{"message":"Authorization Error","field":"internal","code":"invalid"}`
+## Future Considerations
 
-This is an **app-level** issue, not a user token issue. Strava must grant Routes API write access.
+If Strava ever opens a public route creation API, the implementation could be updated to:
+1. Re-enable OAuth flow
+2. Push routes directly via API
+3. Provide instant "View on Strava" links after upload
 
-### Route creation fails (other)
-Strava's route API has strict requirements. Common issues:
-- Route must have at least 2 waypoints
-- Waypoints must be valid lat/lng coordinates
-- API rate limits may apply
-
-### Popup blocked
-If OAuth popup is blocked, the code falls back to redirect flow.
-
-## Debug Instrumentation
-
-> ⚠️ **Tech Debt:** Debug logs are currently in place. See [Issue #44](https://github.com/JakubAnderwald/routista/issues/44).
-
-Files with `[DEBUG]` logging:
-- `src/components/StravaButton.tsx` - client-side console.logs
-- `src/lib/stravaService.ts` - token exchange logging  
-- `src/app/api/strava/upload/route.ts` - server-side logging
-
-Remove after Routes API is approved and verified working.
-
-## Future Enhancements
-
-- Remember connection across sessions (already implemented via localStorage)
-- Custom route naming
-- Pre-set privacy settings
-- Show route on Strava's embedded map after upload
-
+For now, the manual import flow provides the best user experience given API limitations.

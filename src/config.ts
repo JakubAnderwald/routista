@@ -29,19 +29,18 @@ interface AppConfig {
      * Strava integration feature toggle.
      * 
      * When false: Strava button is hidden
-     * When true: Strava button is shown, users can push routes to Strava
+     * When true: Strava button is shown, users can export routes to Strava
      * 
-     * Routista's approved rate limits (Jan 2026) - higher than defaults:
-     * - Overall: 600 requests/15min, 6,000/day
-     * - Read: 300 requests/15min, 3,000/day
-     * - Athlete Capacity: 999
+     * Note: Uses manual import flow since Strava doesn't provide a public
+     * route creation API. The button downloads GPX and opens Strava's
+     * route import page (https://www.strava.com/routes/new).
      */
     stravaEnabled: boolean;
 }
 
 export const APP_CONFIG: AppConfig = {
     uiVariant: 'B',
-    stravaEnabled: false, // Disabled: awaiting Routes API write access from Strava (requested Jan 2026)
+    stravaEnabled: true, // Enabled: Uses manual import flow (GPX download + Strava route import page)
 } as const;
 
 /**

@@ -1,252 +1,108 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { FeatureCollection } from 'geojson';
-import {
-  getStoredTokens,
-  storeTokens,
-  clearTokens,
-  isConnected,
-  buildOAuthUrl,
-} from '@/lib/stravaService';
+import { generateGPX, downloadGPX } from '@/lib/gpxGenerator';
 import { APP_CONFIG } from '@/config';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-type ButtonState = 
-  | 'disconnected'    // Not connected to Strava
-  | 'connecting'      // OAuth popup open, waiting for auth
-  | 'connected'       // Connected, ready to upload
-  | 'uploading'       // Upload in progress
-  | 'success'         // Upload successful
-  | 'error';          // Upload or auth failed
+type ButtonState = 'ready' | 'processing' | 'error';
 
 interface StravaButtonProps {
-  routeData: FeatureCollection | null;
-  mode: string;
-  className?: string;
+  readonly routeData: FeatureCollection | null;
+  readonly className?: string;
 }
 
+// Strava route import page URL
+const STRAVA_IMPORT_URL = 'https://www.strava.com/routes/new';
 
 // ============================================================================
 // Component
 // ============================================================================
 
-// Initialize state based on connection status (avoids useEffect setState)
-function getInitialState(): ButtonState {
-  if (typeof window !== 'undefined' && isConnected()) {
-    return 'connected';
-  }
-  return 'disconnected';
-}
-
-export function StravaButton({ routeData, mode, className = '' }: StravaButtonProps) {
+/**
+ * StravaButton - Export to Strava via manual import
+ * 
+ * Since Strava doesn't provide a public API for route creation,
+ * this button provides a streamlined manual import experience:
+ * 1. Downloads the GPX file
+ * 2. Opens Strava's route import page in a new tab
+ * 3. Shows a brief instruction message
+ */
+export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
   const t = useTranslations('StravaButton');
   
-  const [state, setState] = useState<ButtonState>(getInitialState);
-  const [stravaUrl, setStravaUrl] = useState<string | null>(null);
+  const [state, setState] = useState<ButtonState>('ready');
+  const [showInstruction, setShowInstruction] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Re-check connection on client hydration
+  // Cleanup timeout on unmount to prevent memory leaks
   useEffect(() => {
-    // Only update if we're in disconnected state but actually connected
-    // This handles SSR hydration mismatch
-    if (state === 'disconnected' && isConnected()) {
-      setState('connected');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Listen for OAuth callback messages
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // Only accept messages from same origin
-      if (event.origin !== window.location.origin) return;
-      
-      const data = event.data;
-      
-      if (data.type === 'STRAVA_AUTH_SUCCESS') {
-        console.log('[StravaButton] Received auth success');
-        // #region agent log
-        const now = Math.floor(Date.now() / 1000);
-        console.log('[DEBUG] Tokens received via postMessage', { 
-          expires_at: data.tokens?.expires_at, 
-          now,
-          expiresInSeconds: data.tokens?.expires_at ? data.tokens.expires_at - now : 'N/A',
-          hasAccessToken: !!data.tokens?.access_token 
-        });
-        // #endregion
-        storeTokens(data.tokens);
-        setState('connected');
-      } else if (data.type === 'STRAVA_AUTH_ERROR') {
-        console.error('[StravaButton] Received auth error:', data.error);
-        setErrorMessage(data.description || 'Authorization failed');
-        setState('error');
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
     };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Handle connect button click
-  const handleConnect = useCallback(() => {
-    // #region agent log
-    console.log('[DEBUG] handleConnect called', { currentState: state });
-    // #endregion
-    try {
-      const authUrl = buildOAuthUrl();
-      // #region agent log
-      console.log('[DEBUG] Built OAuth URL', { authUrl });
-      // #endregion
-      
-      // Open OAuth popup
-      const width = 600;
-      const height = 700;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      
-      const popup = window.open(
-        authUrl,
-        'strava-auth',
-        `width=${width},height=${height},left=${left},top=${top},popup=yes`
-      );
-      
-      if (popup) {
-        setState('connecting');
-        
-        // Poll for popup close (in case user closes without completing)
-        const pollTimer = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(pollTimer);
-            // If still connecting, user closed without completing
-            if (state === 'connecting') {
-              setState('disconnected');
-            }
-          }
-        }, 500);
-      } else {
-        // Popup blocked, fall back to redirect
-        window.location.href = authUrl;
-      }
-    } catch (error) {
-      // #region agent log
-      console.error('[DEBUG] handleConnect error', error);
-      // #endregion
-      console.error('[StravaButton] Failed to start OAuth:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to connect');
-      setState('error');
+  // Dismiss instruction tooltip
+  const handleDismissInstruction = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
-  }, [state]);
+    setShowInstruction(false);
+  }, []);
 
-  // Handle upload button click
-  const handleUpload = useCallback(async () => {
-    // #region agent log
-    console.log('[DEBUG] handleUpload called', { hasRouteData: !!routeData, routeDataFeatures: routeData?.features?.length, mode, currentState: state });
-    // #endregion
-
+  // Handle export button click
+  const handleExport = useCallback(() => {
     if (!routeData) {
-      // #region agent log
-      console.log('[DEBUG] No routeData - setting error');
-      // #endregion
-      setErrorMessage('No route to upload');
-      setState('error');
+      console.error('[StravaButton] No route data available');
       return;
     }
 
-    const tokens = getStoredTokens();
-    // #region agent log
-    console.log('[DEBUG] Retrieved tokens', { hasTokens: !!tokens, hasAccessToken: !!tokens?.access_token, expiresAt: tokens?.expires_at });
-    // #endregion
-
-    if (!tokens) {
-      setState('disconnected');
-      return;
-    }
-
-    setState('uploading');
+    console.log('[StravaButton] Starting export to Strava...');
+    setState('processing');
     setErrorMessage(null);
 
     try {
-      // #region agent log
-      console.log('[DEBUG] About to call /api/strava/upload', { featureCount: routeData.features.length, mode });
-      // #endregion
+      // Generate and download GPX
+      const gpx = generateGPX(routeData);
+      downloadGPX(gpx, 'routista-route.gpx');
+      console.log('[StravaButton] GPX file downloaded');
 
-      const response = await fetch('/api/strava/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          routeData,
-          tokens,
-          mode,
-        }),
-      });
+      // Open Strava import page in new tab
+      window.open(STRAVA_IMPORT_URL, '_blank', 'noopener,noreferrer');
+      console.log('[StravaButton] Opened Strava import page');
 
-      const data = await response.json();
+      // Show instruction message
+      setShowInstruction(true);
+      setState('ready');
 
-      // #region agent log
-      console.log('[DEBUG] Received response from /api/strava/upload', { ok: response.ok, status: response.status, hasRouteUrl: !!data.routeUrl, error: data.error, needsReauth: data.needsReauth });
-      // #endregion
-
-      if (!response.ok) {
-        if (data.needsReauth) {
-          clearTokens();
-          setState('disconnected');
-          setErrorMessage('Please reconnect to Strava');
-        } else {
-          setErrorMessage(data.error || 'Upload failed');
-          setState('error');
-        }
-        return;
-      }
-
-      // Update tokens if refreshed
-      if (data.tokens) {
-        storeTokens(data.tokens);
-      }
-
-      setStravaUrl(data.routeUrl);
-      setState('success');
-      console.log('[StravaButton] Upload successful:', data.routeUrl);
+      // Hide instruction after 8 seconds
+      timeoutRef.current = setTimeout(() => {
+        setShowInstruction(false);
+      }, 8000);
 
     } catch (error) {
-      // #region agent log
-      console.error('[DEBUG] Upload threw exception', error);
-      // #endregion
-      console.error('[StravaButton] Upload failed:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'Upload failed');
+      console.error('[StravaButton] Export failed:', error);
+      setErrorMessage(t('exportError'));
       setState('error');
     }
-  }, [routeData, mode, state]);
+  }, [routeData, t]);
 
-  // Handle disconnect
-  const handleDisconnect = useCallback(() => {
-    clearTokens();
-    setState('disconnected');
-    setStravaUrl(null);
-    setErrorMessage(null);
-  }, []);
-
-  // Handle retry
+  // Retry after error
   const handleRetry = useCallback(() => {
     setErrorMessage(null);
-    if (isConnected()) {
-      setState('connected');
-    } else {
-      setState('disconnected');
-    }
+    setState('ready');
   }, []);
 
-  // ============================================================================
-  // Render
-  // ============================================================================
-
-  // Feature toggle - hide button until Strava API access is approved
+  // Feature toggle - hide button if disabled
   if (!APP_CONFIG.stravaEnabled) {
     return null;
   }
@@ -262,129 +118,26 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
     ${className}
   `;
 
-  // Disconnected - Show connect button
-  if (state === 'disconnected') {
-    return (
-      <button
-        onClick={handleConnect}
-        className={baseButtonStyles}
-        style={{ 
-          backgroundColor: stravaOrange, 
-          color: 'white',
-        }}
-        data-testid="strava-connect-button"
-      >
-        <StravaIcon />
-        {t('connect')}
-      </button>
-    );
-  }
-
-  // Connecting - Show spinner
-  if (state === 'connecting') {
-    return (
-      <button
-        disabled
-        className={baseButtonStyles}
-        style={{ 
-          backgroundColor: stravaOrange, 
-          color: 'white',
-          opacity: 0.8,
-        }}
-      >
-        <Spinner />
-        {t('connecting')}
-      </button>
-    );
-  }
-
-  // Connected - Show push button
-  if (state === 'connected') {
-    // #region agent log
-    console.log('[DEBUG] Rendering connected state', { hasRouteData: !!routeData, routeDataFeatures: routeData?.features?.length, buttonDisabled: !routeData });
-    // #endregion
-    return (
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handleUpload}
-          disabled={!routeData}
-          className={baseButtonStyles}
-          style={{ 
-            backgroundColor: stravaOrange, 
-            color: 'white',
-          }}
-          data-testid="strava-push-button"
-        >
-          <StravaIcon />
-          {t('push')}
-        </button>
-        <button
-          onClick={handleDisconnect}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs underline"
-          data-testid="strava-disconnect-button"
-        >
-          {t('disconnect')}
-        </button>
-      </div>
-    );
-  }
-
-  // Uploading - Show spinner
-  if (state === 'uploading') {
-    return (
-      <button
-        disabled
-        className={baseButtonStyles}
-        style={{ 
-          backgroundColor: stravaOrange, 
-          color: 'white',
-          opacity: 0.8,
-        }}
-      >
-        <Spinner />
-        {t('uploading')}
-      </button>
-    );
-  }
-
-  // Success - Show link to Strava
-  if (state === 'success' && stravaUrl) {
-    return (
-      <a
-        href={stravaUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`${baseButtonStyles} no-underline`}
-        style={{ 
-          backgroundColor: '#16a34a', // Green
-          color: 'white',
-        }}
-        data-testid="strava-success-link"
-      >
-        <CheckIcon />
-        {t('success')}
-        <ExternalLinkIcon />
-      </a>
-    );
-  }
-
-  // Error - Show retry button
+  // Error state - Show retry button
   if (state === 'error') {
     return (
       <div className="flex flex-col items-center gap-1">
         <button
           onClick={handleRetry}
           className={baseButtonStyles}
-          style={{ 
+          style={{
             backgroundColor: '#ef4444', // Red
             color: 'white',
           }}
           data-testid="strava-retry-button"
         >
-          {t('error')}
+          {t('retry')}
         </button>
         {errorMessage && (
-          <span className="text-xs text-red-500 dark:text-red-400">
+          <span
+            className="text-xs text-red-500 dark:text-red-400"
+            role="alert"
+          >
             {errorMessage}
           </span>
         )}
@@ -392,7 +145,58 @@ export function StravaButton({ routeData, mode, className = '' }: StravaButtonPr
     );
   }
 
-  return null;
+  return (
+    <div className="relative">
+      <button
+        onClick={handleExport}
+        disabled={!routeData || state === 'processing'}
+        className={baseButtonStyles}
+        style={{
+          backgroundColor: stravaOrange,
+          color: 'white',
+          opacity: state === 'processing' ? 0.8 : 1,
+        }}
+        data-testid="strava-export-button"
+      >
+        {state === 'processing' ? (
+          <>
+            <Spinner />
+            {t('exporting')}
+          </>
+        ) : (
+          <>
+            <StravaIcon />
+            {t('exportToStrava')}
+          </>
+        )}
+      </button>
+
+      {/* Instruction tooltip with accessibility attributes */}
+      {showInstruction && (
+        <div
+          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded-lg shadow-lg z-50 animate-fade-in"
+          role="status"
+          aria-live="polite"
+          data-testid="strava-instruction"
+        >
+          <div className="flex items-center gap-2">
+            <CheckIcon />
+            <span>{t('importInstruction')}</span>
+            <button
+              onClick={handleDismissInstruction}
+              className="ml-2 p-1 rounded hover:bg-gray-700 dark:hover:bg-gray-300 transition-colors"
+              aria-label={t('dismissInstruction')}
+              data-testid="strava-instruction-dismiss"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+          {/* Arrow pointing up */}
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-8 border-transparent border-b-gray-900 dark:border-b-gray-100" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ============================================================================
@@ -437,11 +241,11 @@ function Spinner() {
 
 function CheckIcon() {
   return (
-    <svg 
-      className="w-4 h-4" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
+    <svg
+      className="w-4 h-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
       strokeWidth="2"
     >
       <polyline points="20 6 9 17 4 12" />
@@ -449,21 +253,19 @@ function CheckIcon() {
   );
 }
 
-function ExternalLinkIcon() {
+function CloseIcon() {
   return (
-    <svg 
-      className="w-3 h-3" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
+    <svg
+      className="w-3 h-3"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
       strokeWidth="2"
     >
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-      <polyline points="15 3 21 3 21 9" />
-      <line x1="10" y1="14" x2="21" y2="3" />
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   );
 }
 
 export default StravaButton;
-

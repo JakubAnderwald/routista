@@ -217,13 +217,12 @@
         "description": "Generate real-world GPS routes from any shape or image."
     },
     "StravaButton": {
-        "connect": "Connect Strava",
-        "connecting": "Connecting...",
-        "push": "Push to Strava",
-        "uploading": "Uploading...",
-        "success": "View on Strava",
-        "error": "Failed - Retry",
-        "disconnect": "Disconnect"
+        "exportToStrava": "Export to Strava",
+        "exporting": "Exporting...",
+        "importInstruction": "GPX downloaded! Import it on Strava's route page.",
+        "dismissInstruction": "Dismiss",
+        "exportError": "Export failed. Please try again.",
+        "retry": "Retry"
     },
     "ShareModal": {
         "title": "Share Your Route",

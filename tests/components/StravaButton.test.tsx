@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { StravaButton } from '../../src/components/StravaButton';
 import type { FeatureCollection } from 'geojson';
 
@@ -8,19 +8,13 @@ vi.mock('next-intl', () => ({
     useTranslations: () => (key: string) => key,
 }));
 
-// Mock stravaService
-const mockGetStoredTokens = vi.fn();
-const mockStoreTokens = vi.fn();
-const mockClearTokens = vi.fn();
-const mockIsConnected = vi.fn();
-const mockBuildOAuthUrl = vi.fn();
+// Mock gpxGenerator
+const mockGenerateGPX = vi.fn();
+const mockDownloadGPX = vi.fn();
 
-vi.mock('@/lib/stravaService', () => ({
-    getStoredTokens: () => mockGetStoredTokens(),
-    storeTokens: (tokens: unknown) => mockStoreTokens(tokens),
-    clearTokens: () => mockClearTokens(),
-    isConnected: () => mockIsConnected(),
-    buildOAuthUrl: () => mockBuildOAuthUrl(),
+vi.mock('@/lib/gpxGenerator', () => ({
+    generateGPX: (data: unknown) => mockGenerateGPX(data),
+    downloadGPX: (gpx: string, filename: string) => mockDownloadGPX(gpx, filename),
 }));
 
 // Mock config
@@ -50,21 +44,16 @@ describe('StravaButton', () => {
 
     const defaultProps = {
         routeData: mockRouteData,
-        mode: 'foot-walking',
     };
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockIsConnected.mockReturnValue(false);
-        mockBuildOAuthUrl.mockReturnValue('https://strava.com/oauth/authorize?test=1');
+        mockGenerateGPX.mockReturnValue('<gpx>mock gpx content</gpx>');
         
         // Mock window.open
         vi.spyOn(window, 'open').mockReturnValue({
             closed: false,
         } as Window);
-
-        // Mock fetch
-        global.fetch = vi.fn();
     });
 
     afterEach(() => {
@@ -79,334 +68,202 @@ describe('StravaButton', () => {
         });
     });
 
-    describe('disconnected state', () => {
-        beforeEach(() => {
-            mockIsConnected.mockReturnValue(false);
-        });
-
-        it('should show connect button when not connected', () => {
+    describe('rendering', () => {
+        it('should show export button when route data is present', () => {
             render(<StravaButton {...defaultProps} />);
 
-            expect(screen.getByTestId('strava-connect-button')).toBeInTheDocument();
-            expect(screen.getByText('connect')).toBeInTheDocument();
+            expect(screen.getByTestId('strava-export-button')).toBeInTheDocument();
+            expect(screen.getByText('exportToStrava')).toBeInTheDocument();
         });
 
-        it('should have Strava orange background on connect button', () => {
+        it('should have Strava orange background on export button', () => {
             render(<StravaButton {...defaultProps} />);
 
-            const button = screen.getByTestId('strava-connect-button');
+            const button = screen.getByTestId('strava-export-button');
             expect(button).toHaveStyle({ backgroundColor: '#FC4C02' });
         });
 
-        it('should open OAuth popup when connect is clicked', () => {
-            render(<StravaButton {...defaultProps} />);
+        it('should disable button when no route data', () => {
+            render(<StravaButton routeData={null} />);
 
-            const button = screen.getByTestId('strava-connect-button');
-            fireEvent.click(button);
-
-            expect(window.open).toHaveBeenCalledWith(
-                expect.stringContaining('strava.com'),
-                'strava-auth',
-                expect.stringContaining('popup=yes')
-            );
-        });
-    });
-
-    describe('connected state', () => {
-        beforeEach(() => {
-            mockIsConnected.mockReturnValue(true);
-            mockGetStoredTokens.mockReturnValue({
-                access_token: 'test-token',
-                refresh_token: 'test-refresh',
-                expires_at: Date.now() + 3600000,
-            });
-        });
-
-        it('should show push button when connected', () => {
-            render(<StravaButton {...defaultProps} />);
-
-            expect(screen.getByTestId('strava-push-button')).toBeInTheDocument();
-            expect(screen.getByText('push')).toBeInTheDocument();
-        });
-
-        it('should show disconnect link when connected', () => {
-            render(<StravaButton {...defaultProps} />);
-
-            expect(screen.getByTestId('strava-disconnect-button')).toBeInTheDocument();
-            expect(screen.getByText('disconnect')).toBeInTheDocument();
-        });
-
-        it('should disable push button when no route data', () => {
-            render(<StravaButton routeData={null} mode="foot-walking" />);
-
-            const button = screen.getByTestId('strava-push-button');
+            const button = screen.getByTestId('strava-export-button');
             expect(button).toBeDisabled();
         });
 
-        it('should clear tokens and disconnect when disconnect is clicked', () => {
-            render(<StravaButton {...defaultProps} />);
+        it('should apply custom className', () => {
+            render(<StravaButton {...defaultProps} className="custom-class" />);
 
-            const disconnectButton = screen.getByTestId('strava-disconnect-button');
-            fireEvent.click(disconnectButton);
-
-            expect(mockClearTokens).toHaveBeenCalled();
+            const button = screen.getByTestId('strava-export-button');
+            expect(button).toHaveClass('custom-class');
         });
     });
 
-    describe('upload flow', () => {
-        beforeEach(() => {
-            mockIsConnected.mockReturnValue(true);
-            mockGetStoredTokens.mockReturnValue({
-                access_token: 'test-token',
-                refresh_token: 'test-refresh',
-                expires_at: Date.now() + 3600000,
-            });
-        });
-
-        it('should call upload API when push button is clicked', async () => {
-            vi.mocked(global.fetch).mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({ routeUrl: 'https://strava.com/routes/123' }),
-            } as Response);
-
+    describe('export flow', () => {
+        it('should generate and download GPX when clicked', async () => {
             render(<StravaButton {...defaultProps} />);
 
-            const pushButton = screen.getByTestId('strava-push-button');
-            fireEvent.click(pushButton);
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
 
             await waitFor(() => {
-                expect(global.fetch).toHaveBeenCalledWith(
-                    '/api/strava/upload',
-                    expect.objectContaining({
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                    })
+                expect(mockGenerateGPX).toHaveBeenCalledWith(mockRouteData);
+                expect(mockDownloadGPX).toHaveBeenCalledWith(
+                    '<gpx>mock gpx content</gpx>',
+                    'routista-route.gpx'
                 );
             });
         });
 
-        it('should show success state after successful upload', async () => {
-            vi.mocked(global.fetch).mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({ routeUrl: 'https://strava.com/routes/123' }),
-            } as Response);
-
+        it('should open Strava route import page when clicked', async () => {
             render(<StravaButton {...defaultProps} />);
 
-            const pushButton = screen.getByTestId('strava-push-button');
-            fireEvent.click(pushButton);
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
 
             await waitFor(() => {
-                expect(screen.getByTestId('strava-success-link')).toBeInTheDocument();
-                expect(screen.getByText('success')).toBeInTheDocument();
+                expect(window.open).toHaveBeenCalledWith(
+                    'https://www.strava.com/routes/new',
+                    '_blank',
+                    'noopener,noreferrer'
+                );
             });
         });
 
-        it('should link to Strava route after successful upload', async () => {
-            vi.mocked(global.fetch).mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({ routeUrl: 'https://strava.com/routes/123' }),
-            } as Response);
-
+        it('should show instruction tooltip after export', async () => {
             render(<StravaButton {...defaultProps} />);
 
-            const pushButton = screen.getByTestId('strava-push-button');
-            fireEvent.click(pushButton);
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
 
             await waitFor(() => {
-                const link = screen.getByTestId('strava-success-link');
-                expect(link).toHaveAttribute('href', 'https://strava.com/routes/123');
-                expect(link).toHaveAttribute('target', '_blank');
+                expect(screen.getByTestId('strava-instruction')).toBeInTheDocument();
+                expect(screen.getByText('importInstruction')).toBeInTheDocument();
             });
         });
 
-        it('should update tokens if refreshed during upload', async () => {
-            const newTokens = {
-                access_token: 'new-token',
-                refresh_token: 'new-refresh',
-                expires_at: Date.now() + 7200000,
-            };
+        it('should not trigger export when route data is null', () => {
+            render(<StravaButton routeData={null} />);
 
-            vi.mocked(global.fetch).mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({
-                    routeUrl: 'https://strava.com/routes/123',
-                    tokens: newTokens,
-                }),
-            } as Response);
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
+
+            expect(mockGenerateGPX).not.toHaveBeenCalled();
+            expect(mockDownloadGPX).not.toHaveBeenCalled();
+            expect(window.open).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('instruction tooltip', () => {
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        it('should hide instruction tooltip after timeout', async () => {
+            vi.useFakeTimers();
 
             render(<StravaButton {...defaultProps} />);
 
-            const pushButton = screen.getByTestId('strava-push-button');
-            fireEvent.click(pushButton);
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
+
+            // Instruction should be visible immediately after click
+            expect(screen.getByTestId('strava-instruction')).toBeInTheDocument();
+
+            // Fast-forward 8 seconds and trigger React re-render
+            await act(async () => {
+                vi.advanceTimersByTime(8000);
+            });
+
+            // Instruction should be hidden after timeout
+            expect(screen.queryByTestId('strava-instruction')).not.toBeInTheDocument();
+        });
+
+        it('should have accessibility attributes on instruction tooltip', async () => {
+            render(<StravaButton {...defaultProps} />);
+
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
 
             await waitFor(() => {
-                expect(mockStoreTokens).toHaveBeenCalledWith(newTokens);
+                const tooltip = screen.getByTestId('strava-instruction');
+                expect(tooltip).toHaveAttribute('role', 'status');
+                expect(tooltip).toHaveAttribute('aria-live', 'polite');
+            });
+        });
+
+        it('should dismiss instruction tooltip when dismiss button is clicked', async () => {
+            render(<StravaButton {...defaultProps} />);
+
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
+
+            await waitFor(() => {
+                expect(screen.getByTestId('strava-instruction')).toBeInTheDocument();
+            });
+
+            const dismissButton = screen.getByTestId('strava-instruction-dismiss');
+            fireEvent.click(dismissButton);
+
+            await waitFor(() => {
+                expect(screen.queryByTestId('strava-instruction')).not.toBeInTheDocument();
             });
         });
     });
 
     describe('error handling', () => {
-        beforeEach(() => {
-            mockIsConnected.mockReturnValue(true);
-            mockGetStoredTokens.mockReturnValue({
-                access_token: 'test-token',
-                refresh_token: 'test-refresh',
-                expires_at: Date.now() + 3600000,
+        it('should show error state when GPX generation fails', async () => {
+            mockGenerateGPX.mockImplementation(() => {
+                throw new Error('Generation failed');
             });
-        });
-
-        it('should show error state when upload fails', async () => {
-            vi.mocked(global.fetch).mockResolvedValueOnce({
-                ok: false,
-                json: () => Promise.resolve({ error: 'Upload failed' }),
-            } as Response);
 
             render(<StravaButton {...defaultProps} />);
 
-            const pushButton = screen.getByTestId('strava-push-button');
-            fireEvent.click(pushButton);
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
 
             await waitFor(() => {
                 expect(screen.getByTestId('strava-retry-button')).toBeInTheDocument();
-                expect(screen.getByText('error')).toBeInTheDocument();
+                expect(screen.getByText('exportError')).toBeInTheDocument();
             });
         });
 
-        it('should show error message when upload fails', async () => {
-            vi.mocked(global.fetch).mockResolvedValueOnce({
-                ok: false,
-                json: () => Promise.resolve({ error: 'Rate limit exceeded' }),
-            } as Response);
-
-            render(<StravaButton {...defaultProps} />);
-
-            const pushButton = screen.getByTestId('strava-push-button');
-            fireEvent.click(pushButton);
-
-            await waitFor(() => {
-                expect(screen.getByText('Rate limit exceeded')).toBeInTheDocument();
+        it('should return to ready state when retry button is clicked', async () => {
+            mockGenerateGPX.mockImplementationOnce(() => {
+                throw new Error('Generation failed');
             });
-        });
-
-        it('should disconnect when reauth is needed', async () => {
-            vi.mocked(global.fetch).mockResolvedValueOnce({
-                ok: false,
-                json: () => Promise.resolve({ needsReauth: true }),
-            } as Response);
 
             render(<StravaButton {...defaultProps} />);
 
-            const pushButton = screen.getByTestId('strava-push-button');
-            fireEvent.click(pushButton);
-
-            await waitFor(() => {
-                expect(mockClearTokens).toHaveBeenCalled();
-            });
-        });
-
-        it('should allow retry after error', async () => {
-            vi.mocked(global.fetch).mockResolvedValueOnce({
-                ok: false,
-                json: () => Promise.resolve({ error: 'Temporary error' }),
-            } as Response);
-
-            render(<StravaButton {...defaultProps} />);
-
-            const pushButton = screen.getByTestId('strava-push-button');
-            fireEvent.click(pushButton);
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
 
             await waitFor(() => {
                 expect(screen.getByTestId('strava-retry-button')).toBeInTheDocument();
             });
 
-            // Click retry
             const retryButton = screen.getByTestId('strava-retry-button');
             fireEvent.click(retryButton);
 
-            // Should be back to connected state (showing push button)
             await waitFor(() => {
-                expect(screen.getByTestId('strava-push-button')).toBeInTheDocument();
+                expect(screen.getByTestId('strava-export-button')).toBeInTheDocument();
+                expect(screen.queryByTestId('strava-retry-button')).not.toBeInTheDocument();
             });
         });
-    });
 
-    describe('OAuth message handling', () => {
-        beforeEach(() => {
-            mockIsConnected.mockReturnValue(false);
-        });
+        it('should have role alert on error message', async () => {
+            mockGenerateGPX.mockImplementation(() => {
+                throw new Error('Generation failed');
+            });
 
-        it('should handle successful OAuth message', async () => {
             render(<StravaButton {...defaultProps} />);
 
-            // Simulate OAuth success message
-            const messageEvent = new MessageEvent('message', {
-                origin: window.location.origin,
-                data: {
-                    type: 'STRAVA_AUTH_SUCCESS',
-                    tokens: {
-                        access_token: 'new-token',
-                        refresh_token: 'new-refresh',
-                        expires_at: Date.now() + 3600000,
-                    },
-                },
-            });
-
-            window.dispatchEvent(messageEvent);
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
 
             await waitFor(() => {
-                expect(mockStoreTokens).toHaveBeenCalled();
+                const errorMessage = screen.getByText('exportError');
+                expect(errorMessage).toHaveAttribute('role', 'alert');
             });
-        });
-
-        it('should handle OAuth error message', async () => {
-            render(<StravaButton {...defaultProps} />);
-
-            // Simulate OAuth error message
-            const messageEvent = new MessageEvent('message', {
-                origin: window.location.origin,
-                data: {
-                    type: 'STRAVA_AUTH_ERROR',
-                    error: 'access_denied',
-                    description: 'User denied access',
-                },
-            });
-
-            window.dispatchEvent(messageEvent);
-
-            await waitFor(() => {
-                expect(screen.getByTestId('strava-retry-button')).toBeInTheDocument();
-                expect(screen.getByText('User denied access')).toBeInTheDocument();
-            });
-        });
-
-        it('should ignore messages from different origins', () => {
-            render(<StravaButton {...defaultProps} />);
-
-            // Simulate message from different origin
-            const messageEvent = new MessageEvent('message', {
-                origin: 'https://malicious-site.com',
-                data: {
-                    type: 'STRAVA_AUTH_SUCCESS',
-                    tokens: { access_token: 'fake' },
-                },
-            });
-
-            window.dispatchEvent(messageEvent);
-
-            // Should not have called storeTokens
-            expect(mockStoreTokens).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('styling', () => {
-        it('should apply custom className', () => {
-            mockIsConnected.mockReturnValue(false);
-            render(<StravaButton {...defaultProps} className="custom-class" />);
-
-            const button = screen.getByTestId('strava-connect-button');
-            expect(button).toHaveClass('custom-class');
         });
     });
 });
-

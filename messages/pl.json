@@ -217,13 +217,12 @@
         "description": "Generuj prawdziwe trasy GPS z dowolnego kształtu lub obrazu."
     },
     "StravaButton": {
-        "connect": "Połącz ze Stravą",
-        "connecting": "Łączenie...",
-        "push": "Wyślij do Stravy",
-        "uploading": "Przesyłanie...",
-        "success": "Zobacz na Stravie",
-        "error": "Błąd - Spróbuj ponownie",
-        "disconnect": "Rozłącz"
+        "exportToStrava": "Eksportuj do Stravy",
+        "exporting": "Eksportowanie...",
+        "importInstruction": "GPX pobrany! Zaimportuj go na stronie tras w Stravie.",
+        "dismissInstruction": "Zamknij",
+        "exportError": "Eksport nie powiódł się. Spróbuj ponownie.",
+        "retry": "Ponów"
     },
     "ShareModal": {
         "title": "Udostępnij trasę",

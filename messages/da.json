@@ -219,7 +219,10 @@
     "StravaButton": {
         "exportToStrava": "Eksporter til Strava",
         "exporting": "Eksporterer...",
-        "importInstruction": "GPX downloadet! Importer den på Stravas ruteside."
+        "importInstruction": "GPX downloadet! Importer den på Stravas ruteside.",
+        "dismissInstruction": "Luk",
+        "exportError": "Eksport mislykkedes. Prøv venligst igen.",
+        "retry": "Prøv igen"
     },
     "ShareModal": {
         "title": "Del din rute",

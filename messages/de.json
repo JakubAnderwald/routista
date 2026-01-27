@@ -219,7 +219,10 @@
     "StravaButton": {
         "exportToStrava": "Zu Strava exportieren",
         "exporting": "Exportiere...",
-        "importInstruction": "GPX heruntergeladen! Importiere sie auf der Strava-Routenseite."
+        "importInstruction": "GPX heruntergeladen! Importiere sie auf der Strava-Routenseite.",
+        "dismissInstruction": "Schließen",
+        "exportError": "Export fehlgeschlagen. Bitte versuche es erneut.",
+        "retry": "Wiederholen"
     },
     "ShareModal": {
         "title": "Route teilen",

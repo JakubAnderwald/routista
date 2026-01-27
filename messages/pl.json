@@ -219,7 +219,10 @@
     "StravaButton": {
         "exportToStrava": "Eksportuj do Stravy",
         "exporting": "Eksportowanie...",
-        "importInstruction": "GPX pobrany! Zaimportuj go na stronie tras w Stravie."
+        "importInstruction": "GPX pobrany! Zaimportuj go na stronie tras w Stravie.",
+        "dismissInstruction": "Zamknij",
+        "exportError": "Eksport nie powiódł się. Spróbuj ponownie.",
+        "retry": "Ponów"
     },
     "ShareModal": {
         "title": "Udostępnij trasę",

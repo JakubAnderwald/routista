@@ -10,7 +10,7 @@ import { APP_CONFIG } from '@/config';
 // Types
 // ============================================================================
 
-type ButtonState = 'ready' | 'processing';
+type ButtonState = 'ready' | 'processing' | 'error';
 
 interface StravaButtonProps {
   readonly routeData: FeatureCollection | null;
@@ -38,6 +38,7 @@ export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
   
   const [state, setState] = useState<ButtonState>('ready');
   const [showInstruction, setShowInstruction] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup timeout on unmount to prevent memory leaks
@@ -49,6 +50,15 @@ export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
     };
   }, []);
 
+  // Dismiss instruction tooltip
+  const handleDismissInstruction = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setShowInstruction(false);
+  }, []);
+
   // Handle export button click
   const handleExport = useCallback(() => {
     if (!routeData) {
@@ -58,6 +68,7 @@ export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
 
     console.log('[StravaButton] Starting export to Strava...');
     setState('processing');
+    setErrorMessage(null);
 
     try {
       // Generate and download GPX
@@ -71,7 +82,8 @@ export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
 
       // Show instruction message
       setShowInstruction(true);
-      
+      setState('ready');
+
       // Hide instruction after 8 seconds
       timeoutRef.current = setTimeout(() => {
         setShowInstruction(false);
@@ -79,10 +91,16 @@ export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
 
     } catch (error) {
       console.error('[StravaButton] Export failed:', error);
-    } finally {
-      setState('ready');
+      setErrorMessage(t('exportError'));
+      setState('error');
     }
-  }, [routeData]);
+  }, [routeData, t]);
+
+  // Retry after error
+  const handleRetry = useCallback(() => {
+    setErrorMessage(null);
+    setState('ready');
+  }, []);
 
   // Feature toggle - hide button if disabled
   if (!APP_CONFIG.stravaEnabled) {
@@ -100,14 +118,41 @@ export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
     ${className}
   `;
 
+  // Error state - Show retry button
+  if (state === 'error') {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <button
+          onClick={handleRetry}
+          className={baseButtonStyles}
+          style={{
+            backgroundColor: '#ef4444', // Red
+            color: 'white',
+          }}
+          data-testid="strava-retry-button"
+        >
+          {t('retry')}
+        </button>
+        {errorMessage && (
+          <span
+            className="text-xs text-red-500 dark:text-red-400"
+            role="alert"
+          >
+            {errorMessage}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       <button
         onClick={handleExport}
         disabled={!routeData || state === 'processing'}
         className={baseButtonStyles}
-        style={{ 
-          backgroundColor: stravaOrange, 
+        style={{
+          backgroundColor: stravaOrange,
           color: 'white',
           opacity: state === 'processing' ? 0.8 : 1,
         }}
@@ -126,15 +171,25 @@ export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
         )}
       </button>
 
-      {/* Instruction tooltip */}
+      {/* Instruction tooltip with accessibility attributes */}
       {showInstruction && (
-        <div 
-          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded-lg shadow-lg whitespace-nowrap z-50 animate-fade-in"
+        <div
+          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded-lg shadow-lg z-50 animate-fade-in"
+          role="status"
+          aria-live="polite"
           data-testid="strava-instruction"
         >
           <div className="flex items-center gap-2">
             <CheckIcon />
             <span>{t('importInstruction')}</span>
+            <button
+              onClick={handleDismissInstruction}
+              className="ml-2 p-1 rounded hover:bg-gray-700 dark:hover:bg-gray-300 transition-colors"
+              aria-label={t('dismissInstruction')}
+              data-testid="strava-instruction-dismiss"
+            >
+              <CloseIcon />
+            </button>
           </div>
           {/* Arrow pointing up */}
           <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-8 border-transparent border-b-gray-900 dark:border-b-gray-100" />
@@ -186,14 +241,29 @@ function Spinner() {
 
 function CheckIcon() {
   return (
-    <svg 
-      className="w-4 h-4" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
+    <svg
+      className="w-4 h-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
       strokeWidth="2"
     >
       <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      className="w-3 h-3"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   );
 }

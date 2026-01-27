@@ -160,7 +160,7 @@ describe('StravaButton', () => {
 
         it('should hide instruction tooltip after timeout', async () => {
             vi.useFakeTimers();
-            
+
             render(<StravaButton {...defaultProps} />);
 
             const button = screen.getByTestId('strava-export-button');
@@ -176,6 +176,94 @@ describe('StravaButton', () => {
 
             // Instruction should be hidden after timeout
             expect(screen.queryByTestId('strava-instruction')).not.toBeInTheDocument();
+        });
+
+        it('should have accessibility attributes on instruction tooltip', async () => {
+            render(<StravaButton {...defaultProps} />);
+
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
+
+            await waitFor(() => {
+                const tooltip = screen.getByTestId('strava-instruction');
+                expect(tooltip).toHaveAttribute('role', 'status');
+                expect(tooltip).toHaveAttribute('aria-live', 'polite');
+            });
+        });
+
+        it('should dismiss instruction tooltip when dismiss button is clicked', async () => {
+            render(<StravaButton {...defaultProps} />);
+
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
+
+            await waitFor(() => {
+                expect(screen.getByTestId('strava-instruction')).toBeInTheDocument();
+            });
+
+            const dismissButton = screen.getByTestId('strava-instruction-dismiss');
+            fireEvent.click(dismissButton);
+
+            await waitFor(() => {
+                expect(screen.queryByTestId('strava-instruction')).not.toBeInTheDocument();
+            });
+        });
+    });
+
+    describe('error handling', () => {
+        it('should show error state when GPX generation fails', async () => {
+            mockGenerateGPX.mockImplementation(() => {
+                throw new Error('Generation failed');
+            });
+
+            render(<StravaButton {...defaultProps} />);
+
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
+
+            await waitFor(() => {
+                expect(screen.getByTestId('strava-retry-button')).toBeInTheDocument();
+                expect(screen.getByText('exportError')).toBeInTheDocument();
+            });
+        });
+
+        it('should return to ready state when retry button is clicked', async () => {
+            mockGenerateGPX.mockImplementationOnce(() => {
+                throw new Error('Generation failed');
+            });
+
+            render(<StravaButton {...defaultProps} />);
+
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
+
+            await waitFor(() => {
+                expect(screen.getByTestId('strava-retry-button')).toBeInTheDocument();
+            });
+
+            const retryButton = screen.getByTestId('strava-retry-button');
+            fireEvent.click(retryButton);
+
+            await waitFor(() => {
+                expect(screen.getByTestId('strava-export-button')).toBeInTheDocument();
+                expect(screen.queryByTestId('strava-retry-button')).not.toBeInTheDocument();
+            });
+        });
+
+        it('should have role alert on error message', async () => {
+            mockGenerateGPX.mockImplementation(() => {
+                throw new Error('Generation failed');
+            });
+
+            render(<StravaButton {...defaultProps} />);
+
+            const button = screen.getByTestId('strava-export-button');
+            fireEvent.click(button);
+
+            await waitFor(() => {
+                const errorMessage = screen.getByText('exportError');
+                expect(errorMessage).toHaveAttribute('role', 'alert');
+            });
         });
     });
 });

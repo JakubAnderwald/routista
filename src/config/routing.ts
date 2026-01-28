@@ -67,3 +67,7 @@ export const MODE_PRESETS: Record<TransportMode, { id: string; radius: number; d
  */
 export const PRESET_TOLERANCE_METERS = 50;
 
+
+/** Minimum gap (meters) in a route that triggers car-mode bridge re-routing */
+export const RIVER_JUMP_THRESHOLD_METERS = 50;
+

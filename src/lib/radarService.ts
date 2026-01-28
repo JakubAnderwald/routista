@@ -1,13 +1,13 @@
-import { simplifyPoints } from "./geoUtils";
+import { simplifyPoints, haversineFromGeoJSON } from "./geoUtils";
 import { FeatureCollection, Feature } from "geojson";
 import { Redis } from "@upstash/redis";
 import * as Sentry from "@sentry/nextjs";
-import { 
-    SIMPLIFICATION_TOLERANCES, 
-    MODE_TO_RADAR, 
-    TransportMode 
+import {
+    SIMPLIFICATION_TOLERANCES,
+    MODE_TO_RADAR,
+    TransportMode
 } from "@/config";
-import { RADAR_API, CACHE } from "@/config";
+import { RADAR_API, CACHE, RIVER_JUMP_THRESHOLD_METERS } from "@/config";
 
 /**
  * Create Redis client from environment variables.
@@ -62,9 +62,66 @@ export function hashCoordinates(coordinates: [number, number][]): string {
 }
 
 /**
+ * Post-processes a merged route to detect straight-line river jumps and
+ * re-routes them via car mode, which respects water barriers and uses bridges.
+ * @internal Exported for testing purposes
+ */
+export async function fixRiverJumps(
+    mergedCoordinates: number[][],
+    apiKey: string,
+    jumpThresholdMeters: number = RIVER_JUMP_THRESHOLD_METERS
+): Promise<number[][]> {
+    if (mergedCoordinates.length < 2) return mergedCoordinates;
+
+    const result: number[][] = [mergedCoordinates[0]];
+
+    for (let i = 0; i < mergedCoordinates.length - 1; i++) {
+        const a = mergedCoordinates[i];
+        const b = mergedCoordinates[i + 1];
+        const dist = haversineFromGeoJSON(a, b);
+
+        if (dist > jumpThresholdMeters) {
+            try {
+                // Query car-mode route for this gap
+                const locationsParam = `${a[1]},${a[0]}|${b[1]},${b[0]}`; // lat,lng|lat,lng
+                const url = new URL('https://api.radar.io/v1/route/directions');
+                url.searchParams.append('locations', locationsParam);
+                url.searchParams.append('mode', 'car');
+                url.searchParams.append('geometry', 'linestring');
+                url.searchParams.append('units', 'metric');
+
+                const response = await fetch(url.toString(), {
+                    method: "GET",
+                    headers: { "Authorization": apiKey }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.routes?.[0]?.geometry?.coordinates) {
+                        const carCoords: number[][] = data.routes[0].geometry.coordinates;
+                        if (carCoords.length > 2) {
+                            // Splice car route in (skip first point, it duplicates `a`)
+                            result.push(...carCoords.slice(1));
+                            console.log(`[RadarService] River jump fix: gap ${dist.toFixed(0)}m at index ${i}, spliced ${carCoords.length} car-mode points`);
+                            continue;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn(`[RadarService] River jump fix failed for gap at index ${i}: ${e instanceof Error ? e.message : e}`);
+            }
+        }
+
+        result.push(b);
+    }
+
+    return result;
+}
+
+/**
  * Generates a route by calling the Radar API.
  * This function is designed to be used server-side to keep API keys secure.
- * 
+ *
  * @param options - Configuration options including coordinates and mode.
  * @returns A GeoJSON FeatureCollection containing the route.
  */
@@ -80,11 +137,11 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     
     const inputPointCount = coordinates.length;
     const simplifiedCoordinates = simplifyPoints(coordinates, tolerance);
-    
-    console.log(`[RadarService] Simplification: ${inputPointCount} → ${simplifiedCoordinates.length} points (tolerance: ${tolerance}, mode: ${mode})`);
+
+    console.log(`[RadarService] Simplification: ${inputPointCount} → ${simplifiedCoordinates.length} points (mode: ${mode})`);
 
     // Generate cache key from simplified coordinates and mode
-    const cacheKey = `${CACHE.routeKeyPrefix}${mode}:${hashCoordinates(simplifiedCoordinates as [number, number][])}`;
+    const cacheKey = `${CACHE.routeKeyPrefix}${mode}:${hashCoordinates(simplifiedCoordinates)}`;
     
     // Get Redis client (may be null if not configured)
     const redis = getRedisClient();
@@ -111,7 +168,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     // If no API key, return a mock response
     if (!RADAR_API_KEY) {
         console.warn("[RadarService] No Radar API key provided, using mock response");
-        const mockCoordinates = simplifiedCoordinates.map((c: number[]) => [c[1], c[0]]); // Convert to [lng, lat] for GeoJSON
+        const mockCoordinates = simplifiedCoordinates.map((c) => [c[1], c[0]]); // Convert to [lng, lat] for GeoJSON
         return {
             type: "FeatureCollection",
             features: [
@@ -239,6 +296,12 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
         } else {
             mergedCoordinates.push(...coords);
         }
+    }
+
+    // Fix river jumps by re-routing gaps through car-mode bridges
+    if (RADAR_API_KEY && mergedCoordinates.length > 1) {
+        const fixedCoordinates = await fixRiverJumps(mergedCoordinates, RADAR_API_KEY);
+        mergedCoordinates.splice(0, mergedCoordinates.length, ...fixedCoordinates);
     }
 
     // If no features were generated (e.g. API errors for all chunks), fallback to straight line

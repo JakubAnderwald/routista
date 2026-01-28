@@ -10,6 +10,8 @@ export default defineConfig({
         environment: 'jsdom',
         // Setup file for testing-library matchers
         setupFiles: ['./tests/setup.ts'],
+        // Exclude worktrees from test discovery
+        exclude: ['**/node_modules/**', '**/.worktrees/**'],
         coverage: {
             // Use v8 provider (built-in, no extra deps needed)
             provider: 'v8',

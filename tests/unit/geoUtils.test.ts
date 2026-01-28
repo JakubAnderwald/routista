@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { 
-    calculateDistance, 
-    calculateRouteLength, 
+import {
+    calculateDistance,
+    calculateRouteLength,
     calculateRouteAccuracy,
     scalePointsToGeo,
-    simplifyPoints 
+    simplifyPoints,
+    densifyPath
 } from '../../src/lib/geoUtils';
 import { FeatureCollection } from 'geojson';
 
@@ -275,6 +276,97 @@ describe('geoUtils', () => {
 
             // Should preserve all 3 points due to significant deviation
             expect(result.length).toBe(3);
+        });
+    });
+
+    describe('densifyPath', () => {
+        it('should return input unchanged for fewer than 2 points', () => {
+            const empty: [number, number][] = [];
+            expect(densifyPath(empty, 100)).toEqual([]);
+
+            const single: [number, number][] = [[51.5, -0.1]];
+            expect(densifyPath(single, 100)).toEqual(single);
+        });
+
+        it('should return input unchanged when points are under threshold', () => {
+            // Two points ~50m apart (well under 100m threshold)
+            const points: [number, number][] = [
+                [51.5, -0.1],
+                [51.50045, -0.1], // ~50m north
+            ];
+
+            const result = densifyPath(points, 100);
+
+            expect(result).toEqual(points);
+        });
+
+        it('should add intermediate points when gap exceeds threshold', () => {
+            // Two points ~500m apart
+            const points: [number, number][] = [
+                [51.5, -0.1],
+                [51.5045, -0.1], // ~500m north
+            ];
+
+            const result = densifyPath(points, 100);
+
+            // Should have more points than original (densified)
+            expect(result.length).toBeGreaterThan(2);
+            expect(result[0]).toEqual(points[0]); // first point preserved
+            expect(result[result.length - 1]).toEqual(points[1]); // last point preserved
+        });
+
+        it('should preserve all original points', () => {
+            const points: [number, number][] = [
+                [51.5, -0.1],
+                [51.501, -0.1],    // ~100m
+                [51.506, -0.1],    // ~500m gap - needs densification
+            ];
+
+            const result = densifyPath(points, 100);
+
+            // All original points must be in result
+            expect(result).toContainEqual(points[0]);
+            expect(result).toContainEqual(points[1]);
+            expect(result).toContainEqual(points[2]);
+        });
+
+        it('should interpolate linearly between points', () => {
+            // Simple case: two points 200m apart with 100m threshold
+            const points: [number, number][] = [
+                [0, 0],
+                [0.002, 0], // ~222m at equator
+            ];
+
+            const result = densifyPath(points, 100);
+
+            // Should have 3 points: start, middle, end
+            expect(result.length).toBeGreaterThanOrEqual(3);
+
+            // Middle point(s) should be between start and end
+            for (let i = 1; i < result.length - 1; i++) {
+                expect(result[i][0]).toBeGreaterThan(points[0][0]);
+                expect(result[i][0]).toBeLessThan(points[1][0]);
+            }
+        });
+
+        it('should handle mixed gaps (some need densification, some dont)', () => {
+            const points: [number, number][] = [
+                [51.5, -0.1],
+                [51.5005, -0.1],  // ~55m - no densification needed
+                [51.506, -0.1],   // ~615m - needs densification
+                [51.5065, -0.1],  // ~55m - no densification needed
+            ];
+
+            const result = densifyPath(points, 100);
+
+            // Original points preserved
+            expect(result[0]).toEqual(points[0]);
+            expect(result).toContainEqual(points[1]);
+            expect(result).toContainEqual(points[2]);
+            expect(result[result.length - 1]).toEqual(points[3]);
+
+            // More points than original due to densification
+            expect(result.length).toBeGreaterThan(points.length);
         });
     });
 

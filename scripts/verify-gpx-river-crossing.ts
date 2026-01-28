@@ -12,6 +12,7 @@
  */
 
 import * as path from 'path';
+import * as os from 'os';
 import * as fs from 'fs';
 import sharp from 'sharp';
 import { extractShapeFromImageData, ImageProcessingConfig } from '../src/lib/imageProcessingCore';
@@ -32,7 +33,9 @@ const ROUTE_RADIUS = 1000; // 1km
 const RIVER_JUMP_THRESHOLD_METERS = 50;
 
 // Scratchpad for output files
-const SCRATCHPAD = '/private/tmp/claude/-Users-jakub-code-routista/0c0ff7ec-e74a-45ae-ac1a-0f55eb323f52/scratchpad';
+const SCRATCHPAD =
+    process.env.ROUTISTA_SCRATCHPAD ??
+    path.join(os.tmpdir(), 'routista-gpx-scratchpad');
 
 // API endpoints
 const LOCAL_API = 'http://localhost:3000/api/radar/directions';

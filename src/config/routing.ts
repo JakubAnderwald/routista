@@ -67,20 +67,6 @@ export const MODE_PRESETS: Record<TransportMode, { id: string; radius: number; d
  */
 export const PRESET_TOLERANCE_METERS = 50;
 
-/**
- * Maximum waypoint spacing before densification (in meters)
- *
- * When consecutive waypoints exceed this distance, intermediate points
- * are inserted to prevent the router from taking long detours (e.g.,
- * following a river to a distant bridge instead of crossing directly).
- *
- * Lower values = more control points = better river crossing behavior
- */
-export const DENSIFICATION_THRESHOLDS: Record<TransportMode, number> = {
-    "foot-walking": 100,      // 100m - tight control for footbridges
-    "cycling-regular": 150,   // 150m
-    "driving-car": 200,       // 200m
-};
 
 /** Minimum gap (meters) in a route that triggers car-mode bridge re-routing */
 export const RIVER_JUMP_THRESHOLD_METERS = 50;

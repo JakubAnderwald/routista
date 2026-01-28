@@ -1,10 +1,9 @@
-import { simplifyPoints, densifyPath, haversineFromGeoJSON } from "./geoUtils";
+import { simplifyPoints, haversineFromGeoJSON } from "./geoUtils";
 import { FeatureCollection, Feature } from "geojson";
 import { Redis } from "@upstash/redis";
 import * as Sentry from "@sentry/nextjs";
 import {
     SIMPLIFICATION_TOLERANCES,
-    DENSIFICATION_THRESHOLDS,
     MODE_TO_RADAR,
     TransportMode
 } from "@/config";
@@ -139,14 +138,10 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     const inputPointCount = coordinates.length;
     const simplifiedCoordinates = simplifyPoints(coordinates, tolerance);
 
-    // Densify path to prevent river detours (forces router to cross at nearby bridges)
-    const maxSpacing = DENSIFICATION_THRESHOLDS[mode as TransportMode] || 150;
-    const densifiedCoordinates = densifyPath(simplifiedCoordinates as [number, number][], maxSpacing);
+    console.log(`[RadarService] Simplification: ${inputPointCount} → ${simplifiedCoordinates.length} points (mode: ${mode})`);
 
-    console.log(`[RadarService] Simplification: ${inputPointCount} → ${simplifiedCoordinates.length} → ${densifiedCoordinates.length} points (mode: ${mode}, maxSpacing: ${maxSpacing}m)`);
-
-    // Generate cache key from densified coordinates and mode
-    const cacheKey = `${CACHE.routeKeyPrefix}${mode}:${hashCoordinates(densifiedCoordinates)}`;
+    // Generate cache key from simplified coordinates and mode
+    const cacheKey = `${CACHE.routeKeyPrefix}${mode}:${hashCoordinates(simplifiedCoordinates)}`;
     
     // Get Redis client (may be null if not configured)
     const redis = getRedisClient();
@@ -173,7 +168,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     // If no API key, return a mock response
     if (!RADAR_API_KEY) {
         console.warn("[RadarService] No Radar API key provided, using mock response");
-        const mockCoordinates = densifiedCoordinates.map((c) => [c[1], c[0]]); // Convert to [lng, lat] for GeoJSON
+        const mockCoordinates = simplifiedCoordinates.map((c) => [c[1], c[0]]); // Convert to [lng, lat] for GeoJSON
         return {
             type: "FeatureCollection",
             features: [
@@ -202,17 +197,17 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     const chunkSize = RADAR_API.chunkSize;
     const chunks = [];
     let startIndex = 0;
-    while (startIndex < densifiedCoordinates.length) {
-        const endIndex = Math.min(startIndex + chunkSize + 1, densifiedCoordinates.length);
-        const chunk = densifiedCoordinates.slice(startIndex, endIndex);
+    while (startIndex < simplifiedCoordinates.length) {
+        const endIndex = Math.min(startIndex + chunkSize + 1, simplifiedCoordinates.length);
+        const chunk = simplifiedCoordinates.slice(startIndex, endIndex);
         chunks.push(chunk);
         // Move forward by chunkSize - 1 to overlap last point with next chunk's first
         startIndex += chunkSize - 1;
         // Ensure we exit if we've processed all coordinates
-        if (endIndex >= densifiedCoordinates.length) break;
+        if (endIndex >= simplifiedCoordinates.length) break;
     }
     
-    console.log(`[RadarService] Routing ${densifiedCoordinates.length} waypoints in ${chunks.length} chunk(s)`);
+    console.log(`[RadarService] Routing ${simplifiedCoordinates.length} waypoints in ${chunks.length} chunk(s)`);
 
     const features: Feature[] = [];
     let totalDistance = 0;
@@ -325,7 +320,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
                     },
                     geometry: {
                         type: "LineString",
-                        coordinates: densifiedCoordinates.map(p => [p[1], p[0]]) // GeoJSON is [lng, lat]
+                        coordinates: simplifiedCoordinates.map(p => [p[1], p[0]]) // GeoJSON is [lng, lat]
                     }
                 }
             ]

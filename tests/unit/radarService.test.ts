@@ -192,7 +192,7 @@ describe('radarService', () => {
                 }],
             };
 
-            // Mock multiple responses for densified chunks
+            // Mock response
             mockFetch.mockResolvedValue({
                 ok: true,
                 json: async () => mockRouteResponse,
@@ -227,7 +227,7 @@ describe('radarService', () => {
         it('should use correct mode mapping for foot-walking', async () => {
             vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
 
-            // Mock multiple responses for densified chunks
+            // Mock response
             mockFetch.mockResolvedValue({
                 ok: true,
                 json: async () => ({
@@ -252,7 +252,7 @@ describe('radarService', () => {
         it('should use correct mode mapping for cycling-regular', async () => {
             vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
 
-            // Mock multiple responses for densified chunks
+            // Mock response
             mockFetch.mockResolvedValue({
                 ok: true,
                 json: async () => ({
@@ -276,7 +276,7 @@ describe('radarService', () => {
         it('should use correct mode mapping for driving-car', async () => {
             vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
 
-            // Mock multiple responses for densified chunks
+            // Mock response
             mockFetch.mockResolvedValue({
                 ok: true,
                 json: async () => ({
@@ -300,7 +300,7 @@ describe('radarService', () => {
         it('should return fallback when no routes returned', async () => {
             vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
 
-            // Mock multiple responses for densified chunks
+            // Mock response
             mockFetch.mockResolvedValue({
                 ok: true,
                 json: async () => ({ routes: [] }),

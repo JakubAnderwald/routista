@@ -159,47 +159,6 @@ function simplifyPointsRecursive(points: [number, number][], tolerance: number):
     }
 }
 
-/**
- * Densifies a path by inserting intermediate points when consecutive
- * waypoints exceed a maximum spacing threshold.
- *
- * This prevents routing APIs from taking long detours when crossing
- * rivers or other obstacles - the closer waypoints force the router
- * to cross at nearby bridges rather than routing along the obstacle.
- *
- * @param points - Array of [lat, lng] points.
- * @param maxSpacingMeters - Maximum allowed distance between consecutive points.
- * @returns Densified array of [lat, lng] points with original points preserved.
- */
-export function densifyPath(
-    points: [number, number][],
-    maxSpacingMeters: number
-): [number, number][] {
-    if (points.length < 2) return points;
-
-    const result: [number, number][] = [points[0]];
-
-    for (let i = 1; i < points.length; i++) {
-        const prev = points[i - 1];
-        const curr = points[i];
-        const distance = calculateDistance(prev, curr);
-
-        if (distance > maxSpacingMeters) {
-            const numSegments = Math.ceil(distance / maxSpacingMeters);
-            for (let j = 1; j < numSegments; j++) {
-                const t = j / numSegments;
-                result.push([
-                    prev[0] + (curr[0] - prev[0]) * t,
-                    prev[1] + (curr[1] - prev[1]) * t,
-                ]);
-            }
-        }
-        result.push(curr);
-    }
-
-    return result;
-}
-
 function perpendicularDistance(p: [number, number], p1: [number, number], p2: [number, number]): number {
     const [x, y] = p;
     const [x1, y1] = p1;

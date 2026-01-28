@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { hashCoordinates, getRadarRoute, getRadarAutocomplete } from '../../src/lib/radarService';
+import { hashCoordinates, getRadarRoute, getRadarAutocomplete, fixRiverJumps } from '../../src/lib/radarService';
 
 // Mock the Redis module
 vi.mock('@upstash/redis', () => ({
@@ -314,6 +314,91 @@ describe('radarService', () => {
             // Should return fallback straight line
             expect(result.type).toBe('FeatureCollection');
             expect(result.features).toHaveLength(1);
+        });
+    });
+
+    describe('fixRiverJumps', () => {
+        it('should return coordinates unchanged when no gaps exceed threshold', async () => {
+            // Two points ~11m apart (well under 50m threshold)
+            const coords = [
+                [-0.1, 51.5],
+                [-0.1001, 51.5001],
+            ];
+            const result = await fixRiverJumps(coords, 'test-key');
+            expect(result).toEqual(coords);
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        it('should detect and patch a gap using car-mode response', async () => {
+            // Two points ~275m apart (simulating Thames crossing)
+            const coords = [
+                [-0.1, 51.505],
+                [-0.1, 51.5075],
+            ];
+
+            const carBridgeCoords = [
+                [-0.1, 51.505],
+                [-0.102, 51.505],
+                [-0.103, 51.506],
+                [-0.102, 51.507],
+                [-0.1, 51.5075],
+            ];
+
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    routes: [{
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: carBridgeCoords,
+                        },
+                    }],
+                }),
+            });
+
+            const result = await fixRiverJumps(coords, 'test-key');
+
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            // Should contain bridge coords (first coord from original, rest from car route)
+            expect(result.length).toBe(carBridgeCoords.length);
+            expect(result[0]).toEqual(coords[0]);
+            expect(result[result.length - 1]).toEqual(carBridgeCoords[carBridgeCoords.length - 1]);
+        });
+
+        it('should handle car-mode API failure gracefully', async () => {
+            const coords = [
+                [-0.1, 51.505],
+                [-0.1, 51.5075],
+            ];
+
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            const result = await fixRiverJumps(coords, 'test-key');
+
+            // Should keep original coordinates when car-mode fails
+            expect(result).toEqual(coords);
+        });
+
+        it('should keep original when car-mode returns only 2 points (straight line)', async () => {
+            const coords = [
+                [-0.1, 51.505],
+                [-0.1, 51.5075],
+            ];
+
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    routes: [{
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [[-0.1, 51.505], [-0.1, 51.5075]],
+                        },
+                    }],
+                }),
+            });
+
+            const result = await fixRiverJumps(coords, 'test-key');
+            expect(result).toEqual(coords);
         });
     });
 

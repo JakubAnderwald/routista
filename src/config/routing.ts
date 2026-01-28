@@ -82,3 +82,6 @@ export const DENSIFICATION_THRESHOLDS: Record<TransportMode, number> = {
     "driving-car": 200,       // 200m
 };
 
+/** Minimum gap (meters) in a route that triggers car-mode bridge re-routing */
+export const RIVER_JUMP_THRESHOLD_METERS = 50;
+

@@ -5,7 +5,8 @@ import {
     calculateRouteAccuracy,
     scalePointsToGeo,
     simplifyPoints,
-    densifyPath
+    densifyPath,
+    haversineFromGeoJSON
 } from '../../src/lib/geoUtils';
 import { FeatureCollection } from 'geojson';
 
@@ -48,6 +49,21 @@ describe('geoUtils', () => {
             // Should be approximately half Earth's circumference (~20,000km)
             expect(distance).toBeGreaterThan(19000000);
             expect(distance).toBeLessThan(21000000);
+        });
+    });
+
+    describe('haversineFromGeoJSON', () => {
+        it('should compute distance from GeoJSON [lng, lat] points', () => {
+            const a = [-0.0754, 51.5055]; // Tower Bridge
+            const b = [-0.1246, 51.5007]; // Big Ben
+            const dist = haversineFromGeoJSON(a, b);
+            expect(dist).toBeGreaterThan(2000);
+            expect(dist).toBeLessThan(4000);
+        });
+
+        it('should return 0 for same point', () => {
+            const p = [-0.09, 51.505];
+            expect(haversineFromGeoJSON(p, p)).toBe(0);
         });
     });
 

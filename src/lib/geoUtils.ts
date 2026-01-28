@@ -66,6 +66,14 @@ export function calculateDistance(p1: [number, number], p2: [number, number]): n
 }
 
 /**
+ * Calculates great-circle distance between two GeoJSON [lng, lat] points.
+ * Wraps calculateDistance which expects [lat, lng].
+ */
+export function haversineFromGeoJSON(a: number[], b: number[]): number {
+    return calculateDistance([a[1], a[0]], [b[1], b[0]]);
+}
+
+/**
  * Calculates the total length of a route from a GeoJSON object.
  * 
  * @param geoJson - The GeoJSON object containing the route features.

@@ -67,3 +67,20 @@ export const MODE_PRESETS: Record<TransportMode, { id: string; radius: number; d
  */
 export const PRESET_TOLERANCE_METERS = 50;
 
+/**
+ * River crossing detection config
+ *
+ * Used to pre-process waypoints before routing so foot/bike modes
+ * are guided over bridges instead of routing through water.
+ */
+export const RIVER_CROSSING = {
+    /** Min straight-line distance (m) between consecutive waypoints to probe for crossing */
+    minSegmentDistance: 150,
+    /** Car/straight-line distance ratio that indicates a water barrier */
+    detourRatioThreshold: 3.0,
+    /** Max car-mode API probes per route (budget control) */
+    maxProbes: 10,
+    /** Number of bridge waypoints to extract from car route */
+    bridgePointCount: 3,
+} as const;
+

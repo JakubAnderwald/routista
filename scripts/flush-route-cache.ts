@@ -28,14 +28,14 @@ if (!url || !token) {
 const redis = new Redis({ url, token });
 
 async function flush() {
-  let cursor = 0;
+  let cursor = "0";
   let deleted = 0;
 
   do {
     const [nextCursor, keys] = (await redis.scan(cursor, {
       match: "route:*",
       count: 100,
-    })) as [number, string[]];
+    })) as [string, string[]];
 
     if (keys.length > 0) {
       await redis.del(...keys);
@@ -43,7 +43,7 @@ async function flush() {
     }
 
     cursor = nextCursor;
-  } while (cursor !== 0);
+  } while (cursor !== "0");
 
   if (deleted === 0) {
     console.log("No route cache keys found.");

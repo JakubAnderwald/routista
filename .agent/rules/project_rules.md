@@ -225,6 +225,20 @@ vercel bisect
 
 **Project is linked**: `routista` → https://www.routista.eu
 
+## 🗄️ Redis Cache Operations
+
+**IMPORTANT**: Redis (Upstash KV) credentials are only on the **main Vercel project** (`routista`).
+Worktree Vercel links may point to different projects. Always run `vercel env pull` from the main repo root.
+
+**Flush route cache after routing changes:**
+```bash
+# From main repo root (not a worktree):
+vercel env pull .env.local --environment=production
+npx tsx scripts/flush-route-cache.ts
+```
+
+**Cache key format**: `route:{mode}:{hash}` — TTL 24 hours
+
 ## 📝 Documentation Updates
 
 When making changes, update relevant docs:

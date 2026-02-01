@@ -65,11 +65,17 @@ State is primarily managed in the parent page (`src/app/create/page.tsx` or simi
 
 ### Route Caching (Upstash Redis)
 - Routes are cached by hashing coordinates + mode into a cache key
-- Cache TTL: 24 hours
+- Cache key format: `route:{mode}:{hash}` — TTL 24 hours
 - Reduces Radar API calls for identical requests
 - Graceful fallback: App works without Redis configured
+- **Dashboard**: Accessible via Vercel Dashboard → Storage → KV
 
-**Files:** `src/lib/radarService.ts`
+**Cache management:**
+- Flush route cache: `npx tsx scripts/flush-route-cache.ts`
+- **When to flush**: After any change to routing logic (simplification, preprocessing, chunking)
+- **Important**: Run `vercel env pull .env.local --environment=production` from the **main repo root** (not a worktree) to get KV credentials
+
+**Files:** `src/lib/radarService.ts`, `scripts/flush-route-cache.ts`
 
 ### Rate Limiting
 - IP-based rate limiting: 10 requests per minute per IP

@@ -18,6 +18,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Social Sharing** | `src/components/ShareModal.tsx`, `src/lib/shareImageGenerator.ts` | Branded image generation for social media. See `docs/features/SHARE.md`. |
 | **Strava Integration** | `src/components/StravaButton.tsx`, `src/lib/stravaService.ts`, `src/app/api/strava/` | Direct route upload to Strava. **Currently disabled** pending Routes API access. Debug instrumentation in place (Issue #44). See `docs/features/STRAVA_INTEGRATION.md`. |
 | **Route Caching** | `src/lib/radarService.ts` | Caches routes in Upstash Redis (24h TTL). |
+| **Cache Management** | `scripts/flush-route-cache.ts` | Flush route cache after routing logic changes. |
 | **Rate Limiting** | `middleware.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis. |
 | **Error Tracking** | `sentry.*.config.ts`, `src/app/global-error.tsx` | Sentry SDK for client/server/edge error capture. |
 | **Product Analytics** | `src/lib/analytics.ts`, `src/components/PostHogProvider.tsx` | PostHog analytics with typed events and automatic pageview tracking. |

@@ -184,9 +184,11 @@ describe('radarService', () => {
                 mode: 'foot-walking',
             });
 
-            expect(result.type).toBe('FeatureCollection');
-            expect(result.features).toHaveLength(1);
-            expect(result.features[0].geometry.type).toBe('LineString');
+            expect(result.geoJson.type).toBe('FeatureCollection');
+            expect(result.geoJson.features).toHaveLength(1);
+            expect(result.geoJson.features[0].geometry.type).toBe('LineString');
+            expect(result._metadata).toBeDefined();
+            expect(result._metadata.cacheStatus).toBe('disabled');
         });
 
         it('should call Radar API when API key is configured', async () => {
@@ -216,9 +218,10 @@ describe('radarService', () => {
             });
 
             expect(mockFetch).toHaveBeenCalled();
-            expect(result.type).toBe('FeatureCollection');
-            expect(result.features).toHaveLength(1);
-            expect(result.features[0].properties?.summary?.distance).toBe(1000);
+            expect(result.geoJson.type).toBe('FeatureCollection');
+            expect(result.geoJson.features).toHaveLength(1);
+            expect(result.geoJson.features[0].properties?.summary?.distance).toBe(1000);
+            expect(result._metadata.cacheStatus).toBe('disabled');
         });
 
         it('should throw error when Radar API returns error', async () => {
@@ -330,8 +333,8 @@ describe('radarService', () => {
             });
 
             // Should return fallback straight line
-            expect(result.type).toBe('FeatureCollection');
-            expect(result.features).toHaveLength(1);
+            expect(result.geoJson.type).toBe('FeatureCollection');
+            expect(result.geoJson.features).toHaveLength(1);
         });
     });
 

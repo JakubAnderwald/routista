@@ -12,8 +12,21 @@ vi.mock('@sentry/nextjs', () => ({
     captureException: vi.fn(),
 }));
 
-import { getRadarRoute } from '../../src/lib/radarService';
+import { getRadarRoute, RouteResult } from '../../src/lib/radarService';
 import * as Sentry from '@sentry/nextjs';
+import { FeatureCollection } from 'geojson';
+
+/** Wrap a FeatureCollection in RouteResult shape for mocking */
+function mockRouteResult(geoJson: FeatureCollection): RouteResult {
+    return {
+        geoJson,
+        _metadata: {
+            inputPoints: 0, simplifiedPoints: 0, waypointsAfterPreprocess: 0,
+            riverCrossingsDetected: 0, routePoints: 0, cacheStatus: 'disabled',
+            chunks: 0, distanceKm: 0, durationMin: 0,
+        },
+    };
+}
 
 describe('/api/radar/directions', () => {
     const mockGetRadarRoute = vi.mocked(getRadarRoute);
@@ -60,7 +73,7 @@ describe('/api/radar/directions', () => {
                 ],
             };
 
-            mockGetRadarRoute.mockResolvedValueOnce(mockRoute);
+            mockGetRadarRoute.mockResolvedValueOnce(mockRouteResult(mockRoute));
 
             const request = createRequest({
                 coordinates: [[51.5, -0.1], [51.51, -0.09]],
@@ -82,7 +95,7 @@ describe('/api/radar/directions', () => {
                 features: [],
             };
 
-            mockGetRadarRoute.mockResolvedValueOnce(mockRoute);
+            mockGetRadarRoute.mockResolvedValueOnce(mockRouteResult(mockRoute));
 
             const request = createRequest({
                 coordinates: [[51.5, -0.1], [51.51, -0.09], [51.52, -0.08]],
@@ -103,7 +116,7 @@ describe('/api/radar/directions', () => {
                 features: [],
             };
 
-            mockGetRadarRoute.mockResolvedValueOnce(mockRoute);
+            mockGetRadarRoute.mockResolvedValueOnce(mockRouteResult(mockRoute));
 
             const request = createRequest({
                 coordinates: [[51.5, -0.1], [51.51, -0.09]],
@@ -211,7 +224,7 @@ describe('/api/radar/directions', () => {
                 features: [],
             };
 
-            mockGetRadarRoute.mockResolvedValueOnce(mockRoute);
+            mockGetRadarRoute.mockResolvedValueOnce(mockRouteResult(mockRoute));
 
             const request = createRequest({
                 coordinates: [[51.5, -0.1], [51.51, -0.09]],
@@ -246,7 +259,7 @@ describe('/api/radar/directions', () => {
                 ],
             };
 
-            mockGetRadarRoute.mockResolvedValueOnce(mockRoute);
+            mockGetRadarRoute.mockResolvedValueOnce(mockRouteResult(mockRoute));
 
             const request = createRequest({
                 coordinates,
@@ -268,7 +281,7 @@ describe('/api/radar/directions', () => {
                 features: [],
             };
 
-            mockGetRadarRoute.mockResolvedValueOnce(mockRoute);
+            mockGetRadarRoute.mockResolvedValueOnce(mockRouteResult(mockRoute));
 
             const request = createRequest({
                 coordinates: [[51.5, -0.1], [51.51, -0.09]],

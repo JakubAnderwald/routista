@@ -165,14 +165,31 @@ export async function preprocessRiverCrossings(
     return { waypoints: result, crossingsFound: crossings.length };
 }
 
+export interface RouteMetadata {
+    inputPoints: number;
+    simplifiedPoints: number;
+    waypointsAfterPreprocess: number;
+    riverCrossingsDetected: number;
+    routePoints: number;
+    cacheStatus: 'hit' | 'miss' | 'disabled' | 'error';
+    chunks: number;
+    distanceKm: number;
+    durationMin: number;
+}
+
+export interface RouteResult {
+    geoJson: FeatureCollection;
+    _metadata: RouteMetadata;
+}
+
 /**
  * Generates a route by calling the Radar API.
  * This function is designed to be used server-side to keep API keys secure.
- * 
+ *
  * @param options - Configuration options including coordinates and mode.
- * @returns A GeoJSON FeatureCollection containing the route.
+ * @returns Route result with GeoJSON and metadata.
  */
-export async function getRadarRoute(options: RouteGenerationOptions): Promise<FeatureCollection> {
+export async function getRadarRoute(options: RouteGenerationOptions): Promise<RouteResult> {
     const { coordinates, mode } = options;
 
     if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 2) {
@@ -181,7 +198,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
 
     // Use mode-specific tolerance for Douglas-Peucker simplification from config
     const tolerance = SIMPLIFICATION_TOLERANCES[mode as TransportMode] || SIMPLIFICATION_TOLERANCES["cycling-regular"];
-    
+
     const inputPointCount = coordinates.length;
     let simplifiedCoordinates = simplifyPoints(coordinates, tolerance);
 
@@ -201,24 +218,39 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
         riverCrossingsDetected = result.crossingsFound;
     }
 
+    const metadata: RouteMetadata = {
+        inputPoints: inputPointCount,
+        simplifiedPoints: simplifiedCoordinates.length,
+        waypointsAfterPreprocess: simplifiedCoordinates.length,
+        riverCrossingsDetected,
+        routePoints: 0,
+        cacheStatus: 'disabled',
+        chunks: 0,
+        distanceKm: 0,
+        durationMin: 0,
+    };
+
     // Generate cache key from simplified coordinates and mode
     const cacheKey = `${CACHE.routeKeyPrefix}${mode}:${hashCoordinates(simplifiedCoordinates as [number, number][])}`;
-    
+
     // Get Redis client (may be null if not configured)
     const redis = getRedisClient();
-    
+
     // Try to get cached result (only if Redis is configured)
     if (redis) {
         try {
-            const cachedResult = await redis.get<FeatureCollection>(cacheKey);
+            const cachedResult = await redis.get<RouteResult>(cacheKey);
             if (cachedResult) {
                 console.log(`[RadarService] Cache HIT for key: ${cacheKey}`);
+                cachedResult._metadata.cacheStatus = 'hit';
                 return cachedResult;
             }
             console.log(`[RadarService] Cache MISS for key: ${cacheKey}`);
+            metadata.cacheStatus = 'miss';
         } catch (cacheError) {
             // Redis error - continue without cache
             console.log(`[RadarService] Cache error, proceeding without cache: ${cacheError instanceof Error ? cacheError.message : 'unknown error'}`);
+            metadata.cacheStatus = 'error';
         }
     } else {
         console.log(`[RadarService] Redis not configured, proceeding without cache`);
@@ -230,23 +262,27 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     if (!RADAR_API_KEY) {
         console.warn("[RadarService] No Radar API key provided, using mock response");
         const mockCoordinates = simplifiedCoordinates.map((c: number[]) => [c[1], c[0]]); // Convert to [lng, lat] for GeoJSON
+        metadata.routePoints = mockCoordinates.length;
         return {
-            type: "FeatureCollection",
-            features: [
-                {
-                    type: "Feature",
-                    properties: {
-                        summary: {
-                            distance: 1234,
-                            duration: 567
+            geoJson: {
+                type: "FeatureCollection",
+                features: [
+                    {
+                        type: "Feature",
+                        properties: {
+                            summary: {
+                                distance: 1234,
+                                duration: 567
+                            }
+                        },
+                        geometry: {
+                            type: "LineString",
+                            coordinates: mockCoordinates
                         }
-                    },
-                    geometry: {
-                        type: "LineString",
-                        coordinates: mockCoordinates
                     }
-                }
-            ]
+                ]
+            },
+            _metadata: metadata,
         };
     }
 
@@ -362,45 +398,57 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     // If no features were generated (e.g. API errors for all chunks), fallback to straight line
     if (features.length === 0) {
         console.warn('[RadarService] No features generated, falling back to straight line');
+        metadata.routePoints = simplifiedCoordinates.length;
         return {
+            geoJson: {
+                type: "FeatureCollection",
+                features: [
+                    {
+                        type: "Feature",
+                        properties: {
+                            summary: {
+                                distance: 0,
+                                duration: 0
+                            }
+                        },
+                        geometry: {
+                            type: "LineString",
+                            coordinates: simplifiedCoordinates.map(p => [p[1], p[0]]) // GeoJSON is [lng, lat]
+                        }
+                    }
+                ]
+            },
+            _metadata: metadata,
+        };
+    }
+
+    console.log(`[RadarService] Route generated: ${mergedCoordinates.length} route points, ${(totalDistance / 1000).toFixed(2)}km, ${Math.round(totalDuration / 60)}min`);
+
+    metadata.routePoints = mergedCoordinates.length;
+    metadata.chunks = chunks.length;
+    metadata.distanceKm = Math.round(totalDistance / 10) / 100;
+    metadata.durationMin = Math.round(totalDuration / 60);
+
+    const result: RouteResult = {
+        geoJson: {
             type: "FeatureCollection",
             features: [
                 {
                     type: "Feature",
                     properties: {
                         summary: {
-                            distance: 0,
-                            duration: 0
+                            distance: totalDistance,
+                            duration: totalDuration
                         }
                     },
                     geometry: {
                         type: "LineString",
-                        coordinates: simplifiedCoordinates.map(p => [p[1], p[0]]) // GeoJSON is [lng, lat]
+                        coordinates: mergedCoordinates
                     }
                 }
             ]
-        };
-    }
-
-    console.log(`[RadarService] Route generated: ${mergedCoordinates.length} route points, ${(totalDistance / 1000).toFixed(2)}km, ${Math.round(totalDuration / 60)}min`);
-    
-    const result: FeatureCollection = {
-        type: "FeatureCollection",
-        features: [
-            {
-                type: "Feature",
-                properties: {
-                    summary: {
-                        distance: totalDistance,
-                        duration: totalDuration
-                    }
-                },
-                geometry: {
-                    type: "LineString",
-                    coordinates: mergedCoordinates
-                }
-            }
-        ]
+        },
+        _metadata: metadata,
     };
 
     // Cache the result for future requests (only if Redis is configured)

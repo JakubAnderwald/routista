@@ -58,16 +58,16 @@ describe('Route Accuracy Tests', () => {
         const geoPoints = scalePointsToGeo(shapePoints, CENTER, RADIUS);
 
         // 3. Generate route
-        const routeData = await getRadarRoute({ coordinates: geoPoints, mode: MODE });
-        expect(routeData).toBeDefined();
-        expect(routeData.features).toBeDefined();
+        const routeResult = await getRadarRoute({ coordinates: geoPoints, mode: MODE });
+        expect(routeResult).toBeDefined();
+        expect(routeResult.geoJson.features).toBeDefined();
 
         // Debug logging
         // console.log('GeoPoints:', JSON.stringify(geoPoints.slice(0, 5)));
-        // console.log('RouteData Features:', JSON.stringify(routeData.features));
+        // console.log('RouteData Features:', JSON.stringify(routeResult.geoJson.features));
 
         // 4. Calculate accuracy
-        const accuracy = calculateRouteAccuracy(geoPoints, routeData, RADIUS);
+        const accuracy = calculateRouteAccuracy(geoPoints, routeResult.geoJson, RADIUS);
         console.log(`Accuracy for ${imageFile}: ${accuracy.toFixed(2)}%`);
 
         // 5. Assert accuracy

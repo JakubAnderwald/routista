@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { hashCoordinates, getRadarRoute, getRadarAutocomplete } from '../../src/lib/radarService';
+import { hashCoordinates, getRadarRoute, getRadarAutocomplete, preprocessRiverCrossings } from '../../src/lib/radarService';
 
 // Mock the Redis module
 vi.mock('@upstash/redis', () => ({
@@ -18,6 +18,17 @@ vi.mock('@sentry/nextjs', () => ({
 // Mock fetch
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
+
+/** Mock response for river crossing probe that indicates no crossing (low ratio) */
+const noCrossingProbeResponse = {
+    ok: true,
+    json: async () => ({
+        routes: [{
+            distance: { value: 200 },
+            geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] },
+        }],
+    }),
+};
 
 describe('radarService', () => {
     beforeEach(() => {
@@ -173,9 +184,11 @@ describe('radarService', () => {
                 mode: 'foot-walking',
             });
 
-            expect(result.type).toBe('FeatureCollection');
-            expect(result.features).toHaveLength(1);
-            expect(result.features[0].geometry.type).toBe('LineString');
+            expect(result.geoJson.type).toBe('FeatureCollection');
+            expect(result.geoJson.features).toHaveLength(1);
+            expect(result.geoJson.features[0].geometry.type).toBe('LineString');
+            expect(result._metadata).toBeDefined();
+            expect(result._metadata.cacheStatus).toBe('disabled');
         });
 
         it('should call Radar API when API key is configured', async () => {
@@ -192,6 +205,8 @@ describe('radarService', () => {
                 }],
             };
 
+            // River crossing probe (car mode) + actual route request
+            mockFetch.mockResolvedValueOnce(noCrossingProbeResponse);
             mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => mockRouteResponse,
@@ -203,14 +218,17 @@ describe('radarService', () => {
             });
 
             expect(mockFetch).toHaveBeenCalled();
-            expect(result.type).toBe('FeatureCollection');
-            expect(result.features).toHaveLength(1);
-            expect(result.features[0].properties?.summary?.distance).toBe(1000);
+            expect(result.geoJson.type).toBe('FeatureCollection');
+            expect(result.geoJson.features).toHaveLength(1);
+            expect(result.geoJson.features[0].properties?.summary?.distance).toBe(1000);
+            expect(result._metadata.cacheStatus).toBe('disabled');
         });
 
         it('should throw error when Radar API returns error', async () => {
             vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
 
+            // River crossing probe (car mode) + failing route request
+            mockFetch.mockResolvedValueOnce(noCrossingProbeResponse);
             mockFetch.mockResolvedValueOnce({
                 ok: false,
                 status: 401,
@@ -227,6 +245,8 @@ describe('radarService', () => {
         it('should use correct mode mapping for foot-walking', async () => {
             vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
 
+            // River crossing probe (car mode)
+            mockFetch.mockResolvedValueOnce(noCrossingProbeResponse);
             mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({
@@ -243,14 +263,16 @@ describe('radarService', () => {
                 mode: 'foot-walking',
             });
 
-            // Check that the URL includes mode=foot
-            const callUrl = mockFetch.mock.calls[0][0];
+            // calls[0] is river crossing probe (car), calls[1] is the actual route
+            const callUrl = mockFetch.mock.calls[1][0];
             expect(callUrl).toContain('mode=foot');
         });
 
         it('should use correct mode mapping for cycling-regular', async () => {
             vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
 
+            // River crossing probe (car mode)
+            mockFetch.mockResolvedValueOnce(noCrossingProbeResponse);
             mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({
@@ -267,7 +289,8 @@ describe('radarService', () => {
                 mode: 'cycling-regular',
             });
 
-            const callUrl = mockFetch.mock.calls[0][0];
+            // calls[0] is river crossing probe (car), calls[1] is the actual route
+            const callUrl = mockFetch.mock.calls[1][0];
             expect(callUrl).toContain('mode=bike');
         });
 
@@ -297,6 +320,8 @@ describe('radarService', () => {
         it('should return fallback when no routes returned', async () => {
             vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
 
+            // River crossing probe (car mode) + empty route response
+            mockFetch.mockResolvedValueOnce(noCrossingProbeResponse);
             mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ routes: [] }),
@@ -308,8 +333,135 @@ describe('radarService', () => {
             });
 
             // Should return fallback straight line
-            expect(result.type).toBe('FeatureCollection');
-            expect(result.features).toHaveLength(1);
+            expect(result.geoJson.type).toBe('FeatureCollection');
+            expect(result.geoJson.features).toHaveLength(1);
+        });
+    });
+
+    describe('preprocessRiverCrossings', () => {
+        it('should return original waypoints when all segments are below threshold', async () => {
+            // Two points ~11m apart (well below 150m threshold)
+            const waypoints: [number, number][] = [
+                [51.505, -0.09],
+                [51.5051, -0.09],
+            ];
+
+            const result = await preprocessRiverCrossings(waypoints, 'test-key');
+
+            expect(result.crossingsFound).toBe(0);
+            expect(result.waypoints).toEqual(waypoints);
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        it('should detect crossing when car detour ratio exceeds threshold', async () => {
+            // Two points ~275m apart (simulating Thames crossing)
+            const waypoints: [number, number][] = [
+                [51.505, -0.09],   // North bank
+                [51.5025, -0.09],  // South bank (~275m away)
+            ];
+
+            // Car route returns ~1km distance (ratio ~3.6) with bridge geometry
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    routes: [{
+                        distance: { value: 1000 },
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [
+                                [-0.09, 51.505],
+                                [-0.088, 51.5045],
+                                [-0.086, 51.504],
+                                [-0.085, 51.5035],
+                                [-0.084, 51.503],
+                                [-0.09, 51.5025],
+                            ],
+                        },
+                    }],
+                }),
+            });
+
+            const result = await preprocessRiverCrossings(waypoints, 'test-key');
+
+            expect(result.crossingsFound).toBe(1);
+            expect(result.waypoints.length).toBe(2 + 3); // original 2 + 3 bridge points
+            // First and last waypoints preserved
+            expect(result.waypoints[0]).toEqual(waypoints[0]);
+            expect(result.waypoints[result.waypoints.length - 1]).toEqual(waypoints[1]);
+        });
+
+        it('should not detect crossing when ratio is below threshold', async () => {
+            // Points ~200m apart
+            const waypoints: [number, number][] = [
+                [51.505, -0.09],
+                [51.5032, -0.09],
+            ];
+
+            // Car route returns ~300m (ratio ~1.5, below 3.0 threshold)
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    routes: [{
+                        distance: { value: 300 },
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [[-0.09, 51.505], [-0.09, 51.5032]],
+                        },
+                    }],
+                }),
+            });
+
+            const result = await preprocessRiverCrossings(waypoints, 'test-key');
+
+            expect(result.crossingsFound).toBe(0);
+            expect(result.waypoints).toEqual(waypoints);
+        });
+
+        it('should handle API failure gracefully and keep original waypoints', async () => {
+            const waypoints: [number, number][] = [
+                [51.505, -0.09],
+                [51.5025, -0.09],
+            ];
+
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            const result = await preprocessRiverCrossings(waypoints, 'test-key');
+
+            expect(result.crossingsFound).toBe(0);
+            expect(result.waypoints).toEqual(waypoints);
+        });
+
+        it('should respect max probes budget', async () => {
+            // Create 15 waypoints all >150m apart — only 10 probes should fire
+            const waypoints: [number, number][] = Array.from({ length: 16 }, (_, i) => [
+                51.5 + i * 0.002, // ~222m apart
+                -0.09,
+            ] as [number, number]);
+
+            // All probes return low ratio (no crossings)
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    routes: [{
+                        distance: { value: 250 },
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [[-0.09, 51.5], [-0.09, 51.502]],
+                        },
+                    }],
+                }),
+            });
+
+            await preprocessRiverCrossings(waypoints, 'test-key');
+
+            // Should be capped at 10 probes
+            expect(mockFetch).toHaveBeenCalledTimes(10);
+        });
+
+        it('should return original waypoints for fewer than 2 points', async () => {
+            const result = await preprocessRiverCrossings([[51.5, -0.09]], 'test-key');
+            expect(result.crossingsFound).toBe(0);
+            expect(result.waypoints).toEqual([[51.5, -0.09]]);
         });
     });
 

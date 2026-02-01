@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
         const result = await getRadarRoute({ coordinates, mode });
 
-        return NextResponse.json(result);
+        return NextResponse.json({ ...result.geoJson, _metadata: result._metadata });
 
     } catch (error: unknown) {
         console.error("[API] Error generating route:", error);

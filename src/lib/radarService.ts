@@ -2,12 +2,14 @@ import { simplifyPoints } from "./geoUtils";
 import { FeatureCollection, Feature } from "geojson";
 import { Redis } from "@upstash/redis";
 import * as Sentry from "@sentry/nextjs";
-import { 
-    SIMPLIFICATION_TOLERANCES, 
-    MODE_TO_RADAR, 
-    TransportMode 
+import {
+    SIMPLIFICATION_TOLERANCES,
+    MODE_TO_RADAR,
+    TransportMode,
+    RIVER_CROSSING,
 } from "@/config";
 import { RADAR_API, CACHE } from "@/config";
+import { calculateDistance } from "./geoUtils";
 
 /**
  * Create Redis client from environment variables.
@@ -62,13 +64,132 @@ export function hashCoordinates(coordinates: [number, number][]): string {
 }
 
 /**
+ * Detects river/water crossings between consecutive waypoints by probing
+ * with car-mode routing. When a crossing is found, inserts bridge waypoints
+ * extracted from the car route so the foot/bike router is guided over a bridge.
+ *
+ * @internal Exported for testing purposes
+ */
+export async function preprocessRiverCrossings(
+    waypoints: [number, number][],
+    apiKey: string
+): Promise<{ waypoints: [number, number][]; crossingsFound: number }> {
+    if (waypoints.length < 2) {
+        return { waypoints, crossingsFound: 0 };
+    }
+
+    // Find candidate segments: consecutive pairs with straight-line distance > threshold
+    const candidates: { index: number; distance: number }[] = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+        const dist = calculateDistance(waypoints[i], waypoints[i + 1]);
+        if (dist > RIVER_CROSSING.minSegmentDistance) {
+            candidates.push({ index: i, distance: dist });
+        }
+    }
+
+    // Sort by distance descending, cap at maxProbes
+    candidates.sort((a, b) => b.distance - a.distance);
+    const probes = candidates.slice(0, RIVER_CROSSING.maxProbes);
+
+    // Probe each candidate with car-mode routing
+    const crossings: { index: number; bridgePoints: [number, number][] }[] = [];
+
+    for (const probe of probes) {
+        const w1 = waypoints[probe.index];
+        const w2 = waypoints[probe.index + 1];
+
+        try {
+            const locationsParam = `${w1[0]},${w1[1]}|${w2[0]},${w2[1]}`;
+            const url = new URL('https://api.radar.io/v1/route/directions');
+            url.searchParams.append('locations', locationsParam);
+            url.searchParams.append('mode', 'car');
+            url.searchParams.append('geometry', 'linestring');
+            url.searchParams.append('units', 'metric');
+
+            const response = await fetch(url.toString(), {
+                method: "GET",
+                headers: { "Authorization": apiKey },
+            });
+
+            if (!response.ok) continue;
+
+            const data = await response.json();
+            if (!data.routes || data.routes.length === 0) continue;
+
+            const route = data.routes[0];
+            const carDist = route.distance?.value || 0;
+            const ratio = carDist / probe.distance;
+
+            if (ratio > RIVER_CROSSING.detourRatioThreshold) {
+                // Extract bridge waypoints from middle 60% of car route geometry
+                const coords: number[][] = route.geometry?.coordinates || [];
+                if (coords.length >= 2) {
+                    const startIdx = Math.floor(coords.length * 0.2);
+                    const endIdx = Math.floor(coords.length * 0.8);
+                    const bridgeSection = coords.slice(startIdx, endIdx + 1);
+
+                    const bridgePoints: [number, number][] = [];
+                    const count = RIVER_CROSSING.bridgePointCount;
+                    for (let j = 0; j < count; j++) {
+                        const t = bridgeSection.length <= 1 ? 0 : j / (count - 1);
+                        const idx = Math.min(Math.floor(t * (bridgeSection.length - 1)), bridgeSection.length - 1);
+                        // Radar returns [lng, lat], convert to [lat, lng]
+                        bridgePoints.push([bridgeSection[idx][1], bridgeSection[idx][0]]);
+                    }
+
+                    crossings.push({ index: probe.index, bridgePoints });
+                    console.log(`[RadarService] River crossing detected between waypoints ${probe.index}-${probe.index + 1} (ratio: ${ratio.toFixed(1)}, dist: ${probe.distance.toFixed(0)}m)`);
+                }
+            }
+
+            // Small delay between probes
+            await new Promise(resolve => setTimeout(resolve, 100));
+        } catch {
+            // Probe failed — skip this segment, keep original waypoints
+            console.warn(`[RadarService] River crossing probe failed for segment ${probe.index}`);
+        }
+    }
+
+    if (crossings.length === 0) {
+        return { waypoints, crossingsFound: 0 };
+    }
+
+    // Insert bridge waypoints from end to start to avoid index shifts
+    crossings.sort((a, b) => b.index - a.index);
+    const result = [...waypoints];
+    for (const crossing of crossings) {
+        result.splice(crossing.index + 1, 0, ...crossing.bridgePoints);
+    }
+
+    console.log(`[RadarService] Preprocessed ${crossings.length} river crossing(s), waypoints: ${waypoints.length} → ${result.length}`);
+    return { waypoints: result, crossingsFound: crossings.length };
+}
+
+export interface RouteMetadata {
+    inputPoints: number;
+    simplifiedPoints: number;
+    waypointsAfterPreprocess: number;
+    riverCrossingsDetected: number;
+    routePoints: number;
+    cacheStatus: 'hit' | 'miss' | 'disabled' | 'error';
+    chunks: number;
+    distanceKm: number;
+    durationMin: number;
+}
+
+export interface RouteResult {
+    geoJson: FeatureCollection;
+    _metadata: RouteMetadata;
+}
+
+/**
  * Generates a route by calling the Radar API.
  * This function is designed to be used server-side to keep API keys secure.
- * 
+ *
  * @param options - Configuration options including coordinates and mode.
- * @returns A GeoJSON FeatureCollection containing the route.
+ * @returns Route result with GeoJSON and metadata.
  */
-export async function getRadarRoute(options: RouteGenerationOptions): Promise<FeatureCollection> {
+export async function getRadarRoute(options: RouteGenerationOptions): Promise<RouteResult> {
     const { coordinates, mode } = options;
 
     if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 2) {
@@ -77,30 +198,59 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
 
     // Use mode-specific tolerance for Douglas-Peucker simplification from config
     const tolerance = SIMPLIFICATION_TOLERANCES[mode as TransportMode] || SIMPLIFICATION_TOLERANCES["cycling-regular"];
-    
+
     const inputPointCount = coordinates.length;
-    const simplifiedCoordinates = simplifyPoints(coordinates, tolerance);
-    
+    let simplifiedCoordinates = simplifyPoints(coordinates, tolerance);
+
     console.log(`[RadarService] Simplification: ${inputPointCount} → ${simplifiedCoordinates.length} points (tolerance: ${tolerance}, mode: ${mode})`);
+
+    // Pre-process river crossings for foot/bike modes
+    const RADAR_API_KEY_EARLY = process.env.NEXT_PUBLIC_RADAR_LIVE_PK || process.env.NEXT_PUBLIC_RADAR_TEST_PK;
+    const radarModeEarly = MODE_TO_RADAR[mode as TransportMode] || "car";
+    let riverCrossingsDetected = 0;
+
+    if (RADAR_API_KEY_EARLY && (radarModeEarly === 'foot' || radarModeEarly === 'bike')) {
+        const result = await preprocessRiverCrossings(
+            simplifiedCoordinates as [number, number][],
+            RADAR_API_KEY_EARLY
+        );
+        simplifiedCoordinates = result.waypoints;
+        riverCrossingsDetected = result.crossingsFound;
+    }
+
+    const metadata: RouteMetadata = {
+        inputPoints: inputPointCount,
+        simplifiedPoints: simplifiedCoordinates.length,
+        waypointsAfterPreprocess: simplifiedCoordinates.length,
+        riverCrossingsDetected,
+        routePoints: 0,
+        cacheStatus: 'disabled',
+        chunks: 0,
+        distanceKm: 0,
+        durationMin: 0,
+    };
 
     // Generate cache key from simplified coordinates and mode
     const cacheKey = `${CACHE.routeKeyPrefix}${mode}:${hashCoordinates(simplifiedCoordinates as [number, number][])}`;
-    
+
     // Get Redis client (may be null if not configured)
     const redis = getRedisClient();
-    
+
     // Try to get cached result (only if Redis is configured)
     if (redis) {
         try {
-            const cachedResult = await redis.get<FeatureCollection>(cacheKey);
+            const cachedResult = await redis.get<RouteResult>(cacheKey);
             if (cachedResult) {
                 console.log(`[RadarService] Cache HIT for key: ${cacheKey}`);
+                cachedResult._metadata.cacheStatus = 'hit';
                 return cachedResult;
             }
             console.log(`[RadarService] Cache MISS for key: ${cacheKey}`);
+            metadata.cacheStatus = 'miss';
         } catch (cacheError) {
             // Redis error - continue without cache
             console.log(`[RadarService] Cache error, proceeding without cache: ${cacheError instanceof Error ? cacheError.message : 'unknown error'}`);
+            metadata.cacheStatus = 'error';
         }
     } else {
         console.log(`[RadarService] Redis not configured, proceeding without cache`);
@@ -112,23 +262,27 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     if (!RADAR_API_KEY) {
         console.warn("[RadarService] No Radar API key provided, using mock response");
         const mockCoordinates = simplifiedCoordinates.map((c: number[]) => [c[1], c[0]]); // Convert to [lng, lat] for GeoJSON
+        metadata.routePoints = mockCoordinates.length;
         return {
-            type: "FeatureCollection",
-            features: [
-                {
-                    type: "Feature",
-                    properties: {
-                        summary: {
-                            distance: 1234,
-                            duration: 567
+            geoJson: {
+                type: "FeatureCollection",
+                features: [
+                    {
+                        type: "Feature",
+                        properties: {
+                            summary: {
+                                distance: 1234,
+                                duration: 567
+                            }
+                        },
+                        geometry: {
+                            type: "LineString",
+                            coordinates: mockCoordinates
                         }
-                    },
-                    geometry: {
-                        type: "LineString",
-                        coordinates: mockCoordinates
                     }
-                }
-            ]
+                ]
+            },
+            _metadata: metadata,
         };
     }
 
@@ -244,45 +398,57 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     // If no features were generated (e.g. API errors for all chunks), fallback to straight line
     if (features.length === 0) {
         console.warn('[RadarService] No features generated, falling back to straight line');
+        metadata.routePoints = simplifiedCoordinates.length;
         return {
+            geoJson: {
+                type: "FeatureCollection",
+                features: [
+                    {
+                        type: "Feature",
+                        properties: {
+                            summary: {
+                                distance: 0,
+                                duration: 0
+                            }
+                        },
+                        geometry: {
+                            type: "LineString",
+                            coordinates: simplifiedCoordinates.map(p => [p[1], p[0]]) // GeoJSON is [lng, lat]
+                        }
+                    }
+                ]
+            },
+            _metadata: metadata,
+        };
+    }
+
+    console.log(`[RadarService] Route generated: ${mergedCoordinates.length} route points, ${(totalDistance / 1000).toFixed(2)}km, ${Math.round(totalDuration / 60)}min`);
+
+    metadata.routePoints = mergedCoordinates.length;
+    metadata.chunks = chunks.length;
+    metadata.distanceKm = Math.round(totalDistance / 10) / 100;
+    metadata.durationMin = Math.round(totalDuration / 60);
+
+    const result: RouteResult = {
+        geoJson: {
             type: "FeatureCollection",
             features: [
                 {
                     type: "Feature",
                     properties: {
                         summary: {
-                            distance: 0,
-                            duration: 0
+                            distance: totalDistance,
+                            duration: totalDuration
                         }
                     },
                     geometry: {
                         type: "LineString",
-                        coordinates: simplifiedCoordinates.map(p => [p[1], p[0]]) // GeoJSON is [lng, lat]
+                        coordinates: mergedCoordinates
                     }
                 }
             ]
-        };
-    }
-
-    console.log(`[RadarService] Route generated: ${mergedCoordinates.length} route points, ${(totalDistance / 1000).toFixed(2)}km, ${Math.round(totalDuration / 60)}min`);
-    
-    const result: FeatureCollection = {
-        type: "FeatureCollection",
-        features: [
-            {
-                type: "Feature",
-                properties: {
-                    summary: {
-                        distance: totalDistance,
-                        duration: totalDuration
-                    }
-                },
-                geometry: {
-                    type: "LineString",
-                    coordinates: mergedCoordinates
-                }
-            }
-        ]
+        },
+        _metadata: metadata,
     };
 
     // Cache the result for future requests (only if Redis is configured)

@@ -5,14 +5,21 @@ import { Moon, Sun, Laptop } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useTranslations } from "next-intl"
 
+// Returns false during SSR/hydration and true once running on the client,
+// without a setState-in-effect (which eslint-plugin-react-hooks v7.1 flags).
+const emptySubscribe = () => () => {}
+function useMounted() {
+    return React.useSyncExternalStore(
+        emptySubscribe,
+        () => true,
+        () => false,
+    )
+}
+
 export function ThemeToggle() {
     const { setTheme, theme } = useTheme()
     const t = useTranslations('ThemeToggle')
-    const [mounted, setMounted] = React.useState(false)
-
-    React.useEffect(() => {
-        setMounted(true)
-    }, [])
+    const mounted = useMounted()
 
     if (!mounted) {
         return <div className="w-9 h-9" /> // Placeholder to avoid hydration mismatch

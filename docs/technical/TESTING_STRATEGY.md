@@ -78,7 +78,6 @@ We follow the test pyramid approach, with more tests at the bottom (unit) and fe
 | `rateLimit.test.ts` | Rate-limiting logic |
 | `routeGenerator.test.ts` | Route generation client |
 | `shareImageGenerator.test.ts` | Share functionality |
-| `stravaService.test.ts` | Strava integration |
 | `utils.test.ts` | Utility functions |
 
 ---
@@ -108,7 +107,7 @@ We follow the test pyramid approach, with more tests at the bottom (unit) and fe
 | `ImageUpload.test.tsx` | 97% | Dropzone, file handling, preview, drag-drop, keyboard a11y |
 | `ModeSelector.test.tsx` | 100% | Mode selection, selected state styling |
 | `ShareModal.test.tsx` | 82% | Platform selection, copy/download, close behavior |
-| `StravaButton.test.tsx` | 81% | OAuth flow, upload, error handling, states |
+| `StravaButton.test.tsx` | 81% | Manual export flow (GPX download + opens Strava import page), error handling, states |
 
 **Priority components (remaining):**
 
@@ -145,7 +144,7 @@ export default defineConfig({
 **Characteristics:**
 - Test request validation
 - Test error responses
-- Mock external APIs (Radar, Strava)
+- Mock external APIs (Radar)
 - Verify rate limiting behavior
 
 **What to test:**
@@ -154,8 +153,6 @@ export default defineConfig({
 |-------|------------|
 | `/api/radar/directions` | Coordinate validation, chunking, error propagation |
 | `/api/radar/autocomplete` | Query validation, empty results |
-| `/api/strava/callback` | OAuth exchange, token storage, error handling |
-| `/api/strava/upload` | GPX validation, upload flow, error states |
 
 **Testing pattern:**
 ```typescript
@@ -201,7 +198,7 @@ describe('/api/radar/directions', () => {
 |---------|-------|
 | **Create route from image** | Navigate → Load image → Select area → Choose mode → Generate → Download |
 | **Create route from example** | Navigate → Select example → Generate |
-| **Strava integration** | Connect → Upload route |
+| **Strava export** | Generate route → Export to Strava → GPX downloaded + import page opens |
 | **Mobile flow** | Resize viewport → Complete flow |
 
 ---

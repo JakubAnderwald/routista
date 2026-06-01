@@ -77,6 +77,21 @@ The available Routes API endpoints are read-only:
 
 See [Strava API Routes Documentation](https://developers.strava.com/docs/reference/#api-Routes) for details.
 
+## June 2026 Strava Developer Program Update
+
+On **June 1, 2026**, Strava emailed developers announcing changes to its API and Developer Program. The key takeaway for Routista: **the announcement introduces no route-creation / write endpoint.** The Routes API remains read-only (Export GPX/TCX, Get Route, List Athlete Routes), so the long-standing blocker for direct route push is unchanged — and there are now *additional* barriers.
+
+| Change | Relevance to Routista |
+| :--- | :--- |
+| **Official Strava MCP** (read your own data, incl. subscriber data) | Read-only — for athletes analyzing their own data. **Not** a route-write/push path. No impact on Routista's "push a planned route" use case. |
+| **New tiers** (Standard / Extended Access) + new API Agreement & Policy | Only relevant if Routista ever uses the API. The manual flow uses no API, so it is unaffected today. |
+| **Standard Tier requires a paid Strava subscription** (active devs get 3 months free) | A future cost/constraint for any direct-integration attempt. |
+| **Intermediary-platform access restricted** | Direct integrations unaffected. Routista's manual flow touches no athlete data — but this rules out any future "route data via a third-party layer" design. |
+| **Club + Segments Explore endpoints deprecated** (Sep 1, 2026) | Routista uses none of these. No impact. |
+| **2027 technical changes** (Jun 1, 2027) | No code impact today (Routista has no API client), but **prerequisites** for any future integration — see below. |
+
+**Conclusion:** Keep the current manual GPX-import flow. Direct route push remains impossible (tracked in issue #22).
+
 ## Historical Context
 
 The original implementation attempted to use OAuth and a `POST /api/v3/routes` endpoint, which:
@@ -92,9 +107,17 @@ The current manual import approach:
 
 ## Future Considerations
 
-If Strava ever opens a public route creation API, the implementation could be updated to:
-1. Re-enable OAuth flow
+If Strava ever opens a public route-creation API, the implementation could be updated to:
+1. Re-enable an OAuth flow
 2. Push routes directly via API
 3. Provide instant "View on Strava" links after upload
 
-For now, the manual import flow provides the best user experience given API limitations.
+Any such future integration **must** be built against the 2027 technical requirements from day one (effective **Jun 1, 2027**):
+
+- **Auth tokens in request headers**, not form/query params.
+- **New base URL**: `https://www.strava.com/api/v3` → `https://www.api-v3.strava.com`.
+- **`oauth/deauthorize` retired** in favor of `oauth/revoke`.
+
+…and within the new program constraints: a **paid Strava subscription** is required for Standard-Tier developers, and **intermediary-platform access is banned** (no routing route data through a third-party layer).
+
+For now, the manual import flow provides the best user experience given these limitations.

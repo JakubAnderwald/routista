@@ -62,11 +62,9 @@ export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
   // Handle export button click
   const handleExport = useCallback(() => {
     if (!routeData) {
-      console.error('[StravaButton] No route data available');
       return;
     }
 
-    console.log('[StravaButton] Starting export to Strava...');
     setState('processing');
     setErrorMessage(null);
 
@@ -74,11 +72,9 @@ export function StravaButton({ routeData, className = '' }: StravaButtonProps) {
       // Generate and download GPX
       const gpx = generateGPX(routeData);
       downloadGPX(gpx, 'routista-route.gpx');
-      console.log('[StravaButton] GPX file downloaded');
 
       // Open Strava import page in new tab
       window.open(STRAVA_IMPORT_URL, '_blank', 'noopener,noreferrer');
-      console.log('[StravaButton] Opened Strava import page');
 
       // Show instruction message
       setShowInstruction(true);

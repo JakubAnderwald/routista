@@ -10,7 +10,7 @@ jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # Disable shallow clone for full git history (fixes SCM blame)
           fetch-depth: 0

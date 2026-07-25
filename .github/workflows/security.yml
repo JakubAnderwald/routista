@@ -29,15 +29,34 @@ jobs:
       - name: Security Audit (production dependencies)
         run: npm audit --audit-level=high --omit=dev
 
-      # Dev-only advisories cannot always be fixed. eslint@9 and the
-      # eslint-plugin-* packages pinned by eslint-config-next all depend on
-      # minimatch@3 -> brace-expansion@1, and the only patch for
-      # GHSA-mh99-v99m-4gvg is brace-expansion@5, whose CJS export shape is
-      # incompatible (object, not a callable). eslint@10 would drop that chain
-      # but breaks eslint-plugin-react@7. Advisory *findings* are therefore
-      # reported rather than blocking — but a failure to actually run the audit
-      # (registry outage, unreadable lockfile, npm CLI error) still fails the
-      # job, so real breakage is never silently swallowed.
+      # Dev-only advisories cannot always be fixed. Every current high finding
+      # traces to one root: GHSA-mh99-v99m-4gvg (brace-expansion DoS), reached
+      # via minimatch@3 -> brace-expansion@1. Two independent consumer groups
+      # pull it in:
+      #
+      #   eslint-side:  @eslint/config-array, @eslint/eslintrc  (via eslint@9)
+      #   plugin-side:  eslint-plugin-import, eslint-plugin-jsx-a11y,
+      #                 eslint-plugin-react  (pinned by eslint-config-next)
+      #
+      # Neither an eslint bump nor an override clears it, as of 2026-07:
+      #
+      #   - eslint@10 drops only the eslint-side pair. The three plugins depend
+      #     on minimatch@3 themselves, so the findings survive. (It also needs
+      #     eslint-plugin-react patched: version.js:31, jsx-filename-extension
+      #     .js:64 and forward-ref-uses-ref.js:60 call getFilename/
+      #     getSourceCode, removed in eslint@10. Verified as 3 lines, but a
+      #     patched transitive dep is not worth a partial audit win.)
+      #   - The advisory range is <=5.0.7, so ONLY brace-expansion>=5.0.8 fixes
+      #     it, and its CJS export is an object ({expand, ...}), not a callable
+      #     — minimatch@3 does `require('brace-expansion')(pattern)`.
+      #   - Overriding minimatch does not help either: minimatch@9 still uses
+      #     brace-expansion@^2 (also vulnerable), and minimatch@10 moved to
+      #     named exports, breaking all five callable consumers above.
+      #
+      # So advisory *findings* are reported rather than blocking — but a failure
+      # to actually run the audit (registry outage, unreadable lockfile, npm CLI
+      # error) still fails the job, so real breakage is never silently swallowed.
+      # Revisit when eslint-plugin-react ships eslint@10 support upstream.
       - name: Security Audit (all dependencies, informational)
         run: |
           set +e

@@ -49,7 +49,7 @@ export interface ScenarioMetrics {
  * @returns Rounded metrics for the generated route.
  */
 export async function measureScenario(scenario: Scenario): Promise<ScenarioMetrics> {
-    const waypoints = scenarioWaypoints(scenario);
+    const waypoints = await scenarioWaypoints(scenario);
     const route = await getRadarRoute({ coordinates: waypoints, mode: scenario.mode });
 
     const quality = summarizeRoute(
@@ -73,20 +73,6 @@ export async function measureScenario(scenario: Scenario): Promise<ScenarioMetri
         maxContiguousWaterMeters: water ? Math.round(water.maxContiguousWaterMeters) : null,
     };
 }
-
-/**
- * Scenarios that still travel along water.
- *
- * The river crossing repair fixed the reported case and its variants. What
- * remains is the deliberately extreme one: a star centred in the middle of the
- * Thames, where a fifth of the waypoints are in the water and some in-water
- * runs have no bridge close enough to reach. It improved six-fold — 24.3 km in
- * the water down to 4.0 km — but still travels along the river in places, so
- * it stays here to stop that silently getting worse.
- *
- * See `docs/technical/ISSUE_47_BASELINE.md`.
- */
-export const KNOWN_BROKEN = new Set(["london-star-on-river"]);
 
 function round(value: number, digits: number): number {
     const factor = 10 ** digits;

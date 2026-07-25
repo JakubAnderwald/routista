@@ -112,9 +112,9 @@
     "badLegCount": 27,
     "worstLegRatio": 41.5,
     "accuracyPercent": 94,
-    "waterMeters": null,
-    "waterCrossings": null,
-    "maxContiguousWaterMeters": null
+    "waterMeters": 0,
+    "waterCrossings": 0,
+    "maxContiguousWaterMeters": 0
   },
   "madrid-square-foot": {
     "lengthRatio": 1.27,
@@ -125,8 +125,47 @@
     "badLegCount": 1,
     "worstLegRatio": 3.8,
     "accuracyPercent": 80,
-    "waterMeters": null,
-    "waterCrossings": null,
-    "maxContiguousWaterMeters": null
+    "waterMeters": 0,
+    "waterCrossings": 0,
+    "maxContiguousWaterMeters": 0
+  },
+  "london-heart-image": {
+    "lengthRatio": 2.24,
+    "maxEdgeMeters": 96,
+    "longEdgeCount": 0,
+    "longEdgeMeters": 0,
+    "selfOverlapPercent": 25,
+    "badLegCount": 19,
+    "worstLegRatio": 11.6,
+    "accuracyPercent": 95,
+    "waterMeters": 492,
+    "waterCrossings": 4,
+    "maxContiguousWaterMeters": 251
+  },
+  "london-dino-image": {
+    "lengthRatio": 2.58,
+    "maxEdgeMeters": 153,
+    "longEdgeCount": 0,
+    "longEdgeMeters": 0,
+    "selfOverlapPercent": 33,
+    "badLegCount": 27,
+    "worstLegRatio": 8.4,
+    "accuracyPercent": 95,
+    "waterMeters": 895,
+    "waterCrossings": 10,
+    "maxContiguousWaterMeters": 177
+  },
+  "amsterdam-heart-foot": {
+    "lengthRatio": 2.25,
+    "maxEdgeMeters": 160,
+    "longEdgeCount": 0,
+    "longEdgeMeters": 0,
+    "selfOverlapPercent": 22,
+    "badLegCount": 36,
+    "worstLegRatio": 22.4,
+    "accuracyPercent": 94,
+    "waterMeters": 939,
+    "waterCrossings": 26,
+    "maxContiguousWaterMeters": 398
   }
 }

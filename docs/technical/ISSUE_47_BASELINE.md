@@ -180,8 +180,16 @@ Same scenarios, same measurement, before and after:
 | `london-heart-north` | 3.02x → 2.59x | 149 → 87 m | 45 → 35 | 35 → 35 | 54% → 35% | 94% → 93% |
 | `paris-heart-foot` | 1.89x → 1.63x | 155 → 135 m | 314 → 314 | 126 → 126 | 34% → 15% | 94% → 94% |
 | `budapest-heart-foot` | 2.26x → 1.83x | 323 → 387 m | 802 → 642 | 382 → 354 | 34% → 9% | 92% → 92% |
-| `madrid-heart-foot` | 2.41x → 2.46x | 143 → 470 m | — | — | 27% → 29% | 95% → 94% |
-| `madrid-square-foot` | 1.27x → 1.27x | 171 → 171 m | — | — | 1% → 1% | 80% → 80% |
+| `madrid-heart-foot` | 2.41x → 2.46x | 143 → 470 m | 0 | 0 | 27% → 29% | 95% → 94% |
+| `madrid-square-foot` | 1.27x → 1.27x | 171 → 171 m | 0 | 0 | 1% → 1% | 80% → 80% |
+
+Added after the fix, so measured once (all satisfy every invariant):
+
+| scenario | ratio | maxEdge | water m | maxRun | overlap | accuracy |
+|---|---|---|---|---|---|---|
+| `london-heart-image` | 2.24x | 96 m | 492 | 251 | 25% | 95% |
+| `london-dino-image` | 2.58x | 153 m | 895 | 177 | 33% | 95% |
+| `amsterdam-heart-foot` | 2.25x | 160 m | 939 | 398 | 22% | 94% |
 
 The reported case, `london-heart-foot`, goes from **23 km inside the Thames to 879 m** — three
 bridge crossings — with the longest unbroken run down from 7.4 km to 251 m, which is the width
@@ -191,27 +199,52 @@ km at 90%.
 The controls all improve slightly or hold steady, which is the chunk stitching fix showing up
 as less self-overlap everywhere. Driving is untouched, as intended.
 
+**`london-heart-image` is the one that matters most for confidence**: it is the same
+`heart-v2.png` a user picks, through the real extraction pipeline rather than a parametric
+outline, and it comes out at 2.24x with a 96 m longest edge and 95% accuracy.
+
 ### Known limitations
 
 - **`london-star-on-river` still travels along the river.** A star centred in the middle of
   the Thames with a 500 m radius puts a fifth of its waypoints in the water, and some runs have
   no bridge close enough to reach without a diversion longer than the shape. It improved
-  six-fold and is kept in `KNOWN_BROKEN` so it cannot silently get worse.
-- **`madrid-heart-foot` returned a 470 m edge** in this capture where the previous one topped
-  out at 143 m. Madrid has no water fixture and the route is otherwise unchanged, so this is
-  Radar returning different geometry between captures rather than a regression. The long-edge
-  invariant is only asserted where there is water data to interpret it.
+  six-fold and is listed under `knownIssues.waterTravel` so it cannot silently get worse.
+- **`madrid-heart-foot` contains a 470 m edge, and it is a real defect — a different one.**
+  Radar's foot profile routes pedestrians through the **Calle de Bailén road tunnel** under
+  Plaza de Oriente (`tunnel=yes`, `layer=-1`), turning a 40 m gap into a 1659 m detour with a
+  470 m straight edge. Same class as the Thames ferries — Radar using ways pedestrians cannot
+  — but a different way type, and not water, so the river crossing repair correctly leaves it
+  alone. Reproducible against live Radar, listed under `knownIssues.longEdge`, and worth its
+  own issue.
+
+  One consequence worth knowing: because the free detector only sees "an edge too long to be a
+  street", Madrid triggers an OSM fetch that then finds nothing to repair. That costs one
+  Overpass request per ~1.1 km grid cell per 30 days, and nothing else.
 - **Length ratios stay above 2x** even for healthy routes, because of the simplification
   finding above: waypoints end up ~40 m apart and the street grid cannot follow that closely.
 
 ## How regressions are caught
 
-`tests/integration/riverScenarios.test.ts` asserts, for every scenario outside `KNOWN_BROKEN`:
+Three invariants, in `tests/utils/routeInvariants.ts`, checked **both ways** for every
+scenario. A scenario that does not list an invariant under `knownIssues` must satisfy it; one
+that does must still *fail* it — so a case cannot be quietly fixed and left listed, nor
+regress into the list unnoticed.
 
-- longest unbroken run through water below `ROUTE_QUALITY.maxWaterCrossingMeters` (500 m)
-- no edge over 400 m for `foot` and `bike`, where water data exists to interpret it
-- length ratio under 3.5x and self-overlap under 60% for walking
+| invariant | rule |
+|---|---|
+| `waterTravel` | longest unbroken run through water below 500 m — water is crossed, never travelled along |
+| `longEdge` | no edge over 400 m for walking or cycling; bridge spans in the matrix reach 387 m, so this only catches ferries and tunnels |
+| `followsShape` | walking routes stay under 3.5x the shape length and 60% self-overlap |
 
-and that everything in `KNOWN_BROKEN` is still broken, so a scenario cannot be quietly fixed
-and left in the list. Every metric is also pinned in `tests/fixtures/baseline.json`, so drift
-in either direction fails the build.
+Backed by:
+
+- **`tests/fixtures/baseline.json`** — every metric pinned, so drift in either direction fails
+  the build, including improvements nobody intended.
+- **`tests/integration/routePipeline.test.ts`** — the route still generates when OSM data is
+  unavailable, request count stays bounded, no extra request is made when there is nothing to
+  repair, and the response still exports to GPX and scores for accuracy.
+- **`tests/live/riverScenarios.live.test.ts`** — the same invariants against live Radar, so
+  upstream changes surface as a failure rather than a stale fixture.
+- **`tests/live/repairEffect.live.test.ts`** — routes the same waypoints with the repair on and
+  off and asserts the difference. Without it, a scenario passing its invariants would prove
+  nothing: it might simply never have been broken.

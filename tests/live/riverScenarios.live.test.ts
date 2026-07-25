@@ -11,11 +11,11 @@
  * Run with: npm run test:live
  */
 
-import { describe, it, expect, beforeAll, vi } from "vitest";
+import { describe, it, beforeAll, vi } from "vitest";
 import dotenv from "dotenv";
-import { ROUTE_QUALITY } from "@/config";
 import { SCENARIOS } from "../fixtures/scenarios";
-import { KNOWN_BROKEN, measureScenario } from "../utils/routeMeasurement";
+import { measureScenario } from "../utils/routeMeasurement";
+import { checkAllInvariants } from "../utils/routeInvariants";
 import { useWaterFixture } from "../utils/mockOverpass";
 
 // Radar is the thing under test here, not Overpass: serve OSM from fixtures so
@@ -42,37 +42,17 @@ describe.skipIf(!LIVE)("river scenarios (live Radar)", () => {
         delete process.env.UPSTASH_REDIS_REST_TOKEN;
     });
 
-    it.each(SCENARIOS.filter(s => !KNOWN_BROKEN.has(s.id)))(
-        "$id still crosses water instead of travelling along it",
+    it.each(SCENARIOS)(
+        "$id still satisfies its route quality invariants",
         { timeout: 300_000 },
         async scenario => {
             useWaterFixture(scenario.city);
-            const metrics = await measureScenario(scenario);
 
-            if (metrics.maxContiguousWaterMeters !== null) {
-                expect(metrics.maxContiguousWaterMeters).toBeLessThan(
-                    ROUTE_QUALITY.maxWaterCrossingMeters
-                );
-            }
-            if (scenario.mode !== "driving-car") {
-                expect(metrics.maxEdgeMeters).toBeLessThan(400);
-            }
-        }
-    );
-
-    it.each(SCENARIOS.filter(s => KNOWN_BROKEN.has(s.id)))(
-        "$id reproduces issue #47 against live Radar",
-        { timeout: 300_000 },
-        async scenario => {
-            useWaterFixture(scenario.city);
-            const metrics = await measureScenario(scenario);
-
-            // If this starts failing, Radar changed something upstream: check
-            // whether the ferry ways are still in its walking graph before
-            // assuming our own fix regressed.
-            expect(metrics.maxContiguousWaterMeters).toBeGreaterThanOrEqual(
-                ROUTE_QUALITY.maxWaterCrossingMeters
-            );
+            // The same checks the offline suite runs, but against whatever
+            // Radar returns today. A failure here means either our own
+            // regression or Radar changing its graph — check which before
+            // assuming the former.
+            checkAllInvariants(scenario, await measureScenario(scenario));
         }
     );
 });

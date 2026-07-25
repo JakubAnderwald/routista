@@ -277,6 +277,51 @@ describe("planCrossings", () => {
         expect(plan.crossings).toEqual([]);
     });
 
+    it("does not strand a shape on an ornamental pond", () => {
+        // Madrid's fountains are tagged natural=water. Nothing can bridge a
+        // 20 m pond, so the waypoints in it are dropped — the shape must
+        // survive that with only the pond's own waypoints missing, and the
+        // router walks round a pond perfectly well on its own.
+        const pond = buildWaterIndex({
+            type: "FeatureCollection",
+            features: [
+                {
+                    type: "Feature",
+                    properties: { kind: "water", name: "Fountain" },
+                    geometry: {
+                        type: "Polygon",
+                        coordinates: [
+                            [
+                                [0, 51.51],
+                                [0.0002, 51.51],
+                                [0.0002, 51.5101],
+                                [0, 51.5101],
+                                [0, 51.51],
+                            ],
+                        ],
+                    },
+                },
+            ],
+        });
+
+        const shape: [number, number][] = [
+            [51.5095, -0.001],
+            [51.5098, -0.0005],
+            [51.51005, 0.0001], // inside the pond
+            [51.5103, 0.0005],
+            [51.5106, 0.001],
+        ];
+
+        const plan = planCrossings(shape, pond, buildBridgeIndex(null, pond));
+
+        expect(plan.waypointsInWater).toBe(1);
+        expect(plan.unbridgedRuns).toBe(1);
+        // Only the waypoint in the water is gone; the shape is otherwise intact.
+        expect(plan.waypoints).toHaveLength(shape.length - 1);
+        expect(plan.waypoints[0]).toEqual(shape[0]);
+        expect(plan.waypoints[plan.waypoints.length - 1]).toEqual(shape[shape.length - 1]);
+    });
+
     it("handles degenerate input", () => {
         expect(planCrossings([], water, bridges).waypoints).toEqual([]);
         expect(planCrossings([[51.501, 0]], water, bridges).crossings).toEqual([]);

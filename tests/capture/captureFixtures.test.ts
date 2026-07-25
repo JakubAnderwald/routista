@@ -46,7 +46,7 @@ describe.skipIf(process.env.CAPTURE_FIXTURES !== "1")("capture Radar fixtures", 
         async scenario => {
             useWaterFixture(scenario.city);
 
-            const waypoints = scenarioWaypoints(scenario);
+            const waypoints = await scenarioWaypoints(scenario);
             const realFetch = global.fetch;
             const recorder = recordingFetch(realFetch);
             global.fetch = recorder.fetch;

@@ -11,11 +11,19 @@
  * Run with: npm run test:live
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import dotenv from "dotenv";
 import { ROUTE_QUALITY } from "@/config";
 import { SCENARIOS } from "../fixtures/scenarios";
 import { KNOWN_BROKEN, measureScenario } from "../utils/routeMeasurement";
+import { useWaterFixture } from "../utils/mockOverpass";
+
+// Radar is the thing under test here, not Overpass: serve OSM from fixtures so
+// a slow or unavailable Overpass cannot make this suite flap.
+vi.mock("@/lib/overpassService", () => ({
+    getWaterAndBridges: async () => (await import("../utils/mockOverpass")).currentWaterFixture(),
+    fetchWaterAndBridges: async () => (await import("../utils/mockOverpass")).currentWaterFixture(),
+}));
 
 dotenv.config({ path: ".env.local" });
 
@@ -38,6 +46,7 @@ describe.skipIf(!LIVE)("river scenarios (live Radar)", () => {
         "$id still crosses water instead of travelling along it",
         { timeout: 300_000 },
         async scenario => {
+            useWaterFixture(scenario.city);
             const metrics = await measureScenario(scenario);
 
             if (metrics.maxContiguousWaterMeters !== null) {
@@ -55,6 +64,7 @@ describe.skipIf(!LIVE)("river scenarios (live Radar)", () => {
         "$id reproduces issue #47 against live Radar",
         { timeout: 300_000 },
         async scenario => {
+            useWaterFixture(scenario.city);
             const metrics = await measureScenario(scenario);
 
             // If this starts failing, Radar changed something upstream: check

@@ -12,6 +12,8 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Geo Calculations** | `src/lib/geoUtils.ts` | Distance, scaling, simplification, and accuracy scoring. Pure functions. |
 | **Route Quality Metrics** | `src/lib/routeQuality.ts` | Pure measurements of a generated route: long edges, length ratio, per-leg detours, self-overlap. See `docs/technical/ISSUE_47_BASELINE.md`. |
 | **Water Geometry** | `src/lib/waterGeometry.ts` | Pure point-in-water and route-in-water queries over OSM water polygons. Used to tell a bridge crossing from a route travelling along a river (issue #47). |
+| **River Crossings** | `src/lib/riverCrossing.ts` | Moves waypoints out of water onto bridges, and pins crossings into legs that still travel on water. See `docs/technical/ISSUE_47_BASELINE.md`. |
+| **OSM Water Data** | `src/lib/overpassService.ts` | Fetches water polygons and bridges from Overpass, cached in Redis for 30 days. Only called when a route shows signs of using a ferry. |
 | **Main UI Flow** | `src/app/[locale]/create/CreateClient.tsx` | State machine for the "Create" wizard (Upload -> Area -> Mode -> Result). |
 | **Map Visualization** | `src/components/ResultMap.tsx` | Displays the generated route and original shape on Leaflet. |
 | **Image Upload** | `src/components/ImageUpload.tsx` | Handles file drop and preview. **See Testing Note below.** |
@@ -51,6 +53,9 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `geoUtils.ts`: **CRITICAL**. Math heavy. Handles coordinate geometry.
 *   `routeQuality.ts`: Route measurement metrics. Pure, no I/O.
 *   `waterGeometry.ts`: Water polygon queries. Pure, no I/O.
+*   `riverCrossing.ts`: Bridge selection and river crossing repair. Pure, no I/O.
+*   `overpassService.ts`: OSM water and bridge fetching, with Redis caching.
+*   `redisClient.ts`: Shared Upstash Redis client. Returns null when unconfigured.
 *   `imageProcessingCore.ts`: **CRITICAL**. Platform-agnostic shape extraction algorithms (Otsu, boundary tracing).
 *   `imageProcessing.ts`: **CRITICAL**. Browser wrapper for image processing (uses Canvas API + core).
 *   `gpxGenerator.ts`: Utility for file export.
@@ -78,7 +83,9 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `routeAccuracy.test.ts`: End-to-end route accuracy against live Radar. Skipped unless `RUN_LIVE_ROUTE_TESTS=1`.
 *   `integration/riverScenarios.test.ts`: Route quality across the scenario matrix, replayed from recorded Radar responses. Offline and deterministic.
 *   `live/riverScenarios.live.test.ts`: The same scenarios against live Radar, to catch upstream drift. Gated by `RUN_LIVE_ROUTE_TESTS=1`.
-*   `capture/captureFixtures.test.ts`: Records fixtures from live Radar and OSM. Gated by `CAPTURE_FIXTURES=1`, run via `npm run fixtures:routes`.
+*   `capture/captureFixtures.test.ts`: Records Radar responses. Gated by `CAPTURE_FIXTURES=1`, run via `npm run fixtures:routes`.
+*   `capture/captureWater.test.ts`: Records OSM water and bridges from Overpass. Same gate.
+*   `utils/mockOverpass.ts`: Serves committed OSM fixtures in place of live Overpass calls.
 *   `fixtures/scenarios.ts`: The scenario matrix — shape, place, and mode per case.
 *   `fixtures/baseline.json`: Committed route quality metrics per scenario. Refresh with `npm run test:baseline`.
 *   `fixtures/radar/`, `fixtures/water/`: Recorded Radar responses and OSM water/bridge geometry.

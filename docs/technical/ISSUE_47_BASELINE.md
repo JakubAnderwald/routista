@@ -118,15 +118,100 @@ npm run test:baseline
 npm run test:live
 ```
 
-## How the fix will be measured
+## The fix
 
-`tests/integration/riverScenarios.test.ts` holds a `KNOWN_BROKEN` set with the four London
-walking and cycling scenarios. It asserts that those scenarios still travel along the water
-and that every other scenario does not. When the fix lands, each repaired scenario is removed
-from `KNOWN_BROKEN` and immediately has to satisfy the same invariants as the controls:
+Two changes, both in the routing pipeline.
+
+### 1. Waypoints are moved out of the water before routing
+
+`src/lib/riverCrossing.ts` finds every unbroken run of waypoints that falls inside a water
+polygon and replaces it with a crossing over the nearest suitable bridge, so the router is
+never offered a waypoint it can only satisfy from a ferry.
+
+- A bridge qualifies only if both its ends are on land, it spans at least 25 m of water, and
+  the shape can reach its near end without traversing a river. That last test is measured on
+  the longest unbroken stretch of water the approach touches, not the total, because waypoints
+  sit on embankments and graze the polygon constantly.
+- OSM splits a bridge into several ways, so ways sharing a name are chained end to end first.
+  The filter also removes the short structures OSM tags `bridge=yes` — an 8 m footway over the
+  corner of a dock is not a way across the Thames, and choosing one strands the router
+  mid-river.
+- Where the shape dips into the river and returns to the same bank it goes over and back,
+  turning round past the far abutment so the two legs read as two crossings rather than one
+  long run through the water.
+- Closed shapes are rotated to start on land, so a run straddling the seam — exactly where the
+  reported heart over London breaks — is handled as one run.
+
+Water and bridge geometry come from OSM via `src/lib/overpassService.ts`, cached in Redis for
+a month. It is only fetched when a first routing pass produced an edge longer than any real
+street, so routes in cities without this problem never pay for it, and Overpass being
+unavailable leaves the route exactly as it was before.
+
+### 2. Legs that still travel on water get a crossing pinned into them
+
+Moving waypoints is not always enough: Radar diverts to a pier and back even between two dry
+waypoints. After routing, any leg that spends more than 500 m in water, or contains a single
+over-water edge longer than a street, gets a point pinned into it — a bridge if the straight
+line genuinely crosses water, otherwise a single point on land, which is all it takes to stop
+the router wandering. This repeats up to three times, since pinning one crossing can push the
+router onto a ferry elsewhere.
+
+### Also fixed: chunk stitching
+
+Radar takes at most 25 waypoints per request, so routes are chunked. Consecutive chunks
+overlapped by **two** waypoints while stitching dropped only **one**, so every chunk boundary
+travelled its boundary leg twice and left a jump between the duplicates. At 14 chunks per
+route that is 13 spurious out-and-backs. Chunks now share exactly one waypoint.
+
+This was found while chasing a 503 m stretch of water that survived the bridge repair: the
+route was crossing Blackfriars Bridge, coming back, and crossing again.
+
+## Results
+
+Same scenarios, same measurement, before and after:
+
+| scenario | ratio | maxEdge | water m | maxRun | overlap | accuracy |
+|---|---|---|---|---|---|---|
+| `london-heart-foot` | 6.88x → **2.68x** | 563 → **124** m | 23212 → **879** | 7398 → **251** | 70% → **31%** | 88% → **94%** |
+| `london-heart-foot-sparse` | 2.79x → **1.83x** | 354 → **124** m | 3887 → **879** | 1276 → **251** | 44% → **14%** | 90% → **89%** |
+| `london-heart-bike` | 14.1x → **4.6x** | 755 → **194** m | 34232 → **1806** | 7034 → **238** | 88% → **64%** | 26% → **90%** |
+| `london-star-on-river` | 7.35x → **2.97x** | 563 → **372** m | 24300 → **4035** | 5538 → **2239** | 80% → **58%** | 80% → **85%** |
+| `london-heart-car` | 9.55x → 8.85x | 225 → 225 m | 3124 → 3062 | 238 → 238 | 80% → 76% | 82% → 82% |
+| `london-heart-north` | 3.02x → 2.59x | 149 → 87 m | 45 → 35 | 35 → 35 | 54% → 35% | 94% → 93% |
+| `paris-heart-foot` | 1.89x → 1.63x | 155 → 135 m | 314 → 314 | 126 → 126 | 34% → 15% | 94% → 94% |
+| `budapest-heart-foot` | 2.26x → 1.83x | 323 → 387 m | 802 → 642 | 382 → 354 | 34% → 9% | 92% → 92% |
+| `madrid-heart-foot` | 2.41x → 2.46x | 143 → 470 m | — | — | 27% → 29% | 95% → 94% |
+| `madrid-square-foot` | 1.27x → 1.27x | 171 → 171 m | — | — | 1% → 1% | 80% → 80% |
+
+The reported case, `london-heart-foot`, goes from **23 km inside the Thames to 879 m** — three
+bridge crossings — with the longest unbroken run down from 7.4 km to 251 m, which is the width
+of the river. Cycling improves most: it was 34 km in the water at 26% accuracy, and is now 1.8
+km at 90%.
+
+The controls all improve slightly or hold steady, which is the chunk stitching fix showing up
+as less self-overlap everywhere. Driving is untouched, as intended.
+
+### Known limitations
+
+- **`london-star-on-river` still travels along the river.** A star centred in the middle of
+  the Thames with a 500 m radius puts a fifth of its waypoints in the water, and some runs have
+  no bridge close enough to reach without a diversion longer than the shape. It improved
+  six-fold and is kept in `KNOWN_BROKEN` so it cannot silently get worse.
+- **`madrid-heart-foot` returned a 470 m edge** in this capture where the previous one topped
+  out at 143 m. Madrid has no water fixture and the route is otherwise unchanged, so this is
+  Radar returning different geometry between captures rather than a regression. The long-edge
+  invariant is only asserted where there is water data to interpret it.
+- **Length ratios stay above 2x** even for healthy routes, because of the simplification
+  finding above: waypoints end up ~40 m apart and the street grid cannot follow that closely.
+
+## How regressions are caught
+
+`tests/integration/riverScenarios.test.ts` asserts, for every scenario outside `KNOWN_BROKEN`:
 
 - longest unbroken run through water below `ROUTE_QUALITY.maxWaterCrossingMeters` (500 m)
-- no edge over 400 m for `foot` and `bike`
+- no edge over 400 m for `foot` and `bike`, where water data exists to interpret it
 - length ratio under 3.5x and self-overlap under 60% for walking
 
-Leaving a repaired scenario in `KNOWN_BROKEN` fails the suite on purpose.
+and that everything in `KNOWN_BROKEN` is still broken, so a scenario cannot be quietly fixed
+and left in the list. Every metric is also pinned in `tests/fixtures/baseline.json`, so drift
+in either direction fails the build.

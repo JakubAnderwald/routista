@@ -142,6 +142,26 @@ export function segmentWaterMeters(
 }
 
 /**
+ * Length of a path that runs through water.
+ *
+ * @param points - Path as `[lat, lng]`.
+ * @param index - Index from `buildWaterIndex`.
+ * @param options - Optional boundary tolerance.
+ * @returns Meters of the path inside water.
+ */
+export function pathWaterMeters(
+    points: [number, number][],
+    index: WaterIndex,
+    options: WaterQueryOptions = {}
+): number {
+    let meters = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+        meters += segmentWaterMeters(points[i], points[i + 1], index, options);
+    }
+    return meters;
+}
+
+/**
  * Measures how much of a route runs through water, and in what runs.
  *
  * @param route - Route GeoJSON, typically from `getRadarRoute`.
@@ -151,6 +171,45 @@ export function segmentWaterMeters(
  */
 export function routeWaterStats(
     route: FeatureCollection | null | undefined,
+    index: WaterIndex,
+    options: WaterQueryOptions = {}
+): RouteWaterStats {
+    const merged: RouteWaterStats = {
+        totalWaterMeters: 0,
+        maxContiguousWaterMeters: 0,
+        crossings: 0,
+    };
+
+    for (const feature of route?.features ?? []) {
+        if (feature.geometry?.type !== "LineString") continue;
+
+        const stats = pathWaterStats(
+            feature.geometry.coordinates.map(([lng, lat]) => [lat, lng] as [number, number]),
+            index,
+            options
+        );
+
+        merged.totalWaterMeters += stats.totalWaterMeters;
+        merged.crossings += stats.crossings;
+        merged.maxContiguousWaterMeters = Math.max(
+            merged.maxContiguousWaterMeters,
+            stats.maxContiguousWaterMeters
+        );
+    }
+
+    return merged;
+}
+
+/**
+ * Measures how much of a path runs through water, and in what runs.
+ *
+ * @param points - Path as `[lat, lng]`.
+ * @param index - Index from `buildWaterIndex`.
+ * @param options - Optional boundary tolerance.
+ * @returns Total water length, longest unbroken run, and run count.
+ */
+export function pathWaterStats(
+    points: [number, number][],
     index: WaterIndex,
     options: WaterQueryOptions = {}
 ): RouteWaterStats {
@@ -168,24 +227,15 @@ export function routeWaterStats(
         run = 0;
     };
 
-    for (const feature of route?.features ?? []) {
-        if (feature.geometry?.type !== "LineString") continue;
-
-        const points = feature.geometry.coordinates.map(
-            ([lng, lat]) => [lat, lng] as [number, number]
-        );
-
-        for (let i = 0; i < points.length - 1; i++) {
-            for (const sample of sampleSegment(points[i], points[i + 1])) {
-                if (isPointInWater(sample.point, index, options)) {
-                    stats.totalWaterMeters += sample.meters;
-                    run += sample.meters;
-                } else {
-                    endRun();
-                }
+    for (let i = 0; i < points.length - 1; i++) {
+        for (const sample of sampleSegment(points[i], points[i + 1])) {
+            if (isPointInWater(sample.point, index, options)) {
+                stats.totalWaterMeters += sample.meters;
+                run += sample.meters;
+            } else {
+                endRun();
             }
         }
-        endRun();
     }
 
     endRun();

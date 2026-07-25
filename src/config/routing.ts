@@ -110,3 +110,95 @@ export const ROUTE_QUALITY = {
     badLegRatio: 3,
 } as const;
 
+/**
+ * River crossing repair — GitHub issue #47.
+ *
+ * Radar's foot and bike profiles route along ferry ways in the Thames, so
+ * waypoints that land in water have to be moved onto a bridge before routing.
+ * See `docs/technical/ISSUE_47_BASELINE.md`.
+ */
+export const RIVER_CROSSING = {
+    /** Modes whose routing graph contains ferries, and so need the repair. */
+    affectedModes: ["foot-walking", "cycling-regular"] as TransportMode[],
+
+    /** How far from an in-water section a bridge may be to be considered. */
+    maxBridgeSearchMeters: 1500,
+
+    /**
+     * Water a bridge must actually span to count as a crossing.
+     *
+     * OSM tags plenty of short structures as `bridge=yes` — an 8 m footway
+     * over the corner of a dock is not a way across the Thames, and picking
+     * one leaves the router to find its own way over, which puts it back on
+     * the ferry.
+     */
+    minBridgeSpanMeters: 25,
+
+    /**
+     * Water a straight line from the shape to the bridge head may clip before
+     * that bridge is treated as being on the wrong bank.
+     *
+     * Measured on the longest unbroken stretch of water the line touches.
+     * Waypoints often sit right on an embankment, so an approach along the
+     * bank grazes the polygon; a genuine wrong-bank approach crosses a whole
+     * river, 130 m at the narrowest in the scenario matrix.
+     */
+    approachWaterToleranceMeters: 30,
+
+    /**
+     * Extra distance a diversion may add before the shape is better served by
+     * simply dropping the in-water waypoints.
+     */
+    maxBridgeDetourMeters: 2500,
+
+    /**
+     * Detour a repair may add once a leg is known to be using a ferry. More
+     * generous than `maxBridgeDetourMeters`: at that point any bridge beats
+     * travelling down the river.
+     */
+    maxRepairDetourMeters: 6000,
+
+    /**
+     * Cost added to bridges with no pedestrian-friendly `highway` class, in
+     * meters. Large enough to lose to any reasonable walkable bridge, small
+     * enough to still win against no crossing at all.
+     */
+    unwalkableBridgePenaltyMeters: 400,
+
+    /** Step size when searching past a bridge for the turnaround point. */
+    turnaroundStepMeters: 20,
+
+    /** How far past a bridge to look for dry land before giving up. */
+    maxTurnaroundMeters: 300,
+
+    /** Padding around the shape when asking OSM for water and bridges. */
+    dataPaddingMeters: 1500,
+
+    /** How many legs may be repaired in a single pass. */
+    maxPostRouteRepairs: 8,
+
+    /**
+     * How many times to re-route and re-check. Pinning one crossing can push
+     * the router onto a ferry somewhere else, so one pass is not always enough.
+     */
+    maxRepairPasses: 3,
+
+    /**
+     * Water a single routed leg may travel through before a bridge is pinned
+     * into it. Above this it is travelling along the river, not crossing it.
+     */
+    maxLegWaterMeters: 500,
+
+    /** Abort an Overpass request after this long and route without water data. */
+    overpassTimeoutMs: 8_000,
+
+    /** How long OSM water and bridge geometry stays cached. Rivers do not move. */
+    waterCacheTtlSeconds: 30 * 24 * 60 * 60,
+
+    /**
+     * Grid the water cache key snaps to, in degrees (~1.1 km). Nearby routes
+     * share a cache entry rather than each fetching their own box.
+     */
+    waterCacheGridDegrees: 0.01,
+} as const;
+

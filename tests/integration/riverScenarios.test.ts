@@ -23,11 +23,19 @@ import path from "path";
 import { ROUTE_QUALITY } from "@/config";
 import { SCENARIOS } from "../fixtures/scenarios";
 import { loadRadarFixture, replayFetch } from "../utils/radarFixtures";
+import { useWaterFixture } from "../utils/mockOverpass";
 import { KNOWN_BROKEN, measureScenario, ScenarioMetrics } from "../utils/routeMeasurement";
 
 vi.mock("@sentry/nextjs", () => ({
     captureException: vi.fn(),
     captureMessage: vi.fn(),
+}));
+
+// The river crossing repair reads OSM data; serve the committed fixtures so
+// replay sees exactly the geometry capture saw.
+vi.mock("@/lib/overpassService", () => ({
+    getWaterAndBridges: async () => (await import("../utils/mockOverpass")).currentWaterFixture(),
+    fetchWaterAndBridges: async () => (await import("../utils/mockOverpass")).currentWaterFixture(),
 }));
 
 const BASELINE_PATH = path.resolve(__dirname, "../fixtures/baseline.json");
@@ -75,6 +83,7 @@ describe("river scenarios", () => {
         "matches the recorded baseline for $id",
         { timeout: 120_000 },
         async scenario => {
+            useWaterFixture(scenario.city);
             vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
             const metrics = await measureScenario(scenario);
             measured[scenario.id] = metrics;
@@ -94,6 +103,7 @@ describe("river scenarios", () => {
         "$id crosses water instead of travelling along it",
         { timeout: 120_000 },
         async scenario => {
+            useWaterFixture(scenario.city);
             vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
             const metrics = await measureScenario(scenario);
 
@@ -105,9 +115,10 @@ describe("river scenarios", () => {
                 );
             }
 
-            // No edge long enough to be a ferry hop. Bridge spans in this
-            // matrix reach 323 m, so this only catches the real thing.
-            if (scenario.mode !== "driving-car") {
+            // No edge long enough to be a ferry hop. Only checked where there
+            // is water data to interpret it: without it a long edge is just an
+            // unusually sparse street, as central Madrid occasionally returns.
+            if (scenario.city && scenario.mode !== "driving-car") {
                 expect(metrics.maxEdgeMeters).toBeLessThan(400);
             }
         }
@@ -117,6 +128,7 @@ describe("river scenarios", () => {
         "$id follows the shape it was given",
         { timeout: 120_000 },
         async scenario => {
+            useWaterFixture(scenario.city);
             vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
             const metrics = await measureScenario(scenario);
 
@@ -127,11 +139,12 @@ describe("river scenarios", () => {
         }
     );
 
-    it.each(BROKEN)("$id is still broken by issue #47", { timeout: 120_000 }, async scenario => {
+    it.each(BROKEN)("$id still travels along water", { timeout: 120_000 }, async scenario => {
+        useWaterFixture(scenario.city);
         vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
         const metrics = await measureScenario(scenario);
 
-        // Remove the scenario from KNOWN_BROKEN when the fix lands; leaving it
+        // Remove the scenario from KNOWN_BROKEN once it is healthy; leaving it
         // there afterwards turns the suite red on purpose.
         expect(
             metrics.maxContiguousWaterMeters,

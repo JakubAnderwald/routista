@@ -75,17 +75,18 @@ export async function measureScenario(scenario: Scenario): Promise<ScenarioMetri
 }
 
 /**
- * Scenarios that GitHub issue #47 is about.
+ * Scenarios that still travel along water.
  *
- * They are expected to fail the water invariants until the fix lands. Removing
- * an id from this set is how the fix declares the scenario healthy.
+ * The river crossing repair fixed the reported case and its variants. What
+ * remains is the deliberately extreme one: a star centred in the middle of the
+ * Thames, where a fifth of the waypoints are in the water and some in-water
+ * runs have no bridge close enough to reach. It improved six-fold — 24.3 km in
+ * the water down to 4.0 km — but still travels along the river in places, so
+ * it stays here to stop that silently getting worse.
+ *
+ * See `docs/technical/ISSUE_47_BASELINE.md`.
  */
-export const KNOWN_BROKEN = new Set([
-    "london-heart-foot",
-    "london-heart-foot-sparse",
-    "london-heart-bike",
-    "london-star-on-river",
-]);
+export const KNOWN_BROKEN = new Set(["london-star-on-river"]);
 
 function round(value: number, digits: number): number {
     const factor = 10 ** digits;

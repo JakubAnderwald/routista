@@ -1,12 +1,20 @@
 /**
- * Capture-time OpenStreetMap helpers.
+ * OpenStreetMap water and bridge data, via the Overpass API.
  *
- * Pulls water polygons and bridges from the Overpass API and normalizes them
- * to GeoJSON. Only used by `npm run fixtures:routes`; the committed output is
- * what tests read, so nothing in the suite depends on Overpass being up.
+ * Needed because Radar's foot and bike profiles route along ferry ways in the
+ * Thames (GitHub issue #47) and repairing that requires knowing where the water
+ * and the crossings actually are.
+ *
+ * Only called for routes the cheap long-edge detector has already flagged, and
+ * results are cached in Redis for a month, so most routes never touch Overpass.
+ * Every failure path returns null: no water data means the previous behaviour,
+ * not a broken route.
  */
 
 import { Feature, FeatureCollection, Position } from "geojson";
+import * as Sentry from "@sentry/nextjs";
+import { RIVER_CROSSING } from "@/config";
+import { getRedisClient } from "./redisClient";
 
 const OVERPASS_URL = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter";
 
@@ -24,6 +32,91 @@ interface OverpassElement {
     tags?: Record<string, string>;
     geometry?: OverpassNode[];
     members?: { type: string; role: string; geometry?: OverpassNode[] }[];
+}
+
+/** In-process cache, so repeated routes in one lambda skip even Redis. */
+const memoryCache = new Map<string, FeatureCollection>();
+
+/**
+ * Fetches water polygons and road/foot bridges for a bounding box, with
+ * caching and graceful failure.
+ *
+ * @param bbox - Bounding box as `[south, west, north, east]`.
+ * @returns Water and bridge geometry, or null if it could not be fetched.
+ */
+export async function getWaterAndBridges(
+    bbox: [number, number, number, number]
+): Promise<FeatureCollection | null> {
+    const key = cacheKeyFor(bbox);
+
+    const inMemory = memoryCache.get(key);
+    if (inMemory) return inMemory;
+
+    const redis = getRedisClient();
+    if (redis) {
+        try {
+            const cached = await redis.get<FeatureCollection>(key);
+            if (cached) {
+                console.log(`[Overpass] Cache HIT for ${key}`);
+                memoryCache.set(key, cached);
+                return cached;
+            }
+        } catch (error) {
+            console.log(
+                `[Overpass] Cache read failed: ${error instanceof Error ? error.message : "unknown"}`
+            );
+        }
+    }
+
+    let collection: FeatureCollection;
+    try {
+        collection = await fetchWaterAndBridges(bbox, RIVER_CROSSING.overpassTimeoutMs);
+    } catch (error) {
+        // Overpass being down must never break route generation.
+        console.warn(
+            `[Overpass] Fetch failed, routing without water data: ${error instanceof Error ? error.message : "unknown"}`
+        );
+        Sentry.captureMessage("Overpass fetch failed", {
+            level: "warning",
+            extra: { service: "overpassService", bbox },
+        });
+        return null;
+    }
+
+    console.log(
+        `[Overpass] Fetched ${collection.features.length} features for ${key}`
+    );
+    memoryCache.set(key, collection);
+
+    if (redis) {
+        try {
+            await redis.set(key, collection, { ex: RIVER_CROSSING.waterCacheTtlSeconds });
+        } catch (error) {
+            console.log(
+                `[Overpass] Cache write failed: ${error instanceof Error ? error.message : "unknown"}`
+            );
+        }
+    }
+
+    return collection;
+}
+
+/**
+ * Cache key for a bounding box.
+ *
+ * Boxes are rounded outwards to a coarse grid so nearby routes share an entry;
+ * rivers and bridges do not move.
+ */
+function cacheKeyFor(bbox: [number, number, number, number]): string {
+    const grid = RIVER_CROSSING.waterCacheGridDegrees;
+    const snapped = [
+        Math.floor(bbox[0] / grid) * grid,
+        Math.floor(bbox[1] / grid) * grid,
+        Math.ceil(bbox[2] / grid) * grid,
+        Math.ceil(bbox[3] / grid) * grid,
+    ].map(value => value.toFixed(3));
+
+    return `osm:water:v1:${snapped.join(",")}`;
 }
 
 /**
@@ -77,7 +170,7 @@ async function runQuery(
                 // Overpass answers 406 to requests without a User-Agent.
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded",
-                    "User-Agent": "routista-fixture-capture/1.0 (https://www.routista.eu)",
+                    "User-Agent": "routista/1.0 (https://www.routista.eu)",
                     Accept: "application/json",
                 },
                 body: `data=${encodeURIComponent(query)}`,

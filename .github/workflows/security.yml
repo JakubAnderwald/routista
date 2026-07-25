@@ -34,10 +34,37 @@ jobs:
       # minimatch@3 -> brace-expansion@1, and the only patch for
       # GHSA-mh99-v99m-4gvg is brace-expansion@5, whose CJS export shape is
       # incompatible (object, not a callable). eslint@10 would drop that chain
-      # but breaks eslint-plugin-react@7. Reported for visibility, not blocking.
+      # but breaks eslint-plugin-react@7. Advisory *findings* are therefore
+      # reported rather than blocking — but a failure to actually run the audit
+      # (registry outage, unreadable lockfile, npm CLI error) still fails the
+      # job, so real breakage is never silently swallowed.
       - name: Security Audit (all dependencies, informational)
-        run: npm audit --audit-level=high
-        continue-on-error: true
+        run: |
+          set +e
+          npm audit --audit-level=high --json > audit.json
+          status=$?
+          set -e
+
+          # A genuine audit run always emits .metadata.vulnerabilities, whether
+          # or not anything was found. Its absence means npm never completed.
+          if [ "$status" -ne 0 ] && ! jq -e '.metadata.vulnerabilities' audit.json > /dev/null 2>&1; then
+            echo "::error::npm audit did not complete - this is an execution failure, not an advisory."
+            cat audit.json
+            exit 1
+          fi
+
+          count=$(jq -r '.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' audit.json)
+          if [ "$count" -gt 0 ]; then
+            echo "::warning::$count high/critical advisories remain in the full tree (dev-only, not blocking)."
+            {
+              echo "### Informational: $count high/critical advisories (dev-only)"
+              jq -r '.vulnerabilities | to_entries[]
+                     | select(.value.severity == "high" or .value.severity == "critical")
+                     | "- **\(.key)** (\(.value.severity)): `\(.value.range)`"' audit.json
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No high/critical advisories in the full dependency tree."
+          fi
 
       - name: Linting (including security rules)
         run: npm run lint

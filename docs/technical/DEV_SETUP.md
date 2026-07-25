@@ -23,8 +23,8 @@ For full agent rules, see `.agent/rules/project_rules.md`.
 
 Verify installation:
 ```bash
-node --version    # Should show v18.x or higher
-npm --version     # Should show 9.x or higher
+node --version    # Should show v20.9 or higher
+npm --version     # Should show 10.x or higher
 git --version
 vercel --version  # Optional, for pulling env vars
 ```

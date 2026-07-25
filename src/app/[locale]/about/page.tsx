@@ -1,6 +1,7 @@
 import { Link } from '@/i18n/routing';
 import { Button } from "@/components/ui/Button";
-import { Heart, Coffee, Github } from "lucide-react";
+import { Heart, Coffee } from "lucide-react";
+import { Github } from "@/components/icons/BrandIcons";
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { SupportButton } from "@/components/SupportButton";
 

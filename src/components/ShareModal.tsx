@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { X, Instagram, Facebook, Twitter, Download, Copy, Check, Loader2, ExternalLink } from "lucide-react";
+import { X, Download, Copy, Check, Loader2, ExternalLink } from "lucide-react";
+import { Instagram, Facebook, Twitter } from "@/components/icons/BrandIcons";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import {

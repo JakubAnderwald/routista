@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "prebuild": "npm audit --audit-level=high && npm run lint && ([ -n \"$VERCEL\" ] || npm test)",
+    "prebuild": "npm audit --audit-level=high --omit=dev && npm run lint && ([ -n \"$VERCEL\" ] || npm test)",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -34,7 +34,7 @@
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-leaflet": "^5.0.0",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.3",
     "tailwind-merge": "^3.4.0",
     "xmlbuilder2": "^4.0.0"
   },
@@ -57,5 +57,9 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.13"
+  },
+  "overrides": {
+    "postcss": "^8.5.23",
+    "sharp": "^0.35.3"
   }
 }

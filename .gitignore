@@ -54,3 +54,6 @@ test_output*.txt
 # that churn every session. A shared .claude/settings.json stays committable.
 .claude/settings.local.json
 .claude/*.lock
+
+# e2e run artifacts (screenshots written beside the scripts)
+tests/e2e/*.png

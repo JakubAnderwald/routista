@@ -173,17 +173,25 @@ describe('/api/radar/directions', () => {
 
 ---
 
-### Layer 4: E2E Tests (Cursor Browser)
+### Layer 4: E2E Tests
 
 **Purpose:** Verify critical user journeys work end-to-end.
 
-**Tool:** Cursor's built-in browser MCP tools (not Playwright/Puppeteer)
+Two complementary approaches:
+
+| Approach | Target | When |
+|----------|--------|------|
+| **Scripted** — `tests/e2e/*.mjs` (Playwright) | A deployed Vercel preview or production | Dependency bumps, rendering changes, before merge |
+| **Interactive** — Cursor's browser MCP tools | Local dev server | Exploratory checks, new journeys |
+
+The scripted suite is documented in [AUTOMATED_TESTING.md](./AUTOMATED_TESTING.md) — it
+catches the class of failure CI cannot see, where a page builds cleanly but breaks in a
+real browser. Playwright is intentionally not a devDependency; see that document.
 
 **Characteristics:**
-- Test against running dev server
 - Use `data-testid` attributes for element selection
-- Use `window.__routistaTestHelpers` for image loading
-- Manual execution via Cursor agent
+- Drive the hidden test-controls block in `CreateClient.tsx` to load images without the OS file picker
+- Scripted suite runs against a URL and exits 0/1; interactive runs are manual
 
 **Available Cursor browser tools:**
 - `browser_navigate` - Navigate to URL

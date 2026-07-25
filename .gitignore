@@ -48,3 +48,12 @@ test_output*.txt
 
 # worktrees (kept inside workspace to avoid Cursor "outside workspace" prompts)
 /.worktrees/
+
+# claude code — per-machine only. settings.local.json is the personal permission
+# allowlist (contains absolute paths), and the lock files are runtime artifacts
+# that churn every session. A shared .claude/settings.json stays committable.
+.claude/settings.local.json
+.claude/*.lock
+
+# e2e run artifacts (screenshots written beside the scripts)
+tests/e2e/*.png

@@ -34,7 +34,7 @@
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-leaflet": "^5.0.0",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.0",
     "tailwind-merge": "^3.4.0",
     "xmlbuilder2": "^4.0.0"
   },

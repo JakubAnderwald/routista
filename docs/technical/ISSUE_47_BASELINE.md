@@ -82,8 +82,9 @@ The four bold rows are the bug. `london-heart-foot` spends **23 km inside the Th
 
 Note what the controls prove:
 
-- **Paris is fine.** The Seine gets crossed cleanly at 1.89x with no water travel, so this is
-  not "rivers are hard" — it is specific to what is in Radar's graph for the Thames.
+- **Paris is fine.** The Seine is crossed at 1.89x, and the 314 m of water is four crossings
+  of ~130 m each — the width of the river, i.e. bridges. Nothing travels *along* the water. So
+  this is not "rivers are hard"; it is specific to what is in Radar's graph for the Thames.
 - **Driving is fine.** Same shape, same city: 0 long edges, longest water run 238 m, which is
   the width of the river. The fix only needs to touch `foot` and `bike`.
 - **Budapest is the honest edge case.** A 323 m edge and a 382 m water run are a real bridge

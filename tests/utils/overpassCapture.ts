@@ -145,11 +145,15 @@ function isWater(tags: Record<string, string>): boolean {
 /**
  * Extracts closed rings from a water element. Ways are a single ring;
  * relations are multipolygons whose members have to be chained first.
+ *
+ * Anything that does not come out closed is discarded rather than closed by
+ * force: inventing the missing edge would turn an incomplete outline into a
+ * polygon covering land that is not water.
  */
 function waterRingsOf(element: OverpassElement): Position[][][] {
     if (element.type === "way") {
-        const ring = closeRing(toPositions(element.geometry));
-        return ring.length >= 4 ? [[ring]] : [];
+        const ring = toPositions(element.geometry);
+        return isClosed(ring) ? [[ring]] : [];
     }
 
     const outer = assembleRings(
@@ -200,8 +204,7 @@ function assembleRings(segments: Position[][]): Position[][] {
             }
         }
 
-        const closed = closeRing(ring);
-        if (closed.length >= 4) rings.push(closed);
+        if (isClosed(ring)) rings.push(ring);
     }
 
     return rings;
@@ -231,11 +234,6 @@ function toPositions(geometry: OverpassNode[] | undefined): Position[] {
 
 function isClosed(ring: Position[]): boolean {
     return ring.length >= 4 && samePoint(ring[0], ring[ring.length - 1]);
-}
-
-function closeRing(ring: Position[]): Position[] {
-    if (ring.length < 3) return ring;
-    return isClosed(ring) ? ring : [...ring, ring[0]];
 }
 
 function samePoint(a: Position, b: Position): boolean {

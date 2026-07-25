@@ -16,7 +16,7 @@ For full agent rules, see `.agent/rules/project_rules.md`.
 
 ## Prerequisites
 
-- **Node.js** v18+ ([Download](https://nodejs.org/))
+- **Node.js** v20.9+ (required by `sharp` 0.35; CI and Vercel both build on v24) ([Download](https://nodejs.org/))
 - **npm** (comes with Node.js)
 - **Git** ([Download](https://git-scm.com/))
 - **Vercel CLI** (recommended): `brew install vercel-cli`

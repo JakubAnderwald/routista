@@ -1,6 +1,12 @@
 import { simplifyPoints, calculateDistance } from "./geoUtils";
 import { edgeLengths, RouteLegSummary } from "./routeQuality";
-import { boundingBoxOf, buildWaterIndex, WaterIndex } from "./waterGeometry";
+import {
+    BoundingBox,
+    boundingBoxAreaSqKm,
+    boundingBoxOf,
+    buildWaterIndex,
+    WaterIndex,
+} from "./waterGeometry";
 import { BridgeIndex, buildBridgeIndex, planCrossings, repairWaterLegs } from "./riverCrossing";
 import { getWaterAndBridges } from "./overpassService";
 import { getRedisClient } from "./redisClient";
@@ -270,6 +276,48 @@ interface RiverCrossingDiagnostics {
 }
 
 /**
+ * The area to ask OSM about: where the route actually went wrong, not the
+ * whole shape.
+ *
+ * Every implausibly long edge is somewhere the router left the pedestrian
+ * network, so a box around those covers the water that needs bridging while
+ * staying far smaller than the shape for large routes. Returns null when even
+ * that is too big to fetch, in which case the repair is skipped and the route
+ * is returned as Radar produced it.
+ *
+ * @param routed - The detection pass's result.
+ * @param thresholdMeters - Longest plausible edge for the mode.
+ * @returns Bounding box to fetch, or null if it is not worth asking.
+ */
+function repairBoundingBox(
+    routed: RoutedWaypoints,
+    thresholdMeters: number
+): BoundingBox | null {
+    const suspect: [number, number][] = [];
+
+    for (const path of routed.legPaths.values()) {
+        for (let i = 0; i < path.length - 1; i++) {
+            if (calculateDistance(path[i], path[i + 1]) <= thresholdMeters) continue;
+            suspect.push(path[i], path[i + 1]);
+        }
+    }
+
+    const bbox = boundingBoxOf(suspect, RIVER_CROSSING.dataPaddingMeters);
+    if (!bbox) return null;
+
+    const areaSqKm = boundingBoxAreaSqKm(bbox);
+    if (areaSqKm > RIVER_CROSSING.maxDataAreaSqKm) {
+        console.warn(
+            `[RadarService] Skipping river repair: ${Math.round(areaSqKm)} km² exceeds the ` +
+            `${RIVER_CROSSING.maxDataAreaSqKm} km² OSM fetch limit`
+        );
+        return null;
+    }
+
+    return bbox;
+}
+
+/**
  * Moves waypoints that landed in water onto bridges, when a first routing pass
  * shows signs of having used one of Radar's ferry ways.
  *
@@ -304,7 +352,7 @@ async function repairRiverCrossings(
         `[RadarService] Longest edge ${Math.round(longest)}m exceeds ${threshold}m for ${mode}; checking for water`
     );
 
-    const bbox = boundingBoxOf(waypoints, RIVER_CROSSING.dataPaddingMeters);
+    const bbox = repairBoundingBox(routed, threshold);
     if (!bbox) return null;
 
     const osm = await getWaterAndBridges(bbox);

@@ -276,6 +276,22 @@ export function boundingBoxOf(
     return [minLat - latPad, minLng - lngPad, maxLat + latPad, maxLng + lngPad];
 }
 
+/**
+ * Approximate area of a bounding box in square kilometres.
+ *
+ * @param bbox - Bounding box as `[minLat, minLng, maxLat, maxLng]`.
+ * @returns Area in km².
+ */
+export function boundingBoxAreaSqKm(bbox: BoundingBox): number {
+    const [minLat, minLng, maxLat, maxLng] = bbox;
+    const midLat = (minLat + maxLat) / 2;
+
+    const heightKm = ((maxLat - minLat) * 111.32);
+    const widthKm = (maxLng - minLng) * 111.32 * Math.max(Math.cos((midLat * Math.PI) / 180), 0.01);
+
+    return Math.max(0, heightKm) * Math.max(0, widthKm);
+}
+
 /** Extracts polygon ring sets from a feature, handling Polygon and MultiPolygon. */
 function polygonRingsOf(feature: Feature): Position[][][] {
     const geometry = feature?.geometry;

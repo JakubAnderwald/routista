@@ -189,8 +189,26 @@ export const RIVER_CROSSING = {
      */
     maxLegWaterMeters: 500,
 
+    /**
+     * Largest area worth asking OSM about, in square kilometres.
+     *
+     * Measured in central London, water and bridge data runs at roughly
+     * 0.02 MB/km²: a 1 km walking route needs 0.7 MB, while a 6 km cycling
+     * route over the same city needs 3.8 MB and takes longer to fetch than
+     * the timeout allows. Past this the repair is skipped rather than stalling
+     * the request for data that will not arrive, or will not fit in the cache.
+     */
+    maxDataAreaSqKm: 60,
+
     /** Abort an Overpass request after this long and route without water data. */
-    overpassTimeoutMs: 8_000,
+    overpassTimeoutMs: 15_000,
+
+    /**
+     * Largest OSM payload worth putting in Redis, in bytes. Bigger responses
+     * still work and stay in the per-lambda memory cache; they just are not
+     * shared, rather than failing the write on a value size limit.
+     */
+    maxCachedDataBytes: 800_000,
 
     /** How long OSM water and bridge geometry stays cached. Rivers do not move. */
     waterCacheTtlSeconds: 30 * 24 * 60 * 60,

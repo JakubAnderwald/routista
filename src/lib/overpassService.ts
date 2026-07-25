@@ -88,7 +88,8 @@ export async function getWaterAndBridges(
     );
     memoryCache.set(key, collection);
 
-    if (redis) {
+    const bytes = JSON.stringify(collection).length;
+    if (redis && bytes <= RIVER_CROSSING.maxCachedDataBytes) {
         try {
             await redis.set(key, collection, { ex: RIVER_CROSSING.waterCacheTtlSeconds });
         } catch (error) {
@@ -96,6 +97,10 @@ export async function getWaterAndBridges(
                 `[Overpass] Cache write failed: ${error instanceof Error ? error.message : "unknown"}`
             );
         }
+    } else if (redis) {
+        // Past the value size limit. Keeping it in memory is still worth it
+        // for repeat requests hitting the same lambda.
+        console.log(`[Overpass] ${bytes} bytes too large to share via Redis, memory only`);
     }
 
     return collection;

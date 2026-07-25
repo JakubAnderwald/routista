@@ -94,6 +94,26 @@ Github, Instagram and Twitter now ship from `src/components/icons/BrandIcons.tsx
 missing icon fails *silently* — the element renders at zero size rather than throwing — so
 presence alone proves nothing and geometry is asserted too.
 
+### `tests/e2e/river-crossing-visual.mjs`
+
+Consumes Radar quota. Run it on changes to the routing pipeline, and to eyeball the fix for
+GitHub issue #47.
+
+```bash
+node tests/e2e/river-crossing-visual.mjs https://www.routista.eu baseline
+node tests/e2e/river-crossing-visual.mjs https://routista-<hash>-jakubanderwalds-projects.vercel.app pr89
+```
+
+Drives the shortest path to reproducing issue #47 — the wizard's defaults *are* the reported
+case: the heart example, centred at 51.505,-0.09 on the Thames, 1000 m, walking. It then
+asserts the route is drawn, the displayed accuracy and length are sane, and writes a
+screenshot next to the script.
+
+The screenshot is the point. Route quality is hard to assert and easy to see: the original
+report was a picture of a heart with a spike running down the river, and the answer is a
+picture of a heart that crosses at bridges. The numeric guarantees live in
+`tests/integration/riverScenarios.test.ts`; this is the thing you can look at.
+
 ## How the scripts drive the app
 
 `CreateClient.tsx` renders a hidden `display:none` test-controls block that these scripts
@@ -125,6 +145,11 @@ before trusting any new assertion.
 
 2. **Leaflet only mounts from wizard step 2 onward.** Asserting `.leaflet-container` on a
    freshly loaded `/en/create` always fails — the map genuinely is not there yet.
+
+3. **The test-controls block is `display:none`.** Playwright refuses to click or wait for
+   anything inside it, so dispatch clicks with `locator(...).evaluate(el => el.click())` and
+   pass `state: 'attached'` to `waitForSelector`. Without both, every wait times out on an
+   element that is present and correct.
 
 ## Wiring into CI
 

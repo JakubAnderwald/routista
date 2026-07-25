@@ -10,6 +10,8 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Routing Logic** | `src/lib/routeGenerator.ts` | Calls Radar API, handles batching, stitching, and error handling. |
 | **Shape Extraction** | `src/lib/imageProcessing.ts`, `src/lib/imageProcessingCore.ts` | Canvas wrapper + platform-agnostic algorithms (Otsu, boundary tracing). |
 | **Geo Calculations** | `src/lib/geoUtils.ts` | Distance, scaling, simplification, and accuracy scoring. Pure functions. |
+| **Route Quality Metrics** | `src/lib/routeQuality.ts` | Pure measurements of a generated route: long edges, length ratio, per-leg detours, self-overlap. See `docs/technical/ISSUE_47_BASELINE.md`. |
+| **Water Geometry** | `src/lib/waterGeometry.ts` | Pure point-in-water and route-in-water queries over OSM water polygons. Used to tell a bridge crossing from a route travelling along a river (issue #47). |
 | **Main UI Flow** | `src/app/[locale]/create/CreateClient.tsx` | State machine for the "Create" wizard (Upload -> Area -> Mode -> Result). |
 | **Map Visualization** | `src/components/ResultMap.tsx` | Displays the generated route and original shape on Leaflet. |
 | **Image Upload** | `src/components/ImageUpload.tsx` | Handles file drop and preview. **See Testing Note below.** |
@@ -47,6 +49,8 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `radarService.ts`: **CRITICAL**. Server-side service that proxies Radar API calls. Includes route caching.
 *   `rateLimit.ts`: Rate limiting helper using Upstash Redis.
 *   `geoUtils.ts`: **CRITICAL**. Math heavy. Handles coordinate geometry.
+*   `routeQuality.ts`: Route measurement metrics. Pure, no I/O.
+*   `waterGeometry.ts`: Water polygon queries. Pure, no I/O.
 *   `imageProcessingCore.ts`: **CRITICAL**. Platform-agnostic shape extraction algorithms (Otsu, boundary tracing).
 *   `imageProcessing.ts`: **CRITICAL**. Browser wrapper for image processing (uses Canvas API + core).
 *   `gpxGenerator.ts`: Utility for file export.
@@ -71,7 +75,15 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `technical/`: Technical documentation (architecture, testing, debugging).
 
 ### Tests (`tests/`)
-*   `routeAccuracy.test.ts`: Integration tests - end-to-end route generation accuracy.
+*   `routeAccuracy.test.ts`: End-to-end route accuracy against live Radar. Skipped unless `RUN_LIVE_ROUTE_TESTS=1`.
+*   `integration/riverScenarios.test.ts`: Route quality across the scenario matrix, replayed from recorded Radar responses. Offline and deterministic.
+*   `live/riverScenarios.live.test.ts`: The same scenarios against live Radar, to catch upstream drift. Gated by `RUN_LIVE_ROUTE_TESTS=1`.
+*   `capture/captureFixtures.test.ts`: Records fixtures from live Radar and OSM. Gated by `CAPTURE_FIXTURES=1`, run via `npm run fixtures:routes`.
+*   `fixtures/scenarios.ts`: The scenario matrix — shape, place, and mode per case.
+*   `fixtures/baseline.json`: Committed route quality metrics per scenario. Refresh with `npm run test:baseline`.
+*   `fixtures/radar/`, `fixtures/water/`: Recorded Radar responses and OSM water/bridge geometry.
+*   `utils/shapes.ts`: Deterministic parametric shapes (heart, star, circle, square).
+*   `utils/routeMeasurement.ts`: Shared scenario measurement for the offline and live suites.
 *   `unit/`: Unit tests for pure functions in `src/lib/`.
     *   `gpxGenerator.test.ts`: GPX XML generation tests.
     *   `geoUtils.test.ts`: Distance, route length, simplification tests.

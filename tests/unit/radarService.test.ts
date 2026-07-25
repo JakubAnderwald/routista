@@ -208,6 +208,79 @@ describe('radarService', () => {
             expect(result.features[0].properties?.summary?.distance).toBe(1000);
         });
 
+        it('should attach a per-leg summary for each waypoint pair', async () => {
+            vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
+
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    routes: [{
+                        distance: { value: 4000 },
+                        duration: { value: 2400 },
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [[-0.09, 51.5076], [-0.0946, 51.5088], [-0.0883, 51.5079]],
+                        },
+                        legs: [
+                            {
+                                distance: { value: 3305 },
+                                // A ferry hop: two points 500 m apart.
+                                geometry: {
+                                    type: 'LineString',
+                                    coordinates: [[-0.09, 51.5076], [-0.0946, 51.5088]],
+                                },
+                            },
+                            {
+                                distance: { value: 695 },
+                                geometry: {
+                                    type: 'LineString',
+                                    coordinates: [[-0.0946, 51.5088], [-0.0930, 51.5084], [-0.0883, 51.5079]],
+                                },
+                            },
+                        ],
+                    }],
+                }),
+            });
+
+            const result = await getRadarRoute({
+                coordinates: [[51.5076, -0.09], [51.5088, -0.0946], [51.5079, -0.0883]],
+                mode: 'foot-walking',
+            });
+
+            const legs = result.features[0].properties?.legs;
+            expect(legs).toHaveLength(2);
+            expect(legs[0]).toMatchObject({ index: 0, routedMeters: 3305, points: 2 });
+            expect(legs[1]).toMatchObject({ index: 1, routedMeters: 695, points: 3 });
+
+            // The first leg travels 3.3 km to cover a straight-line gap of
+            // ~350 m, in a single edge no street could be.
+            expect(legs[0].straightMeters).toBeGreaterThan(300);
+            expect(legs[0].maxEdgeMeters).toBeGreaterThan(300);
+            expect(legs[1].maxEdgeMeters).toBeLessThan(400);
+        });
+
+        it('should tolerate a Radar response with no legs', async () => {
+            vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
+
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    routes: [{
+                        distance: { value: 1000 },
+                        duration: { value: 600 },
+                        geometry: { type: 'LineString', coordinates: [[-0.1, 51.5], [-0.09, 51.51]] },
+                    }],
+                }),
+            });
+
+            const result = await getRadarRoute({
+                coordinates: [[51.5, -0.1], [51.51, -0.09]],
+                mode: 'foot-walking',
+            });
+
+            expect(result.features[0].properties?.legs).toEqual([]);
+        });
+
         it('should throw error when Radar API returns error', async () => {
             vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
 

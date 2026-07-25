@@ -211,6 +211,42 @@ real browser. Playwright is intentionally not a devDependency; see that document
 
 ---
 
+## Route Quality Suite (fixture-replay)
+
+**Purpose:** Measure whether a generated route is any good, not just whether the code ran.
+Built for issue #47 — see [ISSUE_47_BASELINE.md](./ISSUE_47_BASELINE.md).
+
+Routing quality can only be judged against real routing data, but the suite has to run
+offline in CI. So real Radar responses are recorded once and replayed through the unmodified
+`getRadarRoute`:
+
+| Piece | Location | Purpose |
+|---|---|---|
+| Scenario matrix | `tests/fixtures/scenarios.ts` | Shape + place + mode per case, with controls |
+| Shape generators | `tests/utils/shapes.ts` | Deterministic heart/star/circle/square, no PNG decoding |
+| Recorded Radar responses | `tests/fixtures/radar/*.json` | Keyed by request URL; `steps` stripped to keep them small |
+| OSM water and bridges | `tests/fixtures/water/*.geo.json` | Water polygons for the water metrics |
+| Metrics | `src/lib/routeQuality.ts`, `src/lib/waterGeometry.ts` | Pure, unit-tested separately |
+| Recorded metrics | `tests/fixtures/baseline.json` | Committed; any drift fails the suite |
+
+```bash
+npm test                  # offline, replayed from fixtures — what CI runs
+npm run fixtures:routes   # re-record from live Radar + Overpass (needs .env.local)
+npm run test:baseline     # refresh baseline.json after a deliberate change
+npm run test:live         # run the same scenarios against live Radar
+```
+
+**Rules of thumb:**
+
+- A replayed request that was never recorded throws rather than hitting the network, so a
+  scenario drifting into different waypoints fails loudly.
+- Anything that calls the live Radar API must be gated behind `RUN_LIVE_ROUTE_TESTS=1`.
+  `npm test` must never make a network call.
+- Changing a metric's value is a behaviour change: update `baseline.json` in the same commit
+  and say why in the message.
+
+---
+
 ## Writing Tests by Code Type
 
 ### For `src/lib` Functions
@@ -394,6 +430,11 @@ npx vitest
 
 # Run tests matching pattern
 npm test -- --grep "calculateDistance"
+
+# Route quality suite (see the section above)
+npm run fixtures:routes   # re-record Radar + OSM fixtures
+npm run test:baseline     # refresh tests/fixtures/baseline.json
+npm run test:live         # run against live Radar (costs API calls)
 ```
 
 ### Coverage Reports

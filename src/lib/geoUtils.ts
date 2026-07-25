@@ -188,7 +188,18 @@ function perpendicularDistance(p: [number, number], p1: [number, number], p2: [n
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-function distanceToSegment(p: [number, number], v: [number, number], w: [number, number]): number {
+/**
+ * Calculates the shortest distance from a point to a line segment.
+ *
+ * Uses a local equirectangular projection, which is accurate over the
+ * neighbourhood distances this is used for.
+ *
+ * @param p - The point [lat, lng].
+ * @param v - Segment start [lat, lng].
+ * @param w - Segment end [lat, lng].
+ * @returns Distance in meters.
+ */
+export function distanceToSegmentMeters(p: [number, number], v: [number, number], w: [number, number]): number {
     const latRad = (v[0] * Math.PI) / 180;
     const metersPerLat = GEO.metersPerLatDegree;
     const metersPerLng = 40075000 * Math.cos(latRad) / 360;
@@ -267,7 +278,7 @@ export function calculateRouteAccuracy(
         for (let i = 0; i < routePoints.length - 1; i++) {
             const p2 = routePoints[i];
             const p3 = routePoints[i + 1];
-            const dist = distanceToSegment(p1, p2, p3);
+            const dist = distanceToSegmentMeters(p1, p2, p3);
             if (dist < minDist) minDist = dist;
         }
         totalForwardError += minDist;

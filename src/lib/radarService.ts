@@ -1,4 +1,5 @@
-import { simplifyPoints } from "./geoUtils";
+import { simplifyPoints, calculateDistance } from "./geoUtils";
+import { edgeLengths, RouteLegSummary } from "./routeQuality";
 import { FeatureCollection, Feature } from "geojson";
 import { Redis } from "@upstash/redis";
 import * as Sentry from "@sentry/nextjs";
@@ -62,9 +63,54 @@ export function hashCoordinates(coordinates: [number, number][]): string {
 }
 
 /**
+ * Radar returns a `legs` array with one entry per consecutive waypoint pair.
+ * This turns those into the compact per-leg summaries attached to the route
+ * under `features[0].properties.legs`, used for route quality diagnostics.
+ *
+ * Chunks overlap by design, so the same leg can arrive twice; the first
+ * summary for a given index wins.
+ *
+ * @param legs - Raw `legs` array from a Radar directions response.
+ * @param chunkStart - Index in `waypoints` of the chunk's first point.
+ * @param waypoints - The full waypoint list the route was requested for.
+ * @param into - Map to accumulate summaries into, keyed by leg start index.
+ */
+function collectLegSummaries(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    legs: any[] | undefined,
+    chunkStart: number,
+    waypoints: [number, number][],
+    into: Map<number, RouteLegSummary>
+): void {
+    if (!Array.isArray(legs)) return;
+
+    legs.forEach((leg, offset) => {
+        const index = chunkStart + offset;
+        if (into.has(index)) return;
+
+        const from = waypoints[index];
+        const to = waypoints[index + 1];
+        if (!from || !to) return;
+
+        const points: [number, number][] = (leg?.geometry?.coordinates ?? []).map(
+            ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+        );
+        const edges = edgeLengths(points);
+
+        into.set(index, {
+            index,
+            straightMeters: calculateDistance(from, to),
+            routedMeters: leg?.distance?.value ?? 0,
+            maxEdgeMeters: edges.length === 0 ? 0 : Math.max(...edges),
+            points: points.length,
+        });
+    });
+}
+
+/**
  * Generates a route by calling the Radar API.
  * This function is designed to be used server-side to keep API keys secure.
- * 
+ *
  * @param options - Configuration options including coordinates and mode.
  * @returns A GeoJSON FeatureCollection containing the route.
  */
@@ -138,29 +184,31 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     // Batching logic - Radar supports up to 25 coordinates per request
     // Each chunk overlaps by 1 point so segments connect properly
     const chunkSize = RADAR_API.chunkSize;
-    const chunks = [];
+    const chunks: { start: number; points: number[][] }[] = [];
     let startIndex = 0;
     while (startIndex < simplifiedCoordinates.length) {
         const endIndex = Math.min(startIndex + chunkSize + 1, simplifiedCoordinates.length);
-        const chunk = simplifiedCoordinates.slice(startIndex, endIndex);
-        chunks.push(chunk);
+        chunks.push({ start: startIndex, points: simplifiedCoordinates.slice(startIndex, endIndex) });
         // Move forward by chunkSize - 1 to overlap last point with next chunk's first
         startIndex += chunkSize - 1;
         // Ensure we exit if we've processed all coordinates
         if (endIndex >= simplifiedCoordinates.length) break;
     }
-    
+
     console.log(`[RadarService] Routing ${simplifiedCoordinates.length} waypoints in ${chunks.length} chunk(s)`);
 
     const features: Feature[] = [];
+    // Keyed by the leg's start waypoint index. Chunks overlap, so the same leg
+    // can come back from two requests; the first one wins.
+    const legSummaries = new Map<number, RouteLegSummary>();
     let totalDistance = 0;
     let totalDuration = 0;
 
     for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-        const chunk = chunks[chunkIdx];
+        const chunk = chunks[chunkIdx].points;
         // Format coordinates as pipe-delimited lat,lng pairs
         const locationsParam = chunk.map((c: number[]) => `${c[0]},${c[1]}`).join('|');
-        
+
         console.log(`[RadarService] Processing chunk ${chunkIdx + 1}/${chunks.length} with ${chunk.length} points`);
 
         const url = new URL('https://api.radar.io/v1/route/directions');
@@ -204,6 +252,13 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
                     totalDistance += route.distance?.value || 0;
                     totalDuration += route.duration?.value || 0;
                 }
+
+                collectLegSummaries(
+                    route.legs,
+                    chunks[chunkIdx].start,
+                    simplifiedCoordinates as [number, number][],
+                    legSummaries
+                );
             }
 
             // Add a small delay to avoid rate limits
@@ -266,6 +321,8 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
 
     console.log(`[RadarService] Route generated: ${mergedCoordinates.length} route points, ${(totalDistance / 1000).toFixed(2)}km, ${Math.round(totalDuration / 60)}min`);
     
+    const legs = Array.from(legSummaries.values()).sort((a, b) => a.index - b.index);
+
     const result: FeatureCollection = {
         type: "FeatureCollection",
         features: [
@@ -275,7 +332,8 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
                     summary: {
                         distance: totalDistance,
                         duration: totalDuration
-                    }
+                    },
+                    legs
                 },
                 geometry: {
                     type: "LineString",

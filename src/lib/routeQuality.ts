@@ -277,16 +277,18 @@ export function selfOverlapFraction(
  * 30 m detour into a driveway and back.
  *
  * @param route - Route GeoJSON.
- * @param mode - Transport mode, which sets the length and deviation bounds.
+ * @param waypoints - The shape the route was asked to follow, as `[lat, lng]`.
+ * @param mode - Transport mode, which sets the bounds.
  * @returns Count, total length, longest, and share of the route.
  */
 export function spurStats(
     route: FeatureCollection | null | undefined,
+    waypoints: [number, number][],
     mode: TransportMode
 ): SpurStats {
     const points = routeToLatLngs(route);
     const routeMeters = pathLengthMeters(points);
-    const { spurs, removedMeters } = removeSpurs(points, spurCleanupOptionsFor(mode));
+    const { spurs, removedMeters } = removeSpurs(points, waypoints, spurCleanupOptionsFor(mode));
 
     return {
         count: spurs.length,
@@ -326,7 +328,7 @@ export function summarizeRoute(
         selfOverlapFraction: selfOverlapFraction(route),
         worstLegRatio: ratios.length === 0 ? 0 : Math.max(...ratios),
         badLegCount: ratios.filter(ratio => ratio > ROUTE_QUALITY.badLegRatio).length,
-        spurs: spurStats(route, mode),
+        spurs: spurStats(route, waypoints, mode),
     };
 }
 

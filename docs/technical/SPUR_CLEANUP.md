@@ -3,11 +3,11 @@
 Reported as: routes "create branches into roads that then turn back in and go back through the
 same branch to main road. it just adds kilometers without any purpose." Screenshot: a heart over
 Warsaw, walking, 4500 m radius, **66.62 km**, with comb teeth and rectangular stubs all over the
-polyline — and 95% shape accuracy next to it.
+polyline — and 95% shape accuracy printed next to it.
 
 This is not issue #47. That was the Thames ferries, and it is fixed. This is the residue that fix
 left behind, and it was present in **every** scenario in the matrix, including the ones #47 called
-healthy: the `london-heart-north` control was spending 31% of its length on it.
+healthy: the `london-heart-north` control was spending over half its length on it.
 
 ## Root cause
 
@@ -37,67 +37,81 @@ per chunk boundary. And Radar cannot be asked to behave better: `/v1/route/direc
 
 ## Why the existing metrics did not catch it
 
-- **`selfOverlapFraction` is nearly blind to it.** `ROUTE_QUALITY.selfOverlapMinGapMeters` is 150 m,
-  so the two halves of an out-and-back have to be 150 m apart *along the route* before they count.
-  A 30 m detour into a driveway and back is 60 m of route: invisible. It was built to catch
-  "walks along the embankment to a bridge and back", which is a different scale of problem.
+- **`selfOverlapFraction` under-reports it.** `ROUTE_QUALITY.selfOverlapMinGapMeters` is 150 m, so
+  the two halves of an out-and-back have to be 150 m apart *along the route* before they count. A
+  30 m detour into a driveway is 60 m of route: invisible. It was built to catch "walks along the
+  embankment to a bridge and back", which is a different scale of problem. It is still a useful
+  after-the-fact check, and it moves a long way here: 31% → 1% on the reported case.
 - **The accuracy score is blind to it by construction.** It normalises by `radius * 0.5`, so on the
   reported 4500 m route the whole error budget is 2250 m. A 60 m spur sitting right next to the
   shape moves the score by a fraction of a point. That is how a 66 km route scores 95%.
 
 ## The fix
 
-`src/lib/routeCleanup.ts` — `removeSpurs(points, options)`. One streaming pass over the returned
-polyline. Whenever the next point lands back on a point the route already passed through, the
-geometry in between is an excursion: it left and came back without getting anywhere. It is spliced
-out when it is short enough to be a snapping artifact rather than a feature of the shape.
+`src/lib/routeCleanup.ts` — `removeSpurs(points, waypoints, options)`. Two decisions define it, and
+**both were got wrong in a first attempt**, which is worth recording because each mistake looks
+reasonable until it is measured.
 
-Two independent bounds decide that, both in `SPUR_CLEANUP` (`src/config/routing.ts`):
+### 1. Find excursions by projecting onto the line, not by matching its points
+
+The first version looked for the route arriving back at a *point* it had already visited. That only
+sees a spur that returns through the very same OSM nodes. A spur that walks up one pavement and
+back down the other — or up one carriageway and back the other, or simply returns over a slightly
+different node set — never revisits a coordinate, and was completely invisible.
+
+Measured with every other guard switched off, that detector found **zero** excursions in the
+Madrid, Paris, Amsterdam, Budapest, dino and star routes. Those are precisely the routes whose
+remaining spurs were reported. Projecting each arriving point onto the *segments* of the retained
+line instead, with `snapMeters = 20`, finds hundreds.
+
+### 2. Keep an excursion only when the shape needs it
+
+The first version asked "how far did this excursion stray from where it rejoined?", and kept
+anything over 35 m. That question cannot distinguish a pointless 300 m detour into a side street
+from a 300 m headland the outline genuinely traces — they stray identically. It let through exactly
+the legs that were reported.
+
+The question that does distinguish them is: **if this were cut, would any requested waypoint be
+left stranded?** A spur into a cul-de-sac goes, because the waypoint that caused it sits on the
+main road metres away. A traced headland stays, because its waypoints are out there and nothing
+else reaches them.
 
 | bound | walking / cycling | driving | what it is for |
 |---|---|---|---|
-| `snapMeters` | 8 | 8 | how close two points must be to be the same place |
-| `maxSpurMeters` | 250 | 400 | longest excursion that may go |
-| `maxDeviationMeters` | 35 | 45 | farthest it may stray from where it rejoins |
+| `snapMeters` | 20 | 20 | how close the line must come back to count as rejoining |
+| `maxShapeLossMeters` | 60 | 100 | how far a cut may leave a waypoint from the route |
+| `maxSpurMeters` | 1500 | 2500 | bounds the search, not the judgement |
+| `maxPasses` | 8 | 8 | cutting one excursion can expose another |
 
-**`maxDeviationMeters` is the control that matters**; the length cap is a safety belt. With the
-deviation guard off, the Paris control loses a genuine part of the heart — the worst distance from
-a shape point to the route jumps from 33 m to 274 m. At 35 m it stays at 65 m and 10-31% of the
-length still goes. Sweeping the length cap between 150 m and 400 m barely changes anything, because
-real features are rejected on deviation long before length.
-
-Driving is looser at 45 m because its waypoints are ~80 m apart and the two carriageways of a
-divided road are ~30 m apart, so 35 m would refuse to remove the wrong-side-of-the-road detour that
-is the commonest car spur. 45 m is the largest value that keeps every scenario's accuracy within 2
-points of its pre-cleanup baseline; 60 m removes another 3.3 km from `london-heart-car` but costs
-it a third point.
+Driving is looser because its waypoints are twice as far apart to begin with.
 
 ### Properties worth knowing
 
-- **Contiguous by construction.** The join point is kept and the route carries on from there, so the
-  only new edge is at most `snapMeters` longer than the one it replaces. `maxEdgeMeters` moved on
-  exactly one scenario in the whole matrix: Paris, 135 → 139 m.
-- **Idempotent.** The pass re-tests each newly formed adjacency as it goes, so a second run finds
-  nothing. That is what lets the invariant assert `spurCount === 0` exactly rather than pick a
-  threshold.
-- **Closed loops, figure-of-eights and traced dead ends survive**, each rejected by both bounds
-  independently: a whole lobe is kilometres long *and* hundreds of metres from the join.
-- **The river repair's own out-and-backs survive.** `riverCrossing.ts` deliberately emits
-  `[entry, past-the-far-abutment, entry]` for a shape that dips into a river and returns to the same
-  bank. Those crossings are 130-380 m wide, far past the deviation bound. The water metrics in the
-  baseline confirm none were touched.
-- **Amortised O(n).** 1-3 ms for a 4000-point route; the 10 000-point guard test runs in well under
-  a second.
+- **Stays on the road.** A cut keeps everything up to the point on the retained segment where the
+  line came back — a projection onto real geometry — then carries on from the point that rejoined.
+  The one edge a cut creates is no longer than `snapMeters`.
+- **Settles.** Cutting exposes new adjacencies, so it runs up to `maxPasses` times; the matrix
+  settles well inside that, and every scenario ends at exactly zero remaining excursions. That is
+  what lets the invariant assert `spurCount === 0` rather than pick a threshold.
+- **Closed loops, figure-of-eights and traced dead ends survive**, each because cutting them would
+  strand the waypoints they exist to serve.
+- **The river repair's own out-and-backs survive** for the same reason: `riverCrossing.ts`
+  deliberately emits `[entry, past-the-far-abutment, entry]` for a shape that dips into a river and
+  returns to the same bank, and those waypoints are in the water with nothing else near them.
+- **Amortised O(n)** in the length of the route, with a segment grid behind the shape-loss test. A
+  12 000-point synthetic route completes in well under a second.
 
 ### Where it runs
 
 `getRadarRoute`, after the river-crossing repair and before the response is assembled. Last on
-purpose: the repair's ferry detector needs to see the geometry Radar actually returned.
+purpose: the repair's ferry detector needs to see the geometry Radar actually returned. The shape
+is judged against the *simplified coordinates* rather than the repaired waypoints, since those
+carry bridge crossings the router had to be told about, which are not part of what the user drew.
 
 - `properties.summary.distance` and `.duration` now describe the **returned geometry**. The UI
   already computed the displayed km from the geometry, so leaving Radar's total there would have
-  been a silent 8-31% overstatement for anything else reading the response. Radar's own numbers are
-  kept beside them as `routedDistance` / `routedDuration`.
+  been a silent overstatement for anything else reading the response. Radar's own numbers are kept
+  beside them as `routedDistance` / `routedDuration`.
 - `properties.legs` still describe the route **as Radar drove it, before cleanup**, so their total
   is larger than the geometry and a leg can describe geometry that is no longer there. That is
   deliberate: the commonest spur goes out on one leg and back on the next, so a per-leg cleanup
@@ -113,49 +127,49 @@ purpose: the repair's ferry detector needs to see the geometry Radar actually re
 
 Same scenarios, same measurement, before and after. From `tests/fixtures/baseline.json`.
 
-| scenario | length ratio | shorter by | removed | longest spur | self-overlap | accuracy |
-|---|---|---|---|---|---|---|
-| `london-heart-foot` | 2.68 → **1.98** | 26% | 5092 m | 69 m | 31 → 21% | 94 → 93% |
-| `london-heart-foot-sparse` | 1.83 → **1.59** | 13% | 2176 m | 67 m | 14 → 10% | 89 → 88% |
-| `london-heart-bike` | 4.6 → **3.95** | 14% | 4707 m | 96 m | 64 → 62% | 90 → 89% |
-| `london-star-on-river` | 2.97 → **2.56** | 14% | 2901 m | 167 m | 58 → 58% | 85 → 83% |
-| `london-heart-car` | 8.85 → **8.13** | 8% | 5768 m | 83 m | 76 → 76% | 82 → 80% |
-| `london-heart-north` | 2.59 → **1.78** | 31% | 3746 m | 105 m | 35 → 28% | 93 → 93% |
-| `paris-heart-foot` | 1.63 → **1.47** | 10% | 1795 m | 59 m | 15 → 14% | 94 → 93% |
-| `budapest-heart-foot` | 1.83 → **1.66** | 9% | 1637 m | 68 m | 9 → 6% | 92 → 91% |
-| `madrid-heart-foot` | 2.46 → **2.18** | 11% | 2050 m | 204 m | 29 → 28% | 94 → 94% |
-| `madrid-square-foot` | 1.27 → **1.24** | 2% | 431 m | 28 m | 1 → 0% | 80 → 79% |
-| `london-heart-image` | 2.24 → **1.79** | 20% | 3601 m | 71 m | 25 → 19% | 95 → 94% |
-| `london-dino-image` | 2.58 → **2.08** | 19% | 4708 m | 65 m | 33 → 30% | 95 → 93% |
-| `amsterdam-heart-foot` | 2.25 → **1.96** | 13% | 2060 m | 69 m | 22 → 20% | 94 → 94% |
-| `warsaw-heart-foot` *(new)* | **2.26** | 8% | 8182 m | 69 m | 17% | 97% |
+| scenario | length ratio | shorter by | self-overlap | removed | accuracy |
+|---|---|---|---|---|---|
+| `london-heart-foot` | 2.68 → **1.31** | 51% | 31 → **1**% | 813 m | 94 → 93% |
+| `london-heart-foot-sparse` | 1.83 → **1.39** | 24% | 14 → **6**% | 371 m | 89 → 88% |
+| `london-heart-bike` | 4.6 → **1.78** | 61% | 64 → **20**% | 1643 m | 90 → 90% |
+| `london-star-on-river` | 2.97 → **1.96** | 34% | 58 → **53**% | 1066 m | 85 → 81% |
+| `london-heart-car` | 8.85 → **4.81** | 46% | 76 → **59**% | 1618 m | 82 → 82% |
+| `london-heart-north` | 2.59 → **1.19** | 54% | 35 → **4**% | 500 m | 93 → 94% |
+| `paris-heart-foot` | 1.63 → **1.3** | 20% | 15 → **10**% | 354 m | 94 → 93% |
+| `budapest-heart-foot` | 1.83 → **1.62** | 11% | 9 → **7**% | 901 m | 92 → 91% |
+| `madrid-heart-foot` | 2.46 → **1.49** | 39% | 29 → **5**% | 1827 m | 94 → 94% |
+| `madrid-square-foot` | 1.27 → **1.19** | 6% | 1 → **0**% | 96 m | 80 → 79% |
+| `london-heart-image` | 2.24 → **1.36** | 39% | 25 → **9**% | 675 m | 95 → 94% |
+| `london-dino-image` | 2.58 → **1.37** | 47% | 33 → **11**% | 2068 m | 95 → 93% |
+| `warsaw-heart-foot` *(new)* | **1.93** | — | **12**% | 2903 m | 97% |
+| `amsterdam-heart-foot` | 2.25 → **1.62** | 28% | 22 → **15**% | 1497 m | 94 → 93% |
 
-No scenario loses more than 2 accuracy points. `maxEdgeMeters` is unchanged everywhere except Paris
-(135 → 139 m). The water metrics for the London scenarios are unchanged in kind — the bridge
-crossings from issue #47 are all still there.
+**A walking length ratio of 1.19–1.96 is close to the floor.** 1.0 would mean the street grid ran
+exactly along the drawn outline; before this change the matrix sat at 1.27–4.6.
 
-**The reported case, `warsaw-heart-foot`**, is the same heart at the same 4500 m radius the
-screenshot used. It reproduces the report to within 70 m of the reported length, and the cleanup
-removes **796 separate out-and-backs**:
+Accuracy is flat within a point almost everywhere, and `london-heart-north` *gains* one — which is
+what removing geometry that served no purpose looks like. `london-star-on-river` loses 4, the worst
+in the matrix; it is a star centred in the middle of the Thames and is already listed under
+`knownIssues.waterTravel`.
 
-```
-[RadarService] Route generated: 4817 route points, 66.55km
-[RadarService] Spur cleanup: removed 796 out-and-back(s), 8182m, leaving 3152 route points, 60.97km
-```
+### Two things this also fixed
 
-### The one wide edge
+- **Madrid's road tunnel.** `ISSUE_47_BASELINE.md` recorded a separate defect: Radar's foot profile
+  routed pedestrians through the **Calle de Bailén road tunnel** under Plaza de Oriente
+  (`tunnel=yes`, `layer=-1`), turning a 40 m gap into a 1659 m detour with a 470 m straight edge.
+  That detour is an excursion the shape does not need, so the cleanup removes it: the scenario's
+  longest edge is now 143 m and `knownIssues.longEdge` has been dropped.
+- **Budapest crosses at Erzsébet híd now**, 451 m end to end, rather than taking a detour to a
+  narrower crossing. Verified against OSM (ways 485689912 / 581325727 / 1346291144, `bridge=yes`,
+  with bridged footways either side) and recorded in `WIDE_SPAN_METERS`.
 
-`warsaw-heart-foot` has a 489 m edge, over the matrix-wide `MAX_EDGE_METERS` of 400. It was checked
-against OSM and it is real: **Most Śląsko-Dąbrowski** over the Wisła (OSM way 1028356267,
-`bridge=yes`, with bridged footway sidewalks either side). The river is 235 m wide there and Radar
-returns the whole structure and its approaches as one edge, against 387 m for the widest span in
-the rest of the matrix — the Danube. The nearest ferry way, Prom Wilga, is 558 m away and this
-route never touches it.
+### The one wide edge, and how it is handled
 
 Edge length alone cannot separate a wide bridge from a tunnel or a ferry; that is what the water
-invariant is for. So rather than raise the bound for everyone — which would let Madrid's 470 m road
-tunnel through — `WIDE_SPAN_METERS` in `tests/utils/routeInvariants.ts` records the verified span
-for this one scenario at 500 m. It is still a bound: anything longer than the real structure fails.
+invariant is for. So rather than raise `MAX_EDGE_METERS` for everyone, `WIDE_SPAN_METERS` in
+`tests/utils/routeInvariants.ts` records the verified span per scenario — Warsaw's Most
+Śląsko-Dąbrowski at 489 m and Budapest's Erzsébet híd at 451 m. Both were checked against OSM. It
+stays a bound: anything longer than the real structure still fails.
 
 ## How regressions are caught
 
@@ -165,33 +179,25 @@ other three, over all 14 scenarios in `tests/integration/riverScenarios.test.ts`
 > `spurCount === 0`, and the route has non-zero length so the count cannot be satisfied by
 > returning nothing.
 
-The exact zero is earned by the idempotence above. Verified to fail without the fix: returning
-Radar's geometry uncleaned fails all 14 scenarios, at 355 spurs for `london-heart-foot`, 439 for
-`london-heart-car`, and 52 even for `madrid-square-foot`, the easiest case in the matrix.
+The exact zero is earned by the settling above. Verified to fail without the fix: returning Radar's
+geometry uncleaned fails all 14 scenarios.
 
 The metric behind it is `spurStats` in `src/lib/routeQuality.ts`, which calls the same
 `removeSpurs` the pipeline does, so the measurement and the fix cannot drift apart. `baseline.json`
 carries `spurCount`, `removedSpurMeters` and `maxRemovedSpurMeters` per scenario, so any change in
 how much is being removed shows up as a diff.
 
-Also backed by `tests/unit/routeCleanup.test.ts` (17 cases: the guards, the edge cases, idempotence,
-contiguity, the edge-growth bound, and a 10 000-point complexity guard) and four new contract tests
-in `tests/integration/routePipeline.test.ts`.
+Also backed by `tests/unit/routeCleanup.test.ts` — including the two cases that pin the design
+decisions above: a spur that returns on the other side of the street must be removed, and a 300 m
+excursion must be removed when the shape does not follow it but kept when it does.
 
 ## Still open
 
 - **Waypoint density — cause (a) above.** Fixing it needs a minimum waypoint spacing in metres
   applied *after* `simplifyPoints`, not a change to the tolerance (touching `closedLoopDivisor`
   would change fidelity for open shapes and letters, which is what issue #5 was about). It would
-  roughly halve the Radar calls per route as well. Held back from this change because Radar
-  fixtures are keyed by request URL, so changing the waypoints invalidates all 14 and forces a live
-  re-record — which would have mixed Radar's own drift into the baseline diff above.
-- **The deviation bound does not scale with the shape.** 35 m is 3.5% of a 1000 m radius but 0.8%
-  of the 4500 m one, so large routes get the least benefit — Warsaw is the smallest improvement in
-  the matrix at 8%, while the 600 m `london-heart-north` gets 31%. Measured on Warsaw: 60 m would
-  take it to 2.10 and 100 m to 1.98, each costing exactly one accuracy point. Making the bound a
-  function of the shape's scale is the obvious next step, and it needs the radius plumbed into
-  `getRadarRoute`, which does not currently receive it.
+  roughly halve the Radar calls per route. Held back from this change because Radar fixtures are
+  keyed by request URL, so changing the waypoints invalidates all 14 and forces a live re-record.
 - **Lollipops are only half-removed.** Where the router runs down a street, around a block, and
   back up the same street, the stick is an excursion and goes; the loop around the block is not a
-  retrace and stays.
+  retrace and stays. This is why `london-heart-car` still sits at 59% self-overlap.

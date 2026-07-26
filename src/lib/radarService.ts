@@ -513,10 +513,16 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
 
     // Every waypoint is a forced via-point, so any that snapped to a driveway
     // or a side street made the router go in and come straight back out. Splice
-    // those out-and-backs away. This runs last: the river crossing repair's
-    // detector needs to see the geometry Radar actually returned.
+    // those out-and-backs away, keeping only the ones the shape actually needs.
+    // This runs last: the river crossing repair's detector needs to see the
+    // geometry Radar actually returned.
+    //
+    // The shape is judged against the simplified coordinates, not the repaired
+    // waypoints: those carry bridge crossings the router had to be told about,
+    // which are not part of what the user drew.
     const cleanup = removeSpurs(
         routed.coordinates.map(([lng, lat]) => [lat, lng] as [number, number]),
+        simplifiedCoordinates as [number, number][],
         spurCleanupOptionsFor(mode as TransportMode)
     );
     const cleanedMeters = pathLengthMeters(cleanup.points);

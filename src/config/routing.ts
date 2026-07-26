@@ -128,62 +128,75 @@ export const ROUTE_QUALITY = {
  */
 export const SPUR_CLEANUP = {
     /**
-     * How close two points must be to count as the same place.
+     * How close the line has to come back to itself to count as rejoining.
      *
-     * Radar returns OSM nodes, so a retraced street comes back through
-     * coordinates that are identical to six decimals. This only has to absorb
-     * rounding, and staying tight bounds the edge the splice creates: joining
-     * across the gap can lengthen a single edge by at most this much.
+     * Measured against a *segment* of the retained line, not its points. An
+     * earlier version matched points, which only sees a spur that returns
+     * through the very same OSM nodes — so a detour that walks up one pavement
+     * and back down the other was invisible, and most of the reported ones were
+     * exactly that. 20 m spans both sides of an ordinary street and the two
+     * carriageways of a divided one without joining separate parallel streets.
      */
-    snapMeters: 8,
+    snapMeters: 20,
 
     /**
-     * Longest excursion that may be spliced out.
+     * Longest excursion that may be removed.
      *
-     * A safety belt rather than the tuning knob: with the deviation guard on,
-     * sweeping this between 150 m and 400 m barely changes what is removed,
-     * because real features are rejected on deviation long before length.
+     * Bounds the search rather than expressing a judgement: whether an
+     * excursion goes is decided by `maxShapeLossMeters`. Set above the longest
+     * excursion seen in the matrix (1.2 km, on a driving route) so the decision
+     * is never made on length by accident.
      */
     maxSpurMeters: {
-        "foot-walking": 250,
-        "cycling-regular": 250,
-        "driving-car": 400,
+        "foot-walking": 1500,
+        "cycling-regular": 1500,
+        "driving-car": 2500,
     } as Record<TransportMode, number>,
 
     /**
-     * Farthest an excursion may stray from the point it rejoins at before it
-     * counts as a genuine feature of the shape rather than a snapping artifact.
+     * How far a removal may leave a requested waypoint from the route.
      *
-     * This is the control that matters. With it off, the Paris control loses a
-     * real part of the heart: the worst shape point-to-route distance jumps
-     * from 33 m to 274 m. At 35 m it stays at 65 m, and 15-40% of the length is
-     * still removed. Anything the shape genuinely traces — a pier, a headland,
-     * a dead-end street the outline runs down — strays much further than this
-     * and survives, as do the same-bank bridge crossings the river repair
-     * deliberately creates (`riverCrossing.ts`), which are 130-380 m wide.
+     * This is the control that matters, and it asks the only question that
+     * separates a pointless detour from a real one: does the shape need it?
+     * An excursion goes unless cutting it would strand a waypoint further than
+     * this — so a spur into a cul-de-sac goes (the waypoint that caused it sits
+     * on the main road, metres away), while a headland the outline genuinely
+     * traces stays (its waypoints are out there and nothing else reaches them).
      *
-     * Driving is looser: its waypoints are ~80 m apart and the two carriageways
-     * of a divided road are ~30 m apart, so 35 m would refuse to remove the
-     * wrong-side-of-the-road detour that is the commonest car spur. 45 m is the
-     * largest value that keeps every scenario's accuracy score within 2 points
-     * of its pre-cleanup baseline; 60 m removes another 3.3 km from
-     * `london-heart-car` but costs it a third point.
+     * Distance from the route is not the same thing as "how far it strayed",
+     * which was the earlier test and could not tell the two apart at all.
+     *
+     * Measured across the matrix at 60 m: 5-50% of the remaining length goes
+     * and the accuracy score is flat or better almost everywhere — it rises 3
+     * points on `london-heart-car` and 1 on `london-heart-north`, which is what
+     * removing geometry that served no purpose looks like. 100 m removes more
+     * still but costs about a point on half the matrix.
+     *
+     * Waypoints sit ~40 m apart, so 60 m is roughly "the shape may lose a
+     * waypoint and a half here".
      */
-    maxDeviationMeters: {
-        "foot-walking": 35,
-        "cycling-regular": 35,
-        "driving-car": 45,
+    maxShapeLossMeters: {
+        "foot-walking": 60,
+        "cycling-regular": 60,
+        "driving-car": 100,
     } as Record<TransportMode, number>,
 
     /**
      * Most geometry points a single excursion may contain.
      *
-     * Purely a complexity guard, set far above anything `maxSpurMeters` allows
-     * in practice (a 250 m excursion of 12 m edges is ~20 points). It keeps the
-     * deviation scan bounded even if a route arrives with a dense run of
-     * near-coincident points.
+     * Purely a complexity guard: it bounds the rejoin scan even if a route
+     * arrives with a dense run of near-coincident points.
      */
     maxSpurPoints: 512,
+
+    /**
+     * How many detect-and-cut passes to run.
+     *
+     * Cutting one excursion can bring two stretches of the line together and
+     * expose another. The matrix settles in two passes; the third is there so a
+     * pathological route cannot loop.
+     */
+    maxPasses: 8,
 } as const;
 
 /**

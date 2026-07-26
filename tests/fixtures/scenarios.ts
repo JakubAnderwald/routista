@@ -160,15 +160,9 @@ export const SCENARIOS: Scenario[] = [
         radius: 1000,
         mode: "foot-walking",
         points: 150,
-        role: "Control: no river, but ornamental fountains tagged as water.",
-        knownIssues: {
-            longEdge:
-                "Radar's foot profile routes through the Calle de Bailen road tunnel under " +
-                "Plaza de Oriente (tunnel=yes, layer=-1), producing a 470 m straight edge " +
-                "for a 40 m gap. Same class of defect as the Thames ferries — Radar using " +
-                "ways pedestrians cannot — but a different way type, and not water, so the " +
-                "river crossing repair correctly leaves it alone. Tracked separately.",
-        },
+        role:
+            "Control: no river, but ornamental fountains tagged as water. Also the " +
+            "Calle de Bailen road tunnel, which the spur cleanup now removes.",
     },
     {
         id: "madrid-square-foot",

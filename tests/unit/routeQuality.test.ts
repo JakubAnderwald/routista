@@ -223,7 +223,7 @@ describe("spurStats", () => {
     }
 
     it("counts and measures a planted spur", () => {
-        const stats = spurStats(routeOf(lineWithSpur(5, 14)), "foot-walking");
+        const stats = spurStats(routeOf(lineWithSpur(5, 14)), [], "foot-walking");
 
         expect(stats.count).toBe(1);
         expect(stats.meters).toBeCloseTo(28, 0);
@@ -237,11 +237,11 @@ describe("spurStats", () => {
 
         // 14 m out and back is well inside the 150 m minimum along-route gap.
         expect(selfOverlapFraction(route)).toBe(0);
-        expect(spurStats(route, "foot-walking").count).toBe(1);
+        expect(spurStats(route, [], "foot-walking").count).toBe(1);
     });
 
     it("reports nothing for a clean route", () => {
-        expect(spurStats(routeOf(straightLine(40, 50)), "foot-walking")).toEqual({
+        expect(spurStats(routeOf(straightLine(40, 50)), [], "foot-walking")).toEqual({
             count: 0,
             meters: 0,
             maxMeters: 0,
@@ -250,9 +250,9 @@ describe("spurStats", () => {
     });
 
     it("returns zeros for degenerate input", () => {
-        expect(spurStats(null, "foot-walking").count).toBe(0);
-        expect(spurStats(routeOf([]), "foot-walking").fraction).toBe(0);
-        expect(spurStats(routeOf([[51.5, -0.09]]), "foot-walking").fraction).toBe(0);
+        expect(spurStats(null, [], "foot-walking").count).toBe(0);
+        expect(spurStats(routeOf([]), [], "foot-walking").fraction).toBe(0);
+        expect(spurStats(routeOf([[51.5, -0.09]]), [], "foot-walking").fraction).toBe(0);
     });
 });
 

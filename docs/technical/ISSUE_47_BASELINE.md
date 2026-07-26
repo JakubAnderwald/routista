@@ -103,7 +103,7 @@ about 0.3 m, so 150-point shapes are not simplified at all. That means ~40 m way
 
 This turned out to be the cause of a second defect: at that density waypoints keep snapping to
 driveways and cul-de-sacs, and the router has to go in and come back out, so routes were
-spending 2-31% of their length on out-and-back spurs. Those are now removed from the returned
+spending 6-61% of their length on out-and-back spurs. Those are now removed from the returned
 geometry — see `docs/technical/SPUR_CLEANUP.md`, which also carries the post-cleanup baseline.
 The spacing itself is still unfixed.
 
@@ -217,7 +217,12 @@ outline, and it comes out at 2.24x with a 96 m longest edge and 95% accuracy.
   the Thames with a 500 m radius puts a fifth of its waypoints in the water, and some runs have
   no bridge close enough to reach without a diversion longer than the shape. It improved
   six-fold and is listed under `knownIssues.waterTravel` so it cannot silently get worse.
-- **`madrid-heart-foot` contains a 470 m edge, and it is a real defect — a different one.**
+- **`madrid-heart-foot` contained a 470 m edge, and it was a real defect — a different one.
+  It is now fixed** by the spur cleanup, which removes the tunnel detour as an excursion the shape
+  does not need; the scenario's longest edge is 143 m and it no longer carries a known issue. The
+  description below is kept because the defect is still in Radar's graph.
+
+- **How it presented:**
   Radar's foot profile routes pedestrians through the **Calle de Bailén road tunnel** under
   Plaza de Oriente (`tunnel=yes`, `layer=-1`), turning a 40 m gap into a 1659 m detour with a
   470 m straight edge. Same class as the Thames ferries — Radar using ways pedestrians cannot

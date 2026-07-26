@@ -177,7 +177,7 @@ describe("route pipeline", () => {
         });
 
         it("returns geometry with no out-and-back spurs left in it", () => {
-            expect(spurStats(route, SCENARIO.mode).count).toBe(0);
+            expect(spurStats(route, waypoints, SCENARIO.mode).count).toBe(0);
         });
 
         it("reports what the cleanup removed", () => {

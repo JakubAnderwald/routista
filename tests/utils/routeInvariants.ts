@@ -30,12 +30,17 @@ export const MAX_EDGE_METERS = 400;
  */
 export const WIDE_SPAN_METERS: Record<string, number> = {
     // Most Slasko-Dabrowski over the Wisla. The river is 235 m wide here and
-    // Radar returns the whole structure and its approaches as one 489 m edge,
-    // against 387 m for the widest span in the rest of the matrix (the Danube).
+    // Radar returns the whole structure and its approaches as one 489 m edge.
     // Verified against OSM: way 1028356267, bridge=yes, with bridged footway
     // sidewalks either side. The nearest ferry way, Prom Wilga, is 558 m away
     // and this route does not touch it.
     "warsaw-heart-foot": 500,
+
+    // Erzsebet hid over the Duna, 451 m end to end. Verified against OSM: ways
+    // 485689912 / 581325727 / 1346291144, bridge=yes, with bridged footways
+    // either side. This scenario used to cross elsewhere at 387 m; the spur
+    // cleanup removed the detour that took it there.
+    "budapest-heart-foot": 470,
 };
 
 /** Bounds on how far a walking route may stray from the shape it was given. */

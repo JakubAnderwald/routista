@@ -94,13 +94,21 @@ Note also that user-facing **accuracy is not a useful signal here**: `london-hea
 scores 88% while spending 23 km in the river, because the metric averages distance to the
 shape and a dense spur near the shape barely moves it.
 
-## Secondary finding, not part of this work
+## Secondary finding, followed up separately
 
 `SIMPLIFICATION_TOLERANCES["foot-walking"]` (0.00005) divided by
 `GEO.simplification.closedLoopDivisor` (20) gives an effective Douglas-Peucker tolerance of
 about 0.3 m, so 150-point shapes are not simplified at all. That means ~40 m waypoint spacing,
-~16 Radar requests per route, and a 2.4x length ratio even in a river-free city. Worth
-revisiting separately.
+~16 Radar requests per route, and a 2.4x length ratio even in a river-free city.
+
+This turned out to be the cause of a second defect: at that density waypoints keep snapping to
+driveways and cul-de-sacs, and the router has to go in and come back out, so routes were
+spending 2-31% of their length on out-and-back spurs. Those are now removed from the returned
+geometry — see `docs/technical/SPUR_CLEANUP.md`, which also carries the post-cleanup baseline.
+The spacing itself is still unfixed.
+
+**The numbers in the tables above are pre-cleanup.** `tests/fixtures/baseline.json` now holds
+the post-cleanup values; both are shown side by side in `SPUR_CLEANUP.md`.
 
 ## Reproducing
 
@@ -233,8 +241,9 @@ regress into the list unnoticed.
 | invariant | rule |
 |---|---|
 | `waterTravel` | longest unbroken run through water below 500 m — water is crossed, never travelled along |
-| `longEdge` | no edge over 400 m for walking or cycling; bridge spans in the matrix reach 387 m, so this only catches ferries and tunnels |
+| `longEdge` | no edge over 400 m for walking or cycling; bridge spans in the matrix reach 387 m, so this only catches ferries and tunnels. `WIDE_SPAN_METERS` raises it per scenario where a wider span has been verified against OSM |
 | `followsShape` | walking routes stay under 3.5x the shape length and 60% self-overlap |
+| `spurs` | no out-and-back excursions left in the geometry, in any mode. Added with the spur cleanup; see `SPUR_CLEANUP.md` |
 
 Backed by:
 

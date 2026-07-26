@@ -27,6 +27,7 @@ import { measureScenario, ScenarioMetrics } from "../utils/routeMeasurement";
 import {
     checkFollowsShape,
     checkLongEdge,
+    checkNoSpurs,
     checkWaterTravel,
 } from "../utils/routeInvariants";
 
@@ -130,6 +131,17 @@ describe("river scenarios", () => {
             vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
 
             checkFollowsShape(scenario, await measureScenario(scenario));
+        }
+    );
+
+    it.each(SCENARIOS)(
+        "$id has no out-and-back spurs",
+        { timeout: 120_000 },
+        async scenario => {
+            useWaterFixture(scenario.city);
+            vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
+
+            checkNoSpurs(scenario, await measureScenario(scenario));
         }
     );
 });

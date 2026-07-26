@@ -214,7 +214,8 @@ real browser. Playwright is intentionally not a devDependency; see that document
 ## Route Quality Suite (fixture-replay)
 
 **Purpose:** Measure whether a generated route is any good, not just whether the code ran.
-Built for issue #47 — see [ISSUE_47_BASELINE.md](./ISSUE_47_BASELINE.md).
+Built for issue #47 — see [ISSUE_47_BASELINE.md](./ISSUE_47_BASELINE.md) — and extended for the
+out-and-back spurs in [SPUR_CLEANUP.md](./SPUR_CLEANUP.md).
 
 Routing quality can only be judged against real routing data, but the suite has to run
 offline in CI. So real Radar responses are recorded once and replayed through the unmodified
@@ -226,6 +227,7 @@ offline in CI. So real Radar responses are recorded once and replayed through th
 | Shape generators | `tests/utils/shapes.ts` | Deterministic heart/star/circle/square, no PNG decoding |
 | Recorded Radar responses | `tests/fixtures/radar/*.json` | Keyed by request URL; `steps` stripped to keep them small |
 | OSM water and bridges | `tests/fixtures/water/*.geo.json` | Water polygons for the water metrics |
+| Shape fixtures | `tests/utils/pathBuilders.ts` | Paths with exactly known spacing, for the geometry unit suites |
 | Metrics | `src/lib/routeQuality.ts`, `src/lib/waterGeometry.ts` | Pure, unit-tested separately |
 | Invariants | `tests/utils/routeInvariants.ts` | What a good route is, checked both ways |
 | Recorded metrics | `tests/fixtures/baseline.json` | Committed; any drift fails the suite |

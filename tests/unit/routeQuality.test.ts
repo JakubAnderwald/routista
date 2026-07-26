@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { FeatureCollection } from "geojson";
+import { RouteLegSummary } from "@/lib/routeQuality";
 import {
     edgeLengths,
     getRouteLegs,
@@ -10,37 +11,10 @@ import {
     routeLengthRatio,
     routeToLatLngs,
     selfOverlapFraction,
+    spurStats,
     summarizeRoute,
-    RouteLegSummary,
 } from "@/lib/routeQuality";
-
-/**
- * One metre of latitude in degrees, using the same mean Earth radius as
- * `calculateDistance`, so north-south spacing in these fixtures is exact.
- */
-const METRES = 360 / (2 * Math.PI * 6371e3);
-
-/** Builds a route FeatureCollection from `[lat, lng]` points. */
-function routeOf(points: [number, number][], legs?: RouteLegSummary[]): FeatureCollection {
-    return {
-        type: "FeatureCollection",
-        features: [
-            {
-                type: "Feature",
-                properties: legs ? { legs } : {},
-                geometry: {
-                    type: "LineString",
-                    coordinates: points.map(([lat, lng]) => [lng, lat]),
-                },
-            },
-        ],
-    };
-}
-
-/** A straight north-south line of `count` points spaced `spacingM` apart. */
-function straightLine(count: number, spacingM: number, startLat = 51.5): [number, number][] {
-    return Array.from({ length: count }, (_, i) => [startLat + i * spacingM * METRES, -0.09]);
-}
+import { METRES, offsetEast, routeOf, straightLine } from "../utils/pathBuilders";
 
 describe("routeToLatLngs", () => {
     it("flips GeoJSON [lng, lat] into [lat, lng]", () => {
@@ -235,6 +209,53 @@ describe("selfOverlapFraction", () => {
     });
 });
 
+describe("spurStats", () => {
+    /** A north-south line with an out-and-back planted at `atIndex`. */
+    function lineWithSpur(atIndex: number, eastMeters: number): [number, number][] {
+        const line = straightLine(12, 25);
+        const join = line[atIndex];
+        return [
+            ...line.slice(0, atIndex + 1),
+            offsetEast(join, eastMeters),
+            join,
+            ...line.slice(atIndex + 1),
+        ];
+    }
+
+    it("counts and measures a planted spur", () => {
+        const stats = spurStats(routeOf(lineWithSpur(5, 14)), "foot-walking");
+
+        expect(stats.count).toBe(1);
+        expect(stats.meters).toBeCloseTo(28, 0);
+        expect(stats.maxMeters).toBeCloseTo(28, 0);
+        expect(stats.fraction).toBeGreaterThan(0);
+        expect(stats.fraction).toBeLessThan(1);
+    });
+
+    it("sees short spurs that selfOverlapFraction cannot", () => {
+        const route = routeOf(lineWithSpur(5, 14));
+
+        // 14 m out and back is well inside the 150 m minimum along-route gap.
+        expect(selfOverlapFraction(route)).toBe(0);
+        expect(spurStats(route, "foot-walking").count).toBe(1);
+    });
+
+    it("reports nothing for a clean route", () => {
+        expect(spurStats(routeOf(straightLine(40, 50)), "foot-walking")).toEqual({
+            count: 0,
+            meters: 0,
+            maxMeters: 0,
+            fraction: 0,
+        });
+    });
+
+    it("returns zeros for degenerate input", () => {
+        expect(spurStats(null, "foot-walking").count).toBe(0);
+        expect(spurStats(routeOf([]), "foot-walking").fraction).toBe(0);
+        expect(spurStats(routeOf([[51.5, -0.09]]), "foot-walking").fraction).toBe(0);
+    });
+});
+
 describe("summarizeRoute", () => {
     it("collects every metric for a healthy route", () => {
         const shape = straightLine(11, 100);
@@ -242,7 +263,7 @@ describe("summarizeRoute", () => {
             { index: 0, straightMeters: 100, routedMeters: 140, maxEdgeMeters: 30, points: 6 },
         ];
 
-        const summary = summarizeRoute(routeOf(straightLine(21, 60), legs), shape, 150);
+        const summary = summarizeRoute(routeOf(straightLine(21, 60), legs), shape, 150, "foot-walking");
 
         expect(summary.routePoints).toBe(21);
         expect(summary.routeMeters).toBeCloseTo(1200, 0);
@@ -265,7 +286,7 @@ describe("summarizeRoute", () => {
             { index: 0, straightMeters: 79, routedMeters: 3305, maxEdgeMeters: 563, points: 12 },
         ];
 
-        const summary = summarizeRoute(routeOf(points, legs), straightLine(2, 79), 150);
+        const summary = summarizeRoute(routeOf(points, legs), straightLine(2, 79), 150, "foot-walking");
 
         expect(summary.maxEdgeMeters).toBeGreaterThan(500);
         expect(summary.longEdges.count).toBe(3);
@@ -274,7 +295,7 @@ describe("summarizeRoute", () => {
     });
 
     it("handles an empty route without throwing", () => {
-        const summary = summarizeRoute(routeOf([]), [], 150);
+        const summary = summarizeRoute(routeOf([]), [], 150, "foot-walking");
 
         expect(summary).toMatchObject({
             routePoints: 0,

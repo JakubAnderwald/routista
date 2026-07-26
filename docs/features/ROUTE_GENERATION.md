@@ -23,6 +23,8 @@ Repair River Crossings (foot/bike only, when needed)
     ↓
 Stitch Segments Together
     ↓
+Remove Out-and-Back Spurs
+    ↓
 Return GeoJSON LineString
 ```
 
@@ -109,6 +111,17 @@ Route segments from each chunk merged:
 - Remove duplicate points at boundaries
 - Verify continuity
 - Combine into single LineString
+
+### 6. Spur Removal
+
+Every waypoint is a forced via-point, so one that snapped to a driveway or a cul-de-sac made the
+router go in and come straight back out. Those out-and-backs are spliced out of the stitched
+geometry, which shortens routes by 2-31% without moving the line more than ~35 m anywhere.
+
+`properties.summary.distance` describes the cleaned geometry; Radar's own total is kept beside it
+as `routedDistance`, and `properties.legs` still describe the route before cleanup.
+
+See `docs/technical/SPUR_CLEANUP.md`.
 
 ## Accuracy Calculation
 

@@ -26,10 +26,11 @@ export const CACHE = {
      * Key prefix for route cache entries.
      *
      * Versioned: bump it whenever a change makes previously cached routes
-     * wrong. v2 retires routes generated before the river crossing repair
-     * (issue #47), which could otherwise be served from cache for 24 hours.
+     * wrong. v2 retired routes generated before the river crossing repair
+     * (issue #47); v3 retires routes generated before the spur cleanup, which
+     * could otherwise be served from cache for 24 hours after the deploy.
      */
-    routeKeyPrefix: "route:v2:",
+    routeKeyPrefix: "route:v3:",
     
     /** Key prefix for rate limit entries */
     rateLimitKeyPrefix: "ratelimit:",

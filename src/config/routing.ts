@@ -111,6 +111,81 @@ export const ROUTE_QUALITY = {
 } as const;
 
 /**
+ * Spur cleanup — removing out-and-back excursions from a returned route.
+ *
+ * Waypoints sit ~40 m apart and every one is a forced via-point, so whenever a
+ * waypoint's nearest way is a driveway, a service road, a cul-de-sac or the far
+ * carriageway of a divided road, Radar has to drive in and back out again.
+ * Enter plus exit is a spur, and Radar's directions API offers no snap radius,
+ * no bearings and no U-turn suppression to prevent it. So they are spliced out
+ * of the geometry afterwards, by `src/lib/routeCleanup.ts`.
+ *
+ * Measured over the recorded scenario matrix, these settings remove 5-40% of
+ * routed length — 355 excursions on `london-heart-foot`, longest 62 m — while
+ * the worst distance from any shape point to the route grows by at most ~30 m.
+ * See `docs/technical/SPUR_CLEANUP.md`.
+ */
+export const SPUR_CLEANUP = {
+    /**
+     * How close two points must be to count as the same place.
+     *
+     * Radar returns OSM nodes, so a retraced street comes back through
+     * coordinates that are identical to six decimals. This only has to absorb
+     * rounding, and staying tight bounds the edge the splice creates: joining
+     * across the gap can lengthen a single edge by at most this much.
+     */
+    snapMeters: 8,
+
+    /**
+     * Longest excursion that may be spliced out.
+     *
+     * A safety belt rather than the tuning knob: with the deviation guard on,
+     * sweeping this between 150 m and 400 m barely changes what is removed,
+     * because real features are rejected on deviation long before length.
+     */
+    maxSpurMeters: {
+        "foot-walking": 250,
+        "cycling-regular": 250,
+        "driving-car": 400,
+    } as Record<TransportMode, number>,
+
+    /**
+     * Farthest an excursion may stray from the point it rejoins at before it
+     * counts as a genuine feature of the shape rather than a snapping artifact.
+     *
+     * This is the control that matters. With it off, the Paris control loses a
+     * real part of the heart: the worst shape point-to-route distance jumps
+     * from 33 m to 274 m. At 35 m it stays at 65 m, and 15-40% of the length is
+     * still removed. Anything the shape genuinely traces — a pier, a headland,
+     * a dead-end street the outline runs down — strays much further than this
+     * and survives, as do the same-bank bridge crossings the river repair
+     * deliberately creates (`riverCrossing.ts`), which are 130-380 m wide.
+     *
+     * Driving is looser: its waypoints are ~80 m apart and the two carriageways
+     * of a divided road are ~30 m apart, so 35 m would refuse to remove the
+     * wrong-side-of-the-road detour that is the commonest car spur. 45 m is the
+     * largest value that keeps every scenario's accuracy score within 2 points
+     * of its pre-cleanup baseline; 60 m removes another 3.3 km from
+     * `london-heart-car` but costs it a third point.
+     */
+    maxDeviationMeters: {
+        "foot-walking": 35,
+        "cycling-regular": 35,
+        "driving-car": 45,
+    } as Record<TransportMode, number>,
+
+    /**
+     * Most geometry points a single excursion may contain.
+     *
+     * Purely a complexity guard, set far above anything `maxSpurMeters` allows
+     * in practice (a 250 m excursion of 12 m edges is ~20 points). It keeps the
+     * deviation scan bounded even if a route arrives with a dense run of
+     * near-coincident points.
+     */
+    maxSpurPoints: 512,
+} as const;
+
+/**
  * River crossing repair — GitHub issue #47.
  *
  * Radar's foot and bike profiles route along ferry ways in the Thames, so

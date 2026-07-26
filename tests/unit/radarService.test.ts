@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { hashCoordinates, getRadarRoute, getRadarAutocomplete, chunkWaypoints } from '../../src/lib/radarService';
+import { calculateRouteLength } from '../../src/lib/geoUtils';
 
 // Mock the Redis module
 vi.mock('@upstash/redis', () => ({
@@ -255,7 +256,83 @@ describe('radarService', () => {
             expect(mockFetch).toHaveBeenCalled();
             expect(result.type).toBe('FeatureCollection');
             expect(result.features).toHaveLength(1);
-            expect(result.features[0].properties?.summary?.distance).toBe(1000);
+            // The summary reports the geometry that is returned, so it can
+            // differ from Radar's own total; that one is kept alongside it.
+            expect(result.features[0].properties?.summary?.distance)
+                .toBeCloseTo(calculateRouteLength(result), 6);
+            expect(result.features[0].properties?.summary?.routedDistance).toBe(1000);
+            expect(result.features[0].properties?.summary?.routedDuration).toBe(600);
+        });
+
+        it('splices out an out-and-back and reports what it removed', async () => {
+            vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
+
+            // A straight street with a 20 m detour into a side turning and
+            // straight back out of it — what a waypoint snapped to a driveway
+            // makes Radar do.
+            const metre = 360 / (2 * Math.PI * 6371e3);
+            const onStreet = (index: number): [number, number] => [-0.09, 51.5 + index * 30 * metre];
+            const branch: [number, number] = [
+                -0.09 + (20 * metre) / Math.cos((51.5 + 60 * metre) * Math.PI / 180),
+                51.5 + 2 * 30 * metre,
+            ];
+            const geometry = [onStreet(0), onStreet(1), onStreet(2), branch, onStreet(2), onStreet(3)];
+
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    routes: [{
+                        distance: { value: 130 },
+                        duration: { value: 120 },
+                        geometry: { type: 'LineString', coordinates: geometry },
+                    }],
+                }),
+            });
+
+            const result = await getRadarRoute({
+                coordinates: [[51.5, -0.09], [51.5 + 90 * metre, -0.09]],
+                mode: 'foot-walking',
+            });
+
+            const line = result.features[0].geometry as { coordinates: number[][] };
+            expect(line.coordinates).toEqual([onStreet(0), onStreet(1), onStreet(2), onStreet(3)]);
+
+            const cleanup = result.features[0].properties?.spurCleanup;
+            expect(cleanup.spurs).toBe(1);
+            expect(cleanup.removedMeters).toBeCloseTo(40, 0);
+            expect(cleanup.longestMeters).toBeCloseTo(40, 0);
+
+            // Radar's totals are kept, and the summary follows the geometry.
+            expect(result.features[0].properties?.summary?.routedDistance).toBe(130);
+            expect(result.features[0].properties?.summary?.distance)
+                .toBeCloseTo(calculateRouteLength(result), 6);
+        });
+
+        it('leaves a spur-free route alone and attaches no cleanup diagnostics', async () => {
+            vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
+
+            const metre = 360 / (2 * Math.PI * 6371e3);
+            const geometry = [0, 1, 2, 3].map(i => [-0.09, 51.5 + i * 30 * metre]);
+
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    routes: [{
+                        distance: { value: 90 },
+                        duration: { value: 80 },
+                        geometry: { type: 'LineString', coordinates: geometry },
+                    }],
+                }),
+            });
+
+            const result = await getRadarRoute({
+                coordinates: [[51.5, -0.09], [51.5 + 90 * metre, -0.09]],
+                mode: 'foot-walking',
+            });
+
+            expect((result.features[0].geometry as { coordinates: number[][] }).coordinates)
+                .toEqual(geometry);
+            expect(result.features[0].properties?.spurCleanup).toBeUndefined();
         });
 
         it('should attach a per-leg summary for each waypoint pair', async () => {

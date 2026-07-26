@@ -20,6 +20,24 @@ import { ScenarioMetrics } from "./routeMeasurement";
  */
 export const MAX_EDGE_METERS = 400;
 
+/**
+ * Scenarios whose longest edge is a verified real crossing wider than that.
+ *
+ * Edge length alone cannot separate a wide bridge from a tunnel or a ferry —
+ * that is what the water invariant is for — so where a span has been checked
+ * against OSM and found genuine, the bound is raised to just above it. It stays
+ * a bound: anything longer than the real structure still fails.
+ */
+export const WIDE_SPAN_METERS: Record<string, number> = {
+    // Most Slasko-Dabrowski over the Wisla. The river is 235 m wide here and
+    // Radar returns the whole structure and its approaches as one 489 m edge,
+    // against 387 m for the widest span in the rest of the matrix (the Danube).
+    // Verified against OSM: way 1028356267, bridge=yes, with bridged footway
+    // sidewalks either side. The nearest ferry way, Prom Wilga, is 558 m away
+    // and this route does not touch it.
+    "warsaw-heart-foot": 500,
+};
+
 /** Bounds on how far a walking route may stray from the shape it was given. */
 export const MAX_LENGTH_RATIO = 3.5;
 export const MAX_SELF_OVERLAP_PERCENT = 60;
@@ -60,16 +78,18 @@ export function checkWaterTravel(scenario: Scenario, metrics: ScenarioMetrics): 
 export function checkLongEdge(scenario: Scenario, metrics: ScenarioMetrics): void {
     if (scenario.mode === "driving-car") return;
 
+    const bound = WIDE_SPAN_METERS[scenario.id] ?? MAX_EDGE_METERS;
+
     const known = scenario.knownIssues?.longEdge;
     if (known) {
         expect(
             metrics.maxEdgeMeters,
             `${scenario.id} no longer has an implausible edge — remove knownIssues.longEdge`
-        ).toBeGreaterThanOrEqual(MAX_EDGE_METERS);
+        ).toBeGreaterThanOrEqual(bound);
         return;
     }
 
-    expect(metrics.maxEdgeMeters).toBeLessThan(MAX_EDGE_METERS);
+    expect(metrics.maxEdgeMeters).toBeLessThan(bound);
 }
 
 /**
@@ -98,6 +118,36 @@ export function checkFollowsShape(scenario: Scenario, metrics: ScenarioMetrics):
 }
 
 /**
+ * Asserts a route contains no out-and-back excursions.
+ *
+ * A spur is a branch off the road into a side street that turns round and comes
+ * back through the same branch. They come from waypoints snapping to driveways
+ * and cul-de-sacs, and 5-40% of every route's length used to be made of them.
+ *
+ * The bound is exact rather than a threshold because the cleanup is idempotent:
+ * a route that has been through it reports zero by construction, so anything
+ * above zero means the cleanup did not run or stopped working.
+ *
+ * @param scenario - Scenario under test.
+ * @param metrics - Its measured metrics.
+ */
+export function checkNoSpurs(scenario: Scenario, metrics: ScenarioMetrics): void {
+    const known = scenario.knownIssues?.spurs;
+    if (known) {
+        expect(
+            metrics.spurCount,
+            `${scenario.id} no longer has out-and-back spurs — remove knownIssues.spurs`
+        ).toBeGreaterThan(0);
+        return;
+    }
+
+    // A route with no geometry has no spurs either, so the count alone could
+    // be satisfied by returning nothing at all.
+    expect(metrics.lengthRatio).toBeGreaterThan(0);
+    expect(metrics.spurCount).toBe(0);
+}
+
+/**
  * Runs every invariant against a scenario.
  *
  * @param scenario - Scenario under test.
@@ -107,4 +157,5 @@ export function checkAllInvariants(scenario: Scenario, metrics: ScenarioMetrics)
     checkWaterTravel(scenario, metrics);
     checkLongEdge(scenario, metrics);
     checkFollowsShape(scenario, metrics);
+    checkNoSpurs(scenario, metrics);
 }

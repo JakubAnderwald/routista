@@ -15,8 +15,8 @@ import { FeatureCollection } from "geojson";
 import { getRadarRoute, chunkWaypoints } from "@/lib/radarService";
 import { calculateRouteAccuracy, calculateRouteLength } from "@/lib/geoUtils";
 import { generateGPX } from "@/lib/gpxGenerator";
-import { maxEdgeMeters, getRouteLegs } from "@/lib/routeQuality";
-import { RIVER_CROSSING } from "@/config";
+import { getRouteLegs, spurStats } from "@/lib/routeQuality";
+import { RIVER_CROSSING, SPUR_CLEANUP } from "@/config";
 import { scenarioById, scenarioWaypoints } from "../fixtures/scenarios";
 import { loadRadarFixture, RadarFixture, replayFetch } from "../utils/radarFixtures";
 import { useWaterFixture } from "../utils/mockOverpass";
@@ -167,8 +167,47 @@ describe("route pipeline", () => {
             expect(new Set(legs.map(l => l.index)).size).toBe(legs.length);
             for (const leg of legs) {
                 expect(leg.routedMeters).toBeGreaterThanOrEqual(0);
-                expect(leg.maxEdgeMeters).toBeLessThanOrEqual(maxEdgeMeters(route) + 1);
+                // Legs describe the route before the spur cleanup, so a leg's
+                // longest edge is bounded by the pre-cleanup route, not by the
+                // geometry that is finally returned.
+                expect(leg.maxEdgeMeters).toBeLessThanOrEqual(
+                    route.features[0].properties?.summary.routedDistance
+                );
             }
+        });
+
+        it("returns geometry with no out-and-back spurs left in it", () => {
+            expect(spurStats(route, SCENARIO.mode).count).toBe(0);
+        });
+
+        it("reports what the cleanup removed", () => {
+            const diagnostics = route.features[0].properties?.spurCleanup;
+
+            expect(diagnostics).toMatchObject({
+                spurs: expect.any(Number),
+                removedMeters: expect.any(Number),
+                longestMeters: expect.any(Number),
+            });
+            expect(diagnostics.spurs).toBeGreaterThan(0);
+            expect(diagnostics.longestMeters).toBeLessThanOrEqual(
+                SPUR_CLEANUP.maxSpurMeters[SCENARIO.mode]
+            );
+        });
+
+        it("reports the length of the route it actually returns", () => {
+            const summary = route.features[0].properties?.summary;
+
+            // The displayed km comes from the geometry, so the summary has to
+            // agree with it — Radar's own total describes the uncleaned route.
+            expect(summary.distance).toBeCloseTo(calculateRouteLength(route), 0);
+            expect(summary.routedDistance).toBeGreaterThan(summary.distance);
+            expect(summary.duration).toBeLessThan(summary.routedDuration);
+        });
+
+        it("keeps the legs Radar reported, uncleaned and larger than the geometry", () => {
+            const legTotal = getRouteLegs(route).reduce((sum, leg) => sum + leg.routedMeters, 0);
+
+            expect(legTotal).toBeGreaterThan(calculateRouteLength(route));
         });
 
         it("reports what the repair did", () => {

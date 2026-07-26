@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fetchWaterAndBridges, getWaterAndBridges } from "@/lib/overpassService";
+import { RIVER_CROSSING } from "@/config";
 
 // Hoisted so the mock factory, which runs before imports, can see them.
 const { redisGet, redisSet } = vi.hoisted(() => ({ redisGet: vi.fn(), redisSet: vi.fn() }));
@@ -331,6 +332,46 @@ describe("getWaterAndBridges", () => {
         mockFetch.mockResolvedValueOnce(okResponse(OVERPASS_RESPONSE));
 
         expect((await getWaterAndBridges([3.5, 3.5, 3.51, 3.51]))?.features.length).toBeGreaterThan(0);
+    });
+
+    it("tries once on the request path rather than working through a retry ladder", async () => {
+        // A retry ladder here would block route generation for ~110 s on every
+        // uncached request while Overpass is down.
+        redisGet.mockResolvedValueOnce(null);
+        mockFetch.mockResolvedValue({ ok: false, status: 429, text: async () => "busy" });
+
+        expect(await getWaterAndBridges([6.5, 6.5, 6.51, 6.51])).toBeNull();
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("remembers a failure briefly instead of paying the timeout again", async () => {
+        redisGet.mockResolvedValue(null);
+        mockFetch.mockResolvedValue({ ok: false, status: 504, text: async () => "timeout" });
+
+        const bbox: [number, number, number, number] = [7.5, 7.5, 7.51, 7.51];
+        expect(await getWaterAndBridges(bbox)).toBeNull();
+        const afterFirst = mockFetch.mock.calls.length;
+
+        expect(await getWaterAndBridges(bbox)).toBeNull();
+        expect(mockFetch).toHaveBeenCalledTimes(afterFirst);
+    });
+
+    it("bounds the in-process cache", async () => {
+        redisGet.mockResolvedValue(null);
+        mockFetch.mockResolvedValue(okResponse(OVERPASS_RESPONSE));
+
+        // Fill well past the limit, then come back to the first one.
+        const first: [number, number, number, number] = [10, 10, 10.01, 10.01];
+        await getWaterAndBridges(first);
+        for (let i = 1; i <= RIVER_CROSSING.maxMemoryCacheEntries + 2; i++) {
+            await getWaterAndBridges([10 + i, 10 + i, 10 + i + 0.01, 10 + i + 0.01]);
+        }
+
+        const before = mockFetch.mock.calls.length;
+        await getWaterAndBridges(first);
+
+        // Evicted, so it had to be fetched again rather than growing forever.
+        expect(mockFetch.mock.calls.length).toBeGreaterThan(before);
     });
 
     it("returns null rather than throwing when Overpass is unavailable", async () => {

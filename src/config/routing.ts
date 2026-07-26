@@ -200,8 +200,27 @@ export const RIVER_CROSSING = {
      */
     maxDataAreaSqKm: 60,
 
-    /** Abort an Overpass request after this long and route without water data. */
+    /**
+     * Abort a single Overpass attempt after this long. Route generation waits
+     * at most `overpassAttempts` of these, so keep the two in step.
+     */
     overpassTimeoutMs: 15_000,
+
+    /**
+     * Attempts on the request path. One: a route must not wait on a retry
+     * ladder. Fixture capture passes a higher count of its own, where a slow
+     * public Overpass is worth waiting out.
+     */
+    overpassAttempts: 1,
+
+    /**
+     * How long a failed Overpass lookup is remembered, in seconds. Without
+     * this, every request during an outage pays the full timeout again.
+     */
+    overpassFailureMemoSeconds: 60,
+
+    /** Entries kept in the per-process OSM cache before the oldest is dropped. */
+    maxMemoryCacheEntries: 16,
 
     /**
      * Largest OSM payload worth putting in Redis, in bytes. Bigger responses

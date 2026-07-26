@@ -146,13 +146,26 @@ async function runCase(page, testCase) {
         await page.waitForTimeout(2500);
     }
 
-    await page.getByRole('button', { name: testCase.mode, exact: true }).first().click();
     await setReactInput(page, 'input[type="range"]', testCase.radius);
     await page.waitForTimeout(800);
 
-    await page.screenshot({ path: join(outDir, `${testCase.id}-${label}-area.png`) });
-
-    await page.click('[data-testid="area-generate-button"]');
+    // Variant B selects the mode alongside the area and generates from there;
+    // variant A has a separate mode step.
+    const generateFromArea = await page.$('[data-testid="area-generate-button"]');
+    if (generateFromArea) {
+        await page.getByRole('button', { name: testCase.mode, exact: true }).first().click();
+        await page.screenshot({ path: join(outDir, `${testCase.id}-${label}-area.png`) });
+        await generateFromArea.click();
+    } else {
+        await page.screenshot({ path: join(outDir, `${testCase.id}-${label}-area.png`) });
+        await page.click('[data-testid="area-next-button"]');
+        await page.waitForSelector('[data-testid="current-step"][data-value="mode"]', {
+            state: 'attached',
+            timeout: 60_000,
+        });
+        await page.getByRole('button', { name: testCase.mode, exact: true }).first().click();
+        await page.click('[data-testid="mode-generate-button"]');
+    }
     await page.waitForSelector('[data-testid="has-route"][data-value="true"]', {
         state: 'attached',
         timeout: 240_000,

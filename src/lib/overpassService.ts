@@ -34,8 +34,29 @@ interface OverpassElement {
     members?: { type: string; role: string; geometry?: OverpassNode[] }[];
 }
 
-/** In-process cache, so repeated routes in one lambda skip even Redis. */
+/**
+ * In-process cache, so repeated routes in one lambda skip even Redis.
+ *
+ * Bounded, and insertion-ordered so the oldest entry goes first: responses too
+ * large for Redis live only here, and a long-lived server covering many cities
+ * would otherwise grow without limit.
+ */
 const memoryCache = new Map<string, FeatureCollection>();
+
+/** Keys whose last lookup failed, with the time the memo expires. */
+const failedLookups = new Map<string, number>();
+
+/** Stores a response, evicting the oldest entries once the cache is full. */
+function rememberInMemory(key: string, collection: FeatureCollection): void {
+    memoryCache.delete(key);
+    memoryCache.set(key, collection);
+
+    while (memoryCache.size > RIVER_CROSSING.maxMemoryCacheEntries) {
+        const oldest = memoryCache.keys().next().value;
+        if (oldest === undefined) break;
+        memoryCache.delete(oldest);
+    }
+}
 
 /**
  * Fetches water polygons and road/foot bridges for a bounding box, with
@@ -50,7 +71,17 @@ export async function getWaterAndBridges(
     const key = cacheKeyFor(bbox);
 
     const inMemory = memoryCache.get(key);
-    if (inMemory) return inMemory;
+    if (inMemory) {
+        // Refresh its position so the busiest areas are the last to be evicted.
+        rememberInMemory(key, inMemory);
+        return inMemory;
+    }
+
+    const failedUntil = failedLookups.get(key);
+    if (failedUntil !== undefined && failedUntil > nowSeconds()) {
+        console.log(`[Overpass] Skipping ${key}, a recent lookup failed`);
+        return null;
+    }
 
     const redis = getRedisClient();
     if (redis) {
@@ -70,8 +101,13 @@ export async function getWaterAndBridges(
 
     let collection: FeatureCollection;
     try {
-        collection = await fetchWaterAndBridges(bbox, RIVER_CROSSING.overpassTimeoutMs);
+        collection = await fetchWaterAndBridges(
+            bbox,
+            RIVER_CROSSING.overpassTimeoutMs,
+            RIVER_CROSSING.overpassAttempts
+        );
     } catch (error) {
+        failedLookups.set(key, nowSeconds() + RIVER_CROSSING.overpassFailureMemoSeconds);
         // Overpass being down must never break route generation.
         console.warn(
             `[Overpass] Fetch failed, routing without water data: ${error instanceof Error ? error.message : "unknown"}`
@@ -86,7 +122,8 @@ export async function getWaterAndBridges(
     console.log(
         `[Overpass] Fetched ${collection.features.length} features for ${key}`
     );
-    memoryCache.set(key, collection);
+    failedLookups.delete(key);
+    rememberInMemory(key, collection);
 
     const bytes = JSON.stringify(collection).length;
     if (redis && bytes <= RIVER_CROSSING.maxCachedDataBytes) {
@@ -104,6 +141,11 @@ export async function getWaterAndBridges(
     }
 
     return collection;
+}
+
+/** Seconds since the epoch, for the failure memo. */
+function nowSeconds(): number {
+    return Math.floor(Date.now() / 1000);
 }
 
 /**
@@ -128,17 +170,23 @@ function cacheKeyFor(bbox: [number, number, number, number]): string {
  * Fetches water polygons and road/foot bridges for a bounding box.
  *
  * @param bbox - Bounding box as `[south, west, north, east]`.
- * @param timeoutMs - Abort the request after this long.
+ * @param timeoutMs - Abort each attempt after this long.
+ * @param attempts - How many times to try before giving up. The request path
+ *   passes 1; fixture capture waits out a busy public instance.
  * @returns FeatureCollection of water Polygons and bridge LineStrings.
  */
 export async function fetchWaterAndBridges(
     bbox: [number, number, number, number],
-    timeoutMs = 90_000
+    timeoutMs = 90_000,
+    attempts = 4
 ): Promise<FeatureCollection> {
     const [south, west, north, east] = bbox;
     const area = `${south},${west},${north},${east}`;
 
-    const query = `[out:json][timeout:90];
+    // Overpass keeps working until its own timeout, so align it with the
+    // client abort rather than leaving the server busy long after we gave up.
+    const serverTimeout = Math.max(10, Math.ceil(timeoutMs / 1000));
+    const query = `[out:json][timeout:${serverTimeout}];
 (
   way["natural"="water"](${area});
   relation["natural"="water"](${area});
@@ -148,7 +196,7 @@ export async function fetchWaterAndBridges(
 );
 out geom;`;
 
-    const data = await runQuery(query, timeoutMs);
+    const data = await runQuery(query, timeoutMs, attempts);
     return toFeatureCollection(data.elements ?? []);
 }
 
@@ -161,7 +209,7 @@ out geom;`;
 async function runQuery(
     query: string,
     timeoutMs: number,
-    attempts = 4
+    attempts: number
 ): Promise<{ elements: OverpassElement[] }> {
     let lastError = "";
 
@@ -193,6 +241,8 @@ async function runQuery(
         } finally {
             clearTimeout(timer);
         }
+
+        if (attempt === attempts) break;
 
         const backoffMs = 5_000 * attempt;
         console.log(`[overpass] attempt ${attempt} failed (${lastError}); retrying in ${backoffMs}ms`);

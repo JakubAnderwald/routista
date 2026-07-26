@@ -174,6 +174,24 @@ describe("chooseBridge", () => {
         expect(far).toBeNull();
     });
 
+    it("takes a usable crossing over a cheaper one that breaks the cap", () => {
+        // The footbridge scores better than the road bridge, since walkable
+        // classes are preferred, but sits further away. With a cap that only
+        // the road bridge satisfies, the road bridge has to win — capping the
+        // winner instead of the candidates would drop the run entirely.
+        const chosen = chooseBridge(
+            [51.503, 0.0102],
+            [51.499, 0.0102],
+            [[51.501, 0.0102]],
+            bridges,
+            water,
+            500
+        );
+
+        expect(chosen?.bridge.name).toBe("Road Bridge");
+        expect(chosen?.detourMeters).toBeLessThanOrEqual(500);
+    });
+
     it("returns null for an empty run or when there are no bridges", () => {
         expect(chooseBridge([51.503, 0], [51.499, 0], [], bridges, water)).toBeNull();
         expect(

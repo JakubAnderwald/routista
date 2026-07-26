@@ -86,7 +86,9 @@ routes wrong, or stale routes are served for up to 24 hours after a fix ships.
 - Only fetched for walking and cycling routes that show signs of having used a ferry, so most
   routes never call it
 - Graceful fallback: if Overpass is slow or down, the route is returned exactly as Radar
-  produced it. An 8 s timeout bounds the delay.
+  produced it. One attempt with a 15 s timeout bounds the delay, and a failure is remembered
+  for 60 s so an outage does not make every request pay it again.
+- Responses over 800 KB are kept in the per-process cache only, which is bounded to 16 entries
 
 **Files:** `src/lib/overpassService.ts`, `src/lib/riverCrossing.ts`.
 See `docs/technical/ISSUE_47_BASELINE.md`.

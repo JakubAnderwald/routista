@@ -320,14 +320,18 @@ export function chooseBridge(
         const penalty = rank === -1 ? RIVER_CROSSING.unwalkableBridgePenaltyMeters : rank * 5;
         const cost = travelled + penalty;
 
+        // Rejected per candidate, not on the winner: the walkability penalty
+        // is part of the cost but not of the detour, so ranking first and
+        // capping afterwards can throw away a perfectly good crossing because
+        // a cheaper-scoring one happened to be too far.
+        const detourMeters = Math.max(0, travelled - direct);
+        if (detourMeters > maxDetourMeters) continue;
+
         if (cost < bestCost) {
             bestCost = cost;
-            best = { bridge, crossing, detourMeters: Math.max(0, travelled - direct), sameBank };
+            best = { bridge, crossing, detourMeters, sameBank };
         }
     }
-
-    if (!best) return null;
-    if (best.detourMeters > maxDetourMeters) return null;
 
     return best;
 }

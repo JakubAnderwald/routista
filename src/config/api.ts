@@ -29,11 +29,15 @@ export const CACHE = {
      * wrong. v2 retired routes generated before the river crossing repair
      * (issue #47); v3 the ones from before the spur cleanup; v4 the ones from
      * before the cleanup learned to see spurs that return on the other side of
-     * the street. Without a bump, a deploy keeps serving the old geometry for
-     * 24 hours — which is how the v3 routes were caught still coming back
-     * byte-identical from a preview that had already shipped v4's code.
+     * the street; v5 the ones from before a cut was measured against the
+     * geometry it actually emits.
+     *
+     * The rule this keeps proving: if the returned geometry changes at all, the
+     * prefix has to move with it, or a deploy serves the previous version for
+     * 24 hours. Both v4 and v5 were caught by a verification run coming back
+     * byte-identical from a preview that had already shipped the new code.
      */
-    routeKeyPrefix: "route:v4:",
+    routeKeyPrefix: "route:v5:",
     
     /** Key prefix for rate limit entries */
     rateLimitKeyPrefix: "ratelimit:",

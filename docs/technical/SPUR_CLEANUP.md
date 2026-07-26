@@ -120,7 +120,7 @@ carry bridge crossings the router had to be told about, which are not part of wh
   surprising.
 - `properties.spurCleanup` = `{ spurs, removedMeters, longestMeters }`, attached only when something
   was removed.
-- `CACHE.routeKeyPrefix` is `route:v4:`. Without a bump, a deploy keeps serving the previous
+- `CACHE.routeKeyPrefix` is `route:v5:`. Without a bump, a deploy keeps serving the previous
   geometry for 24 hours — which is exactly how the v3 routes were caught coming back
   byte-identical from a preview that had already shipped the new code.
 

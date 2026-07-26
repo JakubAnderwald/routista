@@ -27,10 +27,13 @@ export const CACHE = {
      *
      * Versioned: bump it whenever a change makes previously cached routes
      * wrong. v2 retired routes generated before the river crossing repair
-     * (issue #47); v3 retires routes generated before the spur cleanup, which
-     * could otherwise be served from cache for 24 hours after the deploy.
+     * (issue #47); v3 the ones from before the spur cleanup; v4 the ones from
+     * before the cleanup learned to see spurs that return on the other side of
+     * the street. Without a bump, a deploy keeps serving the old geometry for
+     * 24 hours — which is how the v3 routes were caught still coming back
+     * byte-identical from a preview that had already shipped v4's code.
      */
-    routeKeyPrefix: "route:v3:",
+    routeKeyPrefix: "route:v4:",
     
     /** Key prefix for rate limit entries */
     rateLimitKeyPrefix: "ratelimit:",

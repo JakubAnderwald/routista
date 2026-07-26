@@ -12,6 +12,10 @@
  * Usage:
  *   node tests/e2e/river-crossing-matrix.mjs <baseUrl> <label> [outDir]
  *
+ * Set MATRIX_ONLY to a substring of a case id to run just that case — the
+ * whole matrix hits the 10 req/min rate limit on `/api/radar/*` if a case has
+ * to be retried, and a retry of one case does not.
+ *
  * Requires Playwright — deliberately not a devDependency, install on demand:
  *   npm i -D playwright && npx playwright install chromium
  *
@@ -232,10 +236,13 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 
-console.log(`\n${label} — ${baseUrl}\n`);
+const only = process.env.MATRIX_ONLY;
+const selected = only ? CASES.filter(c => c.id.includes(only)) : CASES;
+
+console.log(`\n${label} — ${baseUrl}${only ? ` (only: ${only})` : ''}\n`);
 const results = [];
 
-for (const testCase of CASES) {
+for (const testCase of selected) {
     try {
         const result = await runCase(page, testCase);
         results.push(result);
@@ -254,9 +261,17 @@ for (const testCase of CASES) {
 
 await browser.close();
 
+// A filtered run is a retry of part of a matrix, so merge into whatever is
+// already there rather than replacing it with one case.
+const resultsPath = join(outDir, `results-${label}.json`);
+/* eslint-disable security/detect-non-literal-fs-filename */
+const previous = existsSync(resultsPath)
+    ? JSON.parse(readFileSync(resultsPath, 'utf-8')).results ?? []
+    : [];
+/* eslint-enable security/detect-non-literal-fs-filename */
+const merged = CASES.map(c => results.find(r => r.id === c.id) ?? previous.find(r => r.id === c.id))
+    .filter(Boolean);
+
 // eslint-disable-next-line security/detect-non-literal-fs-filename
-writeFileSync(
-    join(outDir, `results-${label}.json`),
-    `${JSON.stringify({ label, baseUrl, results }, null, 2)}\n`
-);
-console.log(`\n  results: ${join(outDir, `results-${label}.json`)}\n`);
+writeFileSync(resultsPath, `${JSON.stringify({ label, baseUrl, results: merged }, null, 2)}\n`);
+console.log(`\n  results: ${resultsPath}\n`);

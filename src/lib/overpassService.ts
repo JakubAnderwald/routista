@@ -1,12 +1,20 @@
 /**
- * Capture-time OpenStreetMap helpers.
+ * OpenStreetMap water and bridge data, via the Overpass API.
  *
- * Pulls water polygons and bridges from the Overpass API and normalizes them
- * to GeoJSON. Only used by `npm run fixtures:routes`; the committed output is
- * what tests read, so nothing in the suite depends on Overpass being up.
+ * Needed because Radar's foot and bike profiles route along ferry ways in the
+ * Thames (GitHub issue #47) and repairing that requires knowing where the water
+ * and the crossings actually are.
+ *
+ * Only called for routes the cheap long-edge detector has already flagged, and
+ * results are cached in Redis for a month, so most routes never touch Overpass.
+ * Every failure path returns null: no water data means the previous behaviour,
+ * not a broken route.
  */
 
 import { Feature, FeatureCollection, Position } from "geojson";
+import * as Sentry from "@sentry/nextjs";
+import { RIVER_CROSSING } from "@/config";
+import { getRedisClient } from "./redisClient";
 
 const OVERPASS_URL = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter";
 
@@ -27,20 +35,158 @@ interface OverpassElement {
 }
 
 /**
+ * In-process cache, so repeated routes in one lambda skip even Redis.
+ *
+ * Bounded, and insertion-ordered so the oldest entry goes first: responses too
+ * large for Redis live only here, and a long-lived server covering many cities
+ * would otherwise grow without limit.
+ */
+const memoryCache = new Map<string, FeatureCollection>();
+
+/** Keys whose last lookup failed, with the time the memo expires. */
+const failedLookups = new Map<string, number>();
+
+/** Stores a response, evicting the oldest entries once the cache is full. */
+function rememberInMemory(key: string, collection: FeatureCollection): void {
+    memoryCache.delete(key);
+    memoryCache.set(key, collection);
+
+    while (memoryCache.size > RIVER_CROSSING.maxMemoryCacheEntries) {
+        const oldest = memoryCache.keys().next().value;
+        if (oldest === undefined) break;
+        memoryCache.delete(oldest);
+    }
+}
+
+/**
+ * Fetches water polygons and road/foot bridges for a bounding box, with
+ * caching and graceful failure.
+ *
+ * @param bbox - Bounding box as `[south, west, north, east]`.
+ * @returns Water and bridge geometry, or null if it could not be fetched.
+ */
+export async function getWaterAndBridges(
+    bbox: [number, number, number, number]
+): Promise<FeatureCollection | null> {
+    const key = cacheKeyFor(bbox);
+
+    const inMemory = memoryCache.get(key);
+    if (inMemory) {
+        // Refresh its position so the busiest areas are the last to be evicted.
+        rememberInMemory(key, inMemory);
+        return inMemory;
+    }
+
+    const failedUntil = failedLookups.get(key);
+    if (failedUntil !== undefined && failedUntil > nowSeconds()) {
+        console.log(`[Overpass] Skipping ${key}, a recent lookup failed`);
+        return null;
+    }
+
+    const redis = getRedisClient();
+    if (redis) {
+        try {
+            const cached = await redis.get<FeatureCollection>(key);
+            if (cached) {
+                console.log(`[Overpass] Cache HIT for ${key}`);
+                memoryCache.set(key, cached);
+                return cached;
+            }
+        } catch (error) {
+            console.log(
+                `[Overpass] Cache read failed: ${error instanceof Error ? error.message : "unknown"}`
+            );
+        }
+    }
+
+    let collection: FeatureCollection;
+    try {
+        collection = await fetchWaterAndBridges(
+            bbox,
+            RIVER_CROSSING.overpassTimeoutMs,
+            RIVER_CROSSING.overpassAttempts
+        );
+    } catch (error) {
+        failedLookups.set(key, nowSeconds() + RIVER_CROSSING.overpassFailureMemoSeconds);
+        // Overpass being down must never break route generation.
+        console.warn(
+            `[Overpass] Fetch failed, routing without water data: ${error instanceof Error ? error.message : "unknown"}`
+        );
+        Sentry.captureMessage("Overpass fetch failed", {
+            level: "warning",
+            extra: { service: "overpassService", bbox },
+        });
+        return null;
+    }
+
+    console.log(
+        `[Overpass] Fetched ${collection.features.length} features for ${key}`
+    );
+    failedLookups.delete(key);
+    rememberInMemory(key, collection);
+
+    const bytes = JSON.stringify(collection).length;
+    if (redis && bytes <= RIVER_CROSSING.maxCachedDataBytes) {
+        try {
+            await redis.set(key, collection, { ex: RIVER_CROSSING.waterCacheTtlSeconds });
+        } catch (error) {
+            console.log(
+                `[Overpass] Cache write failed: ${error instanceof Error ? error.message : "unknown"}`
+            );
+        }
+    } else if (redis) {
+        // Past the value size limit. Keeping it in memory is still worth it
+        // for repeat requests hitting the same lambda.
+        console.log(`[Overpass] ${bytes} bytes too large to share via Redis, memory only`);
+    }
+
+    return collection;
+}
+
+/** Seconds since the epoch, for the failure memo. */
+function nowSeconds(): number {
+    return Math.floor(Date.now() / 1000);
+}
+
+/**
+ * Cache key for a bounding box.
+ *
+ * Boxes are rounded outwards to a coarse grid so nearby routes share an entry;
+ * rivers and bridges do not move.
+ */
+function cacheKeyFor(bbox: [number, number, number, number]): string {
+    const grid = RIVER_CROSSING.waterCacheGridDegrees;
+    const snapped = [
+        Math.floor(bbox[0] / grid) * grid,
+        Math.floor(bbox[1] / grid) * grid,
+        Math.ceil(bbox[2] / grid) * grid,
+        Math.ceil(bbox[3] / grid) * grid,
+    ].map(value => value.toFixed(3));
+
+    return `osm:water:v1:${snapped.join(",")}`;
+}
+
+/**
  * Fetches water polygons and road/foot bridges for a bounding box.
  *
  * @param bbox - Bounding box as `[south, west, north, east]`.
- * @param timeoutMs - Abort the request after this long.
+ * @param timeoutMs - Abort each attempt after this long.
+ * @param attempts - How many times to try before giving up. The request path
+ *   passes 1; fixture capture waits out a busy public instance.
  * @returns FeatureCollection of water Polygons and bridge LineStrings.
  */
 export async function fetchWaterAndBridges(
     bbox: [number, number, number, number],
-    timeoutMs = 90_000
+    timeoutMs = 90_000,
+    attempts = 4
 ): Promise<FeatureCollection> {
     const [south, west, north, east] = bbox;
     const area = `${south},${west},${north},${east}`;
 
-    const query = `[out:json][timeout:90];
+    // Overpass keeps working until its own timeout, so align it with the
+    // client abort rather than leaving the server busy long after we gave up.
+    const serverTimeout = Math.max(10, Math.ceil(timeoutMs / 1000));
+    const query = `[out:json][timeout:${serverTimeout}];
 (
   way["natural"="water"](${area});
   relation["natural"="water"](${area});
@@ -50,7 +196,7 @@ export async function fetchWaterAndBridges(
 );
 out geom;`;
 
-    const data = await runQuery(query, timeoutMs);
+    const data = await runQuery(query, timeoutMs, attempts);
     return toFeatureCollection(data.elements ?? []);
 }
 
@@ -63,7 +209,7 @@ out geom;`;
 async function runQuery(
     query: string,
     timeoutMs: number,
-    attempts = 4
+    attempts: number
 ): Promise<{ elements: OverpassElement[] }> {
     let lastError = "";
 
@@ -77,7 +223,7 @@ async function runQuery(
                 // Overpass answers 406 to requests without a User-Agent.
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded",
-                    "User-Agent": "routista-fixture-capture/1.0 (https://www.routista.eu)",
+                    "User-Agent": "routista/1.0 (https://www.routista.eu)",
                     Accept: "application/json",
                 },
                 body: `data=${encodeURIComponent(query)}`,
@@ -95,6 +241,8 @@ async function runQuery(
         } finally {
             clearTimeout(timer);
         }
+
+        if (attempt === attempts) break;
 
         const backoffMs = 5_000 * attempt;
         console.log(`[overpass] attempt ${attempt} failed (${lastError}); retrying in ${backoffMs}ms`);

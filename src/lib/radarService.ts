@@ -1,31 +1,23 @@
 import { simplifyPoints, calculateDistance } from "./geoUtils";
 import { edgeLengths, RouteLegSummary } from "./routeQuality";
+import {
+    BoundingBox,
+    boundingBoxAreaSqKm,
+    boundingBoxOf,
+    buildWaterIndex,
+    WaterIndex,
+} from "./waterGeometry";
+import { BridgeIndex, buildBridgeIndex, planCrossings, repairWaterLegs } from "./riverCrossing";
+import { getWaterAndBridges } from "./overpassService";
+import { getRedisClient } from "./redisClient";
 import { FeatureCollection, Feature } from "geojson";
-import { Redis } from "@upstash/redis";
 import * as Sentry from "@sentry/nextjs";
-import { 
-    SIMPLIFICATION_TOLERANCES, 
-    MODE_TO_RADAR, 
-    TransportMode 
+import {
+    SIMPLIFICATION_TOLERANCES,
+    MODE_TO_RADAR,
+    TransportMode
 } from "@/config";
-import { RADAR_API, CACHE } from "@/config";
-
-/**
- * Create Redis client from environment variables.
- * Checks both Vercel KV and Upstash naming conventions.
- * Returns null if not configured.
- */
-function getRedisClient(): Redis | null {
-    // Check Vercel KV naming convention first, then Upstash native naming
-    const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-    
-    if (!url || !token) {
-        return null;
-    }
-    
-    return new Redis({ url, token });
-}
+import { RADAR_API, CACHE, RIVER_CROSSING, ROUTE_QUALITY } from "@/config";
 
 export interface RouteGenerationOptions {
     coordinates: [number, number][];
@@ -74,13 +66,15 @@ export function hashCoordinates(coordinates: [number, number][]): string {
  * @param chunkStart - Index in `waypoints` of the chunk's first point.
  * @param waypoints - The full waypoint list the route was requested for.
  * @param into - Map to accumulate summaries into, keyed by leg start index.
+ * @param paths - Map to accumulate leg geometry into, keyed the same way.
  */
 function collectLegSummaries(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     legs: any[] | undefined,
     chunkStart: number,
     waypoints: [number, number][],
-    into: Map<number, RouteLegSummary>
+    into: Map<number, RouteLegSummary>,
+    paths?: Map<number, [number, number][]>
 ): void {
     if (!Array.isArray(legs)) return;
 
@@ -96,6 +90,7 @@ function collectLegSummaries(
             ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
         );
         const edges = edgeLengths(points);
+        paths?.set(index, points);
 
         into.set(index, {
             index,
@@ -105,6 +100,282 @@ function collectLegSummaries(
             points: points.length,
         });
     });
+}
+
+/**
+ * Splits waypoints into chunks small enough for one Radar request.
+ *
+ * Consecutive chunks share exactly one waypoint, which is the point stitching
+ * later drops. Sharing two — as this did before — made the router travel the
+ * boundary leg twice and left a jump between the duplicates, adding a spurious
+ * out-and-back at every chunk boundary.
+ *
+ * @param waypoints - Waypoints to route, as `[lat, lng]`.
+ * @returns Chunks with their start index in `waypoints`.
+ * @internal Exported for testing purposes
+ */
+export function chunkWaypoints(waypoints: number[][]): { start: number; points: number[][] }[] {
+    const chunkSize = RADAR_API.chunkSize;
+    const chunks: { start: number; points: number[][] }[] = [];
+
+    for (let start = 0; start < waypoints.length - 1; start += chunkSize) {
+        const end = Math.min(start + chunkSize + 1, waypoints.length);
+        chunks.push({ start, points: waypoints.slice(start, end) });
+    }
+
+    // A trailing chunk of one point is not a route; fold it into its
+    // predecessor, which stays well inside Radar's 25-waypoint limit.
+    const last = chunks[chunks.length - 1];
+    if (chunks.length > 1 && last.points.length < 2) {
+        chunks.pop();
+        chunks[chunks.length - 1].points.push(...last.points);
+    }
+
+    return chunks;
+}
+
+/** One routing pass: the stitched route plus the per-leg detail behind it. */
+interface RoutedWaypoints {
+    features: Feature[];
+    /** Stitched geometry as GeoJSON `[lng, lat]`. */
+    coordinates: number[][];
+    legs: RouteLegSummary[];
+    /** Routed geometry per leg as `[lat, lng]`, keyed by leg start index. */
+    legPaths: Map<number, [number, number][]>;
+    distance: number;
+    duration: number;
+}
+
+/**
+ * Routes a waypoint list through the Radar directions API, in chunks.
+ *
+ * @param waypoints - Waypoints as `[lat, lng]`.
+ * @param radarMode - Radar's mode name (`foot`, `bike`, `car`).
+ * @param apiKey - Radar API key.
+ * @returns The stitched route and its per-leg detail.
+ */
+async function routeWaypoints(
+    waypoints: [number, number][],
+    radarMode: string,
+    apiKey: string
+): Promise<RoutedWaypoints> {
+    const chunks = chunkWaypoints(waypoints);
+    console.log(`[RadarService] Routing ${waypoints.length} waypoints in ${chunks.length} chunk(s)`);
+
+    const features: Feature[] = [];
+    const legSummaries = new Map<number, RouteLegSummary>();
+    const legPaths = new Map<number, [number, number][]>();
+    let distance = 0;
+    let duration = 0;
+
+    for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+        const chunk = chunks[chunkIdx].points;
+        // Format coordinates as pipe-delimited lat,lng pairs
+        const locationsParam = chunk.map((c: number[]) => `${c[0]},${c[1]}`).join('|');
+
+        console.log(`[RadarService] Processing chunk ${chunkIdx + 1}/${chunks.length} with ${chunk.length} points`);
+
+        const url = new URL('https://api.radar.io/v1/route/directions');
+        url.searchParams.append('locations', locationsParam);
+        url.searchParams.append('mode', radarMode);
+        url.searchParams.append('geometry', 'linestring'); // Get GeoJSON LineString
+        url.searchParams.append('units', 'metric');
+
+        try {
+            const response = await fetch(url.toString(), {
+                method: "GET",
+                headers: {
+                    "Authorization": apiKey
+                }
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`[RadarService] Radar API Error: ${response.status} ${response.statusText} - ${errorText}`);
+                throw new Error(`Radar API Error: ${response.status} ${response.statusText} - ${errorText}`);
+            }
+
+            const data = await response.json();
+
+            if (data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
+
+                // Extract geometry - Radar returns GeoJSON LineString in geometry.coordinates
+                if (route.geometry && route.geometry.coordinates) {
+                    features.push({
+                        type: "Feature",
+                        properties: {
+                            summary: {
+                                distance: route.distance?.value || 0,
+                                duration: route.duration?.value || 0
+                            }
+                        },
+                        geometry: route.geometry
+                    });
+
+                    distance += route.distance?.value || 0;
+                    duration += route.duration?.value || 0;
+                }
+
+                collectLegSummaries(
+                    route.legs,
+                    chunks[chunkIdx].start,
+                    waypoints,
+                    legSummaries,
+                    legPaths
+                );
+            }
+
+            // Add a small delay to avoid rate limits
+            await new Promise(resolve => setTimeout(resolve, RADAR_API.delayBetweenChunksMs));
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (e: any) {
+            console.error(`[RadarService] Fetch error for chunk: ${e.message || e}`);
+
+            // Capture error in Sentry with context
+            Sentry.captureException(e, {
+                extra: {
+                    service: "RadarService",
+                    operation: "getRadarRoute",
+                    chunkIndex: chunkIdx,
+                    totalChunks: chunks.length,
+                    mode: radarMode,
+                }
+            });
+
+            throw e; // Re-throw to indicate a failure in route generation
+        }
+    }
+
+    // Stitch features into a single LineString
+    const coordinates: number[][] = [];
+    for (let i = 0; i < features.length; i++) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const coords = (features[i].geometry as any).coordinates as number[][];
+        // Chunks share their boundary waypoint, so drop the repeated first point
+        coordinates.push(...(i > 0 ? coords.slice(1) : coords));
+    }
+
+    return {
+        features,
+        coordinates,
+        legs: Array.from(legSummaries.values()).sort((a, b) => a.index - b.index),
+        legPaths,
+        distance,
+        duration,
+    };
+}
+
+/** What the river crossing repair changed, reported under `properties`. */
+interface RiverCrossingDiagnostics {
+    waypointsInWater: number;
+    crossings: number;
+    unbridgedRuns: number;
+    repairedLegs: number;
+    bridges: string[];
+}
+
+/**
+ * The area to ask OSM about: where the route actually went wrong, not the
+ * whole shape.
+ *
+ * Every implausibly long edge is somewhere the router left the pedestrian
+ * network, so a box around those covers the water that needs bridging while
+ * staying far smaller than the shape for large routes. Returns null when even
+ * that is too big to fetch, in which case the repair is skipped and the route
+ * is returned as Radar produced it.
+ *
+ * @param routed - The detection pass's result.
+ * @param thresholdMeters - Longest plausible edge for the mode.
+ * @returns Bounding box to fetch, or null if it is not worth asking.
+ */
+function repairBoundingBox(
+    routed: RoutedWaypoints,
+    thresholdMeters: number
+): BoundingBox | null {
+    const suspect: [number, number][] = [];
+
+    for (const path of routed.legPaths.values()) {
+        for (let i = 0; i < path.length - 1; i++) {
+            if (calculateDistance(path[i], path[i + 1]) <= thresholdMeters) continue;
+            suspect.push(path[i], path[i + 1]);
+        }
+    }
+
+    const bbox = boundingBoxOf(suspect, RIVER_CROSSING.dataPaddingMeters);
+    if (!bbox) return null;
+
+    const areaSqKm = boundingBoxAreaSqKm(bbox);
+    if (areaSqKm > RIVER_CROSSING.maxDataAreaSqKm) {
+        console.warn(
+            `[RadarService] Skipping river repair: ${Math.round(areaSqKm)} km² exceeds the ` +
+            `${RIVER_CROSSING.maxDataAreaSqKm} km² OSM fetch limit`
+        );
+        return null;
+    }
+
+    return bbox;
+}
+
+/**
+ * Moves waypoints that landed in water onto bridges, when a first routing pass
+ * shows signs of having used one of Radar's ferry ways.
+ *
+ * The detector is free: an edge longer than any real street means the router
+ * travelled over water. Only then is OSM data fetched, so routes in cities
+ * without this problem never pay for it, and Overpass being unavailable simply
+ * leaves the route as it was.
+ *
+ * @param waypoints - Waypoints as routed in the first pass.
+ * @param routed - The first pass's result.
+ * @param mode - Transport mode.
+ * @returns Repaired waypoints with the geometry needed for a second pass, or
+ *   null when no repair is needed or possible.
+ */
+async function repairRiverCrossings(
+    waypoints: [number, number][],
+    routed: RoutedWaypoints,
+    mode: TransportMode
+): Promise<{
+    waypoints: [number, number][];
+    water: WaterIndex;
+    bridges: BridgeIndex;
+    diagnostics: RiverCrossingDiagnostics;
+} | null> {
+    if (!RIVER_CROSSING.affectedModes.includes(mode)) return null;
+
+    const threshold = ROUTE_QUALITY.longEdgeThresholdMeters[mode];
+    const longest = Math.max(0, ...routed.legs.map(leg => leg.maxEdgeMeters));
+    if (longest <= threshold) return null;
+
+    console.log(
+        `[RadarService] Longest edge ${Math.round(longest)}m exceeds ${threshold}m for ${mode}; checking for water`
+    );
+
+    const bbox = repairBoundingBox(routed, threshold);
+    if (!bbox) return null;
+
+    const osm = await getWaterAndBridges(bbox);
+    if (!osm) return null;
+
+    const water = buildWaterIndex(osm);
+    const bridges = buildBridgeIndex(osm, water);
+    const plan = planCrossings(waypoints, water, bridges);
+
+    if (plan.crossings.length === 0 && plan.unbridgedRuns === 0) return null;
+
+    return {
+        waypoints: plan.waypoints,
+        water,
+        bridges,
+        diagnostics: {
+            waypointsInWater: plan.waypointsInWater,
+            crossings: plan.crossings.length,
+            unbridgedRuns: plan.unbridgedRuns,
+            repairedLegs: 0,
+            bridges: plan.crossings.map(crossing => crossing.bridgeName ?? "unnamed"),
+        },
+    };
 }
 
 /**
@@ -181,123 +452,41 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     // Map transportation mode from app format to Radar format using config
     const radarMode = MODE_TO_RADAR[mode as TransportMode] || "car";
 
-    // Batching logic - Radar supports up to 25 coordinates per request
-    // Each chunk overlaps by 1 point so segments connect properly
-    const chunkSize = RADAR_API.chunkSize;
-    const chunks: { start: number; points: number[][] }[] = [];
-    let startIndex = 0;
-    while (startIndex < simplifiedCoordinates.length) {
-        const endIndex = Math.min(startIndex + chunkSize + 1, simplifiedCoordinates.length);
-        chunks.push({ start: startIndex, points: simplifiedCoordinates.slice(startIndex, endIndex) });
-        // Move forward by chunkSize - 1 to overlap last point with next chunk's first
-        startIndex += chunkSize - 1;
-        // Ensure we exit if we've processed all coordinates
-        if (endIndex >= simplifiedCoordinates.length) break;
-    }
+    let waypoints = simplifiedCoordinates as [number, number][];
+    let routed = await routeWaypoints(waypoints, radarMode, RADAR_API_KEY);
 
-    console.log(`[RadarService] Routing ${simplifiedCoordinates.length} waypoints in ${chunks.length} chunk(s)`);
+    const repair = await repairRiverCrossings(waypoints, routed, mode as TransportMode);
+    if (repair) {
+        waypoints = repair.waypoints;
+        routed = await routeWaypoints(waypoints, radarMode, RADAR_API_KEY);
 
-    const features: Feature[] = [];
-    // Keyed by the leg's start waypoint index. Chunks overlap, so the same leg
-    // can come back from two requests; the first one wins.
-    const legSummaries = new Map<number, RouteLegSummary>();
-    let totalDistance = 0;
-    let totalDuration = 0;
+        // Radar can still divert to a pier and back between two dry waypoints,
+        // so pin a bridge into any leg that is still travelling on water.
+        // Pinning one leg can expose another, so repeat until nothing changes.
+        for (let pass = 0; pass < RIVER_CROSSING.maxRepairPasses; pass++) {
+            const pinned = repairWaterLegs(
+                waypoints,
+                routed.legPaths,
+                repair.water,
+                repair.bridges,
+                ROUTE_QUALITY.longEdgeThresholdMeters[mode as TransportMode]
+            );
+            if (pinned.repaired === 0) break;
 
-    for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-        const chunk = chunks[chunkIdx].points;
-        // Format coordinates as pipe-delimited lat,lng pairs
-        const locationsParam = chunk.map((c: number[]) => `${c[0]},${c[1]}`).join('|');
-
-        console.log(`[RadarService] Processing chunk ${chunkIdx + 1}/${chunks.length} with ${chunk.length} points`);
-
-        const url = new URL('https://api.radar.io/v1/route/directions');
-        url.searchParams.append('locations', locationsParam);
-        url.searchParams.append('mode', radarMode);
-        url.searchParams.append('geometry', 'linestring'); // Get GeoJSON LineString
-        url.searchParams.append('units', 'metric');
-
-        try {
-            const response = await fetch(url.toString(), {
-                method: "GET",
-                headers: {
-                    "Authorization": RADAR_API_KEY
-                }
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`[RadarService] Radar API Error: ${response.status} ${response.statusText} - ${errorText}`);
-                throw new Error(`Radar API Error: ${response.status} ${response.statusText} - ${errorText}`);
-            }
-
-            const data = await response.json();
-
-            if (data.routes && data.routes.length > 0) {
-                const route = data.routes[0];
-
-                // Extract geometry - Radar returns GeoJSON LineString in geometry.coordinates
-                if (route.geometry && route.geometry.coordinates) {
-                    features.push({
-                        type: "Feature",
-                        properties: {
-                            summary: {
-                                distance: route.distance?.value || 0,
-                                duration: route.duration?.value || 0
-                            }
-                        },
-                        geometry: route.geometry
-                    });
-
-                    totalDistance += route.distance?.value || 0;
-                    totalDuration += route.duration?.value || 0;
-                }
-
-                collectLegSummaries(
-                    route.legs,
-                    chunks[chunkIdx].start,
-                    simplifiedCoordinates as [number, number][],
-                    legSummaries
-                );
-            }
-
-            // Add a small delay to avoid rate limits
-            await new Promise(resolve => setTimeout(resolve, RADAR_API.delayBetweenChunksMs));
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (e: any) {
-            console.error(`[RadarService] Fetch error for chunk: ${e.message || e}`);
-            
-            // Capture error in Sentry with context
-            Sentry.captureException(e, {
-                extra: {
-                    service: "RadarService",
-                    operation: "getRadarRoute",
-                    chunkIndex: chunkIdx,
-                    totalChunks: chunks.length,
-                    mode: radarMode,
-                }
-            });
-            
-            throw e; // Re-throw to indicate a failure in route generation
+            waypoints = pinned.waypoints;
+            routed = await routeWaypoints(waypoints, radarMode, RADAR_API_KEY);
+            repair.diagnostics.repairedLegs += pinned.repaired;
         }
-    }
 
-    // Stitch features into a single LineString
-    const mergedCoordinates: number[][] = [];
-
-    for (let i = 0; i < features.length; i++) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const coords = (features[i].geometry as any).coordinates as number[][];
-        // If not the first chunk, skip the first point as it overlaps with the last point of previous chunk
-        if (i > 0) {
-            mergedCoordinates.push(...coords.slice(1));
-        } else {
-            mergedCoordinates.push(...coords);
-        }
+        console.log(
+            `[RadarService] River repair: ${repair.diagnostics.waypointsInWater} waypoints in water, ` +
+            `${repair.diagnostics.crossings} bridge crossing(s), ` +
+            `${repair.diagnostics.unbridgedRuns} unbridged, ${repair.diagnostics.repairedLegs} leg(s) pinned`
+        );
     }
 
     // If no features were generated (e.g. API errors for all chunks), fallback to straight line
-    if (features.length === 0) {
+    if (routed.features.length === 0) {
         console.warn('[RadarService] No features generated, falling back to straight line');
         return {
             type: "FeatureCollection",
@@ -312,16 +501,14 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
                     },
                     geometry: {
                         type: "LineString",
-                        coordinates: simplifiedCoordinates.map(p => [p[1], p[0]]) // GeoJSON is [lng, lat]
+                        coordinates: waypoints.map(p => [p[1], p[0]]) // GeoJSON is [lng, lat]
                     }
                 }
             ]
         };
     }
 
-    console.log(`[RadarService] Route generated: ${mergedCoordinates.length} route points, ${(totalDistance / 1000).toFixed(2)}km, ${Math.round(totalDuration / 60)}min`);
-    
-    const legs = Array.from(legSummaries.values()).sort((a, b) => a.index - b.index);
+    console.log(`[RadarService] Route generated: ${routed.coordinates.length} route points, ${(routed.distance / 1000).toFixed(2)}km, ${Math.round(routed.duration / 60)}min`);
 
     const result: FeatureCollection = {
         type: "FeatureCollection",
@@ -330,14 +517,15 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
                 type: "Feature",
                 properties: {
                     summary: {
-                        distance: totalDistance,
-                        duration: totalDuration
+                        distance: routed.distance,
+                        duration: routed.duration
                     },
-                    legs
+                    legs: routed.legs,
+                    ...(repair ? { riverCrossing: repair.diagnostics } : {})
                 },
                 geometry: {
                     type: "LineString",
-                    coordinates: mergedCoordinates
+                    coordinates: routed.coordinates
                 }
             }
         ]

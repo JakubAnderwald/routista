@@ -49,7 +49,7 @@ export interface ScenarioMetrics {
  * @returns Rounded metrics for the generated route.
  */
 export async function measureScenario(scenario: Scenario): Promise<ScenarioMetrics> {
-    const waypoints = scenarioWaypoints(scenario);
+    const waypoints = await scenarioWaypoints(scenario);
     const route = await getRadarRoute({ coordinates: waypoints, mode: scenario.mode });
 
     const quality = summarizeRoute(
@@ -73,19 +73,6 @@ export async function measureScenario(scenario: Scenario): Promise<ScenarioMetri
         maxContiguousWaterMeters: water ? Math.round(water.maxContiguousWaterMeters) : null,
     };
 }
-
-/**
- * Scenarios that GitHub issue #47 is about.
- *
- * They are expected to fail the water invariants until the fix lands. Removing
- * an id from this set is how the fix declares the scenario healthy.
- */
-export const KNOWN_BROKEN = new Set([
-    "london-heart-foot",
-    "london-heart-foot-sparse",
-    "london-heart-bike",
-    "london-star-on-river",
-]);
 
 function round(value: number, digits: number): number {
     const factor = 10 ** digits;

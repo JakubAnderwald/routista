@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { FeatureCollection, Position } from "geojson";
 import {
+    boundingBoxAreaSqKm,
     boundingBoxOf,
     buildWaterIndex,
     isPointInWater,
@@ -297,6 +298,29 @@ describe("boundingBoxOf", () => {
 
     it("returns null when there are no points", () => {
         expect(boundingBoxOf([])).toBeNull();
+    });
+});
+
+describe("boundingBoxAreaSqKm", () => {
+    it("measures a box in square kilometres", () => {
+        // Roughly 1 km of latitude by 1 km of longitude at London's latitude.
+        const area = boundingBoxAreaSqKm([51.5, -0.09, 51.5 + 1 / 111.32, -0.09 + 1 / (111.32 * Math.cos((51.5 * Math.PI) / 180))]);
+
+        expect(area).toBeCloseTo(1, 1);
+    });
+
+    it("separates a walking route's area from a long cycling route's", () => {
+        // The sizes that decide whether OSM data is worth fetching: measured
+        // at 0.7 MB and 3.8 MB of OSM data respectively in central London.
+        const walking = boundingBoxAreaSqKm([51.4905, -0.1246, 51.5195, -0.0554]);
+        const cycling = boundingBoxAreaSqKm([51.4382, -0.1972, 51.5718, 0.0172]);
+
+        expect(walking).toBeLessThan(60);
+        expect(cycling).toBeGreaterThan(60);
+    });
+
+    it("is zero for a degenerate box", () => {
+        expect(boundingBoxAreaSqKm([51.5, -0.09, 51.5, -0.09])).toBe(0);
     });
 });
 

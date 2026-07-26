@@ -227,7 +227,17 @@ offline in CI. So real Radar responses are recorded once and replayed through th
 | Recorded Radar responses | `tests/fixtures/radar/*.json` | Keyed by request URL; `steps` stripped to keep them small |
 | OSM water and bridges | `tests/fixtures/water/*.geo.json` | Water polygons for the water metrics |
 | Metrics | `src/lib/routeQuality.ts`, `src/lib/waterGeometry.ts` | Pure, unit-tested separately |
+| Invariants | `tests/utils/routeInvariants.ts` | What a good route is, checked both ways |
 | Recorded metrics | `tests/fixtures/baseline.json` | Committed; any drift fails the suite |
+
+**Invariants are checked in both directions.** A scenario that does not list an invariant
+under `knownIssues` must satisfy it; one that does must still *fail* it. So a case cannot be
+quietly fixed and left on the list, and cannot regress onto the list unnoticed. Each entry
+carries the reason in prose — see `london-star-on-river` and `madrid-heart-foot`.
+
+Image-based scenarios (`shape: { image: "heart-v2.png" }`) run through the same extraction the
+browser uses, so at least one case per feature exercises the real pipeline rather than a
+parametric outline.
 
 ```bash
 npm test                  # offline, replayed from fixtures — what CI runs
@@ -235,6 +245,11 @@ npm run fixtures:routes   # re-record from live Radar + Overpass (needs .env.loc
 npm run test:baseline     # refresh baseline.json after a deliberate change
 npm run test:live         # run the same scenarios against live Radar
 ```
+
+The live suite is worth running whenever routing behaviour changes. It includes
+`repairEffect.live.test.ts`, which routes the same waypoints with the river crossing repair on
+and off and asserts the difference — without it, a scenario passing its invariants proves
+nothing, since it might never have been broken.
 
 **Rules of thumb:**
 

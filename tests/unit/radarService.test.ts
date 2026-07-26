@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { hashCoordinates, getRadarRoute, getRadarAutocomplete } from '../../src/lib/radarService';
+import { hashCoordinates, getRadarRoute, getRadarAutocomplete, chunkWaypoints } from '../../src/lib/radarService';
 
 // Mock the Redis module
 vi.mock('@upstash/redis', () => ({
@@ -146,6 +146,56 @@ describe('radarService', () => {
 
             // Different order should produce different hash
             expect(hash1).not.toBe(hash2);
+        });
+    });
+
+    describe('chunkWaypoints', () => {
+        const points = (count: number) =>
+            Array.from({ length: count }, (_, i) => [51.5 + i * 0.001, -0.09]);
+
+        it('has consecutive chunks share exactly one waypoint', () => {
+            const chunks = chunkWaypoints(points(31));
+
+            for (let i = 1; i < chunks.length; i++) {
+                const previous = chunks[i - 1];
+                const previousEnd = previous.start + previous.points.length - 1;
+
+                // The boundary point is the one stitching drops. Sharing two
+                // made the router travel that leg twice and left a jump
+                // between the duplicates.
+                expect(chunks[i].start).toBe(previousEnd);
+            }
+        });
+
+        it('covers every waypoint exactly once across the chunks', () => {
+            const chunks = chunkWaypoints(points(31));
+            const covered = new Set<number>();
+
+            for (const chunk of chunks) {
+                chunk.points.forEach((_, offset) => covered.add(chunk.start + offset));
+            }
+
+            expect(covered.size).toBe(31);
+        });
+
+        it('never leaves a trailing chunk with a single point', () => {
+            // 12 points would otherwise leave one point stranded after the
+            // first chunk of 11, which Radar rejects as not a route.
+            for (const count of [2, 11, 12, 21, 22, 100]) {
+                for (const chunk of chunkWaypoints(points(count))) {
+                    expect(chunk.points.length).toBeGreaterThanOrEqual(2);
+                }
+            }
+        });
+
+        it('keeps every chunk inside the Radar waypoint limit', () => {
+            for (const chunk of chunkWaypoints(points(100))) {
+                expect(chunk.points.length).toBeLessThanOrEqual(25);
+            }
+        });
+
+        it('returns a single chunk for a short route', () => {
+            expect(chunkWaypoints(points(2))).toHaveLength(1);
         });
     });
 

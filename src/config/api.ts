@@ -22,8 +22,14 @@ export const CACHE = {
     /** Cache TTL in seconds (24 hours) */
     ttlSeconds: 24 * 60 * 60,
     
-    /** Key prefix for route cache entries */
-    routeKeyPrefix: "route:",
+    /**
+     * Key prefix for route cache entries.
+     *
+     * Versioned: bump it whenever a change makes previously cached routes
+     * wrong. v2 retires routes generated before the river crossing repair
+     * (issue #47), which could otherwise be served from cache for 24 hours.
+     */
+    routeKeyPrefix: "route:v2:",
     
     /** Key prefix for rate limit entries */
     rateLimitKeyPrefix: "ratelimit:",

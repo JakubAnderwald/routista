@@ -20,23 +20,32 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import fs from "fs";
 import path from "path";
-import { ROUTE_QUALITY } from "@/config";
 import { SCENARIOS } from "../fixtures/scenarios";
 import { loadRadarFixture, replayFetch } from "../utils/radarFixtures";
-import { KNOWN_BROKEN, measureScenario, ScenarioMetrics } from "../utils/routeMeasurement";
+import { useWaterFixture } from "../utils/mockOverpass";
+import { measureScenario, ScenarioMetrics } from "../utils/routeMeasurement";
+import {
+    checkFollowsShape,
+    checkLongEdge,
+    checkWaterTravel,
+} from "../utils/routeInvariants";
 
 vi.mock("@sentry/nextjs", () => ({
     captureException: vi.fn(),
     captureMessage: vi.fn(),
 }));
 
+// The river crossing repair reads OSM data; serve the committed fixtures so
+// replay sees exactly the geometry capture saw.
+vi.mock("@/lib/overpassService", () => ({
+    getWaterAndBridges: async () => (await import("../utils/mockOverpass")).currentWaterFixture(),
+    fetchWaterAndBridges: async () => (await import("../utils/mockOverpass")).currentWaterFixture(),
+}));
+
 const BASELINE_PATH = path.resolve(__dirname, "../fixtures/baseline.json");
 const UPDATING = process.env.UPDATE_BASELINE === "1";
 
 type Baseline = Record<string, ScenarioMetrics>;
-
-const HEALTHY = SCENARIOS.filter(s => !KNOWN_BROKEN.has(s.id));
-const BROKEN = SCENARIOS.filter(s => KNOWN_BROKEN.has(s.id));
 
 function readBaseline(): Baseline {
 
@@ -75,6 +84,7 @@ describe("river scenarios", () => {
         "matches the recorded baseline for $id",
         { timeout: 120_000 },
         async scenario => {
+            useWaterFixture(scenario.city);
             vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
             const metrics = await measureScenario(scenario);
             measured[scenario.id] = metrics;
@@ -90,52 +100,36 @@ describe("river scenarios", () => {
         }
     );
 
-    it.each(HEALTHY)(
+    it.each(SCENARIOS)(
         "$id crosses water instead of travelling along it",
         { timeout: 120_000 },
         async scenario => {
+            useWaterFixture(scenario.city);
             vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
-            const metrics = await measureScenario(scenario);
 
-            // The invariant issue #47 is about: every time this route touches
-            // water it gets straight back out, which is what a bridge is.
-            if (metrics.maxContiguousWaterMeters !== null) {
-                expect(metrics.maxContiguousWaterMeters).toBeLessThan(
-                    ROUTE_QUALITY.maxWaterCrossingMeters
-                );
-            }
-
-            // No edge long enough to be a ferry hop. Bridge spans in this
-            // matrix reach 323 m, so this only catches the real thing.
-            if (scenario.mode !== "driving-car") {
-                expect(metrics.maxEdgeMeters).toBeLessThan(400);
-            }
+            checkWaterTravel(scenario, await measureScenario(scenario));
         }
     );
 
-    it.each(HEALTHY.filter(s => s.mode === "foot-walking"))(
+    it.each(SCENARIOS)(
+        "$id has no edge longer than a street",
+        { timeout: 120_000 },
+        async scenario => {
+            useWaterFixture(scenario.city);
+            vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
+
+            checkLongEdge(scenario, await measureScenario(scenario));
+        }
+    );
+
+    it.each(SCENARIOS)(
         "$id follows the shape it was given",
         { timeout: 120_000 },
         async scenario => {
+            useWaterFixture(scenario.city);
             vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
-            const metrics = await measureScenario(scenario);
 
-            // Loose bounds: dense waypoints on a street grid legitimately cost
-            // ~3x the shape's length. The broken cases sit at 6.9-14.1x.
-            expect(metrics.lengthRatio).toBeLessThan(3.5);
-            expect(metrics.selfOverlapPercent).toBeLessThan(60);
+            checkFollowsShape(scenario, await measureScenario(scenario));
         }
     );
-
-    it.each(BROKEN)("$id is still broken by issue #47", { timeout: 120_000 }, async scenario => {
-        vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
-        const metrics = await measureScenario(scenario);
-
-        // Remove the scenario from KNOWN_BROKEN when the fix lands; leaving it
-        // there afterwards turns the suite red on purpose.
-        expect(
-            metrics.maxContiguousWaterMeters,
-            `${scenario.id} no longer travels along the water — move it out of KNOWN_BROKEN`
-        ).toBeGreaterThanOrEqual(ROUTE_QUALITY.maxWaterCrossingMeters);
-    });
 });

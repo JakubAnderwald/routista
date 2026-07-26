@@ -25,6 +25,7 @@ Routista is a client-side heavy Next.js application that leverages external APIs
     *   Points are sent to the internal API route (`/api/radar/directions`).
     *   The API route proxies the request to the Radar API in chunks to respect limits and avoid CORS.
     *   Radar returns navigable paths between the points.
+    *   For walking and cycling, river crossings are repaired so the route uses bridges rather than Radar's ferry ways (issue #47).
     *   Segments are stitched together to form a continuous `LineString`.
 
 6.  **Visualization** (`ResultMap.tsx`)
@@ -42,6 +43,10 @@ Routista is a client-side heavy Next.js application that leverages external APIs
 *   **`geoUtils.ts`**: Pure functions for geographic calculations (distance, scaling, accuracy).
 *   **`routeGenerator.ts`**: Handles interaction with the ORS API and response processing.
 *   **`imageProcessing.ts`**: Canvas manipulation, edge detection, and uniform point sampling for consistent shape extraction.
+*   **`routeQuality.ts`**: Pure measurements of a generated route — long edges, length ratio, per-leg detours, self-overlap.
+*   **`waterGeometry.ts`**: Pure point-in-water and route-in-water queries over OSM polygons.
+*   **`riverCrossing.ts`**: Moves waypoints out of water onto bridges (issue #47).
+*   **`overpassService.ts`**: Fetches OSM water and bridges, cached in Redis.
 
 ## Key Algorithms
 
@@ -69,7 +74,24 @@ State is primarily managed in the parent page (`src/app/create/page.tsx` or simi
 - Reduces Radar API calls for identical requests
 - Graceful fallback: App works without Redis configured
 
-**Files:** `src/lib/radarService.ts`
+**Files:** `src/lib/radarService.ts`, `src/lib/redisClient.ts`
+
+**Cache key is versioned** (`route:v2:`). Bump it whenever a change makes previously cached
+routes wrong, or stale routes are served for up to 24 hours after a fix ships.
+
+### OSM Water Data (Overpass, cached in Upstash Redis)
+- Water polygons and bridges are fetched from the public Overpass API
+- Cache TTL: 30 days, keyed by a bounding box snapped to a ~1.1 km grid, plus a per-lambda
+  in-memory cache
+- Only fetched for walking and cycling routes that show signs of having used a ferry, so most
+  routes never call it
+- Graceful fallback: if Overpass is slow or down, the route is returned exactly as Radar
+  produced it. One attempt with a 15 s timeout bounds the delay, and a failure is remembered
+  for 60 s so an outage does not make every request pay it again.
+- Responses over 800 KB are kept in the per-process cache only, which is bounded to 16 entries
+
+**Files:** `src/lib/overpassService.ts`, `src/lib/riverCrossing.ts`.
+See `docs/technical/ISSUE_47_BASELINE.md`.
 
 ### Rate Limiting
 - IP-based rate limiting: 10 requests per minute per IP

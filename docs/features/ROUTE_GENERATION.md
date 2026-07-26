@@ -19,6 +19,8 @@ Chunk into API Batches
     ↓
 Call Radar Directions API
     ↓
+Repair River Crossings (foot/bike only, when needed)
+    ↓
 Stitch Segments Together
     ↓
 Return GeoJSON LineString
@@ -54,7 +56,8 @@ Radar API has waypoint limits. Coordinates split into chunks:
 | Setting | Value |
 |---------|-------|
 | Max waypoints per request | 25 |
-| Overlap between chunks | 1 point (for continuity) |
+| Waypoints per chunk | 11 (`RADAR_API.chunkSize` + 1) |
+| Overlap between chunks | Exactly 1 point, which stitching drops |
 
 ### 4. API Calls
 
@@ -69,6 +72,35 @@ POST /api/radar/directions
 ```
 
 Server proxies to Radar API, handles auth, and caches results.
+
+### 4b. River Crossing Repair (walking and cycling)
+
+Radar's foot and bike profiles route along the ferry ways in the Thames, so a shape drawn over
+London used to travel down the middle of the river instead of using a bridge (issue #47).
+
+When a routing pass returns an edge longer than any real street, water polygons and bridges are
+fetched from OpenStreetMap and:
+
+1. every run of waypoints inside water is replaced with a crossing over the nearest suitable
+   bridge, and
+2. any leg that still travels on water has a crossing pinned into it.
+
+Driving is unaffected: its routing graph has no waterways.
+
+What this does **not** promise:
+
+- **The long edge is a heuristic, not proof of a ferry.** It only says the router left the
+  pedestrian network. Madrid trips it via a road tunnel, which is not water — so OSM gets
+  fetched and nothing is repaired. That is the intended outcome, not a failure.
+- **A run with no reachable bridge stays unresolved.** If nothing crosses the water within
+  range, or every crossing costs more than the diversion cap, those waypoints are dropped and
+  the router connects the banks however it can.
+- **Not every OSM response is shared via Redis.** Responses over 800 KB stay in the calling
+  process only, and areas over 60 km² are not fetched at all.
+- **If OSM data cannot be fetched, the route is returned exactly as Radar produced it** —
+  including when Overpass is slow, down, or the area is too large.
+
+See `docs/technical/ISSUE_47_BASELINE.md` for the measurements.
 
 ### 5. Segment Stitching
 

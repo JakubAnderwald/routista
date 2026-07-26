@@ -23,7 +23,14 @@ dotenv.config({ path: '.env.local' });
  * - radius: 1000m
  * - mode: 'foot-walking'
  * - numPoints: 150
+ *
+ * These call the live Radar API, so they are skipped unless
+ * `RUN_LIVE_ROUTE_TESTS=1`. For offline coverage of the same code path see
+ * `tests/integration/riverScenarios.test.ts`, which replays recorded
+ * responses. Run with: npm run test:live
  */
+
+const LIVE = process.env.RUN_LIVE_ROUTE_TESTS === '1';
 
 // Use images from public/ folder - same source as browser examples
 const PUBLIC_EXAMPLES_DIR = path.resolve(__dirname, '../public/examples');
@@ -46,7 +53,7 @@ const CENTER: [number, number] = [51.505, -0.09];
 const RADIUS = 1000;
 const MODE = 'foot-walking';
 
-describe('Route Accuracy Tests', () => {
+describe.skipIf(!LIVE)('Route Accuracy Tests', () => {
     it.concurrent.each(TEST_IMAGES)('should generate accurate route for $name', { timeout: 60000 }, async ({ name: imageFile, path: imagePath }) => {
         console.log(`Testing image: ${imageFile}`);
 

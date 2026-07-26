@@ -4,6 +4,9 @@ import path from 'path';
 export default defineConfig({
     test: {
         testTimeout: 60000,
+        // Feature branches live in .worktrees/ (see .agent/rules/project_rules.md);
+        // without this the root repo would also collect every worktree's tests.
+        exclude: ['**/node_modules/**', '**/dist/**', '.worktrees/**'],
         // Limit concurrent tests to avoid Radar API rate limiting
         maxConcurrency: 2,
         // Use jsdom for component tests

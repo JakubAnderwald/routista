@@ -11,7 +11,10 @@
     "export": "next build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "deploy": "npm run export && firebase deploy --only hosting"
+    "fixtures:routes": "CAPTURE_FIXTURES=1 vitest run tests/capture",
+    "test:live": "RUN_LIVE_ROUTE_TESTS=1 vitest run tests/live tests/routeAccuracy.test.ts",
+    "deploy": "npm run export && firebase deploy --only hosting",
+    "test:baseline": "UPDATE_BASELINE=1 vitest run tests/integration"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

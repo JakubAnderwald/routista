@@ -223,6 +223,34 @@ describe("removeSpurs", () => {
         }
     });
 
+    it("leaves a route that is entirely one excursion alone", () => {
+        // Two waypoints a few metres apart, served by walking up a pavement and
+        // back. Splicing this would leave a single point, which is no route and
+        // not a valid GeoJSON LineString either.
+        const start = straightLine(1, 0)[0];
+        const path: [number, number][] = [start, offsetNorth(start, 10), start];
+
+        const result = removeSpurs(path, WALKING);
+
+        expect(result.points).toEqual(path);
+        expect(result.spurs).toEqual([]);
+        expect(result.removedMeters).toBe(0);
+    });
+
+    it("never returns a polyline too short to be a LineString", () => {
+        const start = straightLine(1, 0)[0];
+        const candidates: [number, number][][] = [
+            [start, offsetNorth(start, 10), start],
+            [start, offsetEast(start, 6), offsetNorth(start, 6), start],
+            [start, offsetNorth(start, 30), offsetNorth(start, 15), start],
+        ];
+
+        for (const path of candidates) {
+            const result = removeSpurs(path, WALKING);
+            expect(result.points.length).toBeGreaterThanOrEqual(2);
+        }
+    });
+
     it("handles empty, single-point and two-point routes", () => {
         expect(removeSpurs([], WALKING)).toEqual({ points: [], spurs: [], removedMeters: 0 });
         expect(removeSpurs(straightLine(1, 10), WALKING).points).toHaveLength(1);

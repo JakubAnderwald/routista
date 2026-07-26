@@ -116,7 +116,8 @@ Route segments from each chunk merged:
 
 Every waypoint is a forced via-point, so one that snapped to a driveway or a cul-de-sac made the
 router go in and come straight back out. Those out-and-backs are spliced out of the stitched
-geometry, which shortens routes by 2-31% without moving the line more than ~35 m anywhere.
+geometry, which shortens routes by 2-31% without moving the line more than `maxDeviationMeters`
+anywhere — 35 m for walking and cycling, 45 m for driving, whose waypoints are twice as far apart.
 
 `properties.summary.distance` describes the cleaned geometry; Radar's own total is kept beside it
 as `routedDistance`, and `properties.legs` still describe the route before cleanup.

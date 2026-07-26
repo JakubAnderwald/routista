@@ -1,9 +1,13 @@
 /**
- * Screenshots the river crossing scenario matrix from a deployed Routista.
+ * Screenshots the route quality scenario matrix from a deployed Routista.
  *
  * Drives the real wizard for each case — shape, place, radius, mode — and
  * writes a screenshot plus the reported length and accuracy. Run it against
  * production and against a preview to compare the same cases side by side.
+ *
+ * Covers the river crossing cases from issue #47 and the out-and-back spur
+ * cases from `docs/technical/SPUR_CLEANUP.md`, including the reported Warsaw
+ * heart at a 4500 m radius.
  *
  * Usage:
  *   node tests/e2e/river-crossing-matrix.mjs <baseUrl> <label> [outDir]
@@ -82,6 +86,37 @@ const CASES = [
         shape: 'heart',
         search: 'Amsterdam, Netherlands',
         radius: 1000,
+        mode: 'Walk',
+    },
+    {
+        id: '7-heart-warsaw-walk-4500',
+        title: 'Heart over Warsaw at 4500 m, walking — the reported spur case',
+        shape: 'heart',
+        search: 'Warsaw, Poland',
+        radius: 4500,
+        mode: 'Walk',
+    },
+    {
+        id: '8-heart-warsaw-walk-1500',
+        title: 'Heart over Warsaw at 1500 m, walking — where the cleanup helps most',
+        shape: 'heart',
+        search: 'Warsaw, Poland',
+        radius: 1500,
+        mode: 'Walk',
+    },
+    {
+        id: '9-heart-london-drive',
+        title: 'Heart over the Thames, driving — the worst self-overlap measured',
+        shape: 'heart',
+        radius: 1000,
+        mode: 'Drive',
+    },
+    {
+        id: '10-star-madrid-walk',
+        title: 'Star over Madrid, walking — street grid, the easiest case',
+        shape: 'star',
+        search: 'Madrid, Spain',
+        radius: 800,
         mode: 'Walk',
     },
 ];
@@ -166,9 +201,12 @@ async function runCase(page, testCase) {
         await page.getByRole('button', { name: testCase.mode, exact: true }).first().click();
         await page.click('[data-testid="mode-generate-button"]');
     }
+    // Generous: a 4500 m walking shape is ~15 Radar chunks, and a first pass
+    // that trips the river repair detector re-routes all of them up to four
+    // more times. Measured at over four minutes against production.
     await page.waitForSelector('[data-testid="has-route"][data-value="true"]', {
         state: 'attached',
-        timeout: 240_000,
+        timeout: 600_000,
     });
 
     // Let the tiles settle so the screenshot is worth looking at.

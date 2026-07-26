@@ -218,5 +218,13 @@ export function removeSpurs(
         // which stays, so the route carries on from there.
     }
 
+    // A whole route can be one excursion — a couple of waypoints a few metres
+    // apart that Radar serves by walking up a pavement and back. Collapsing
+    // that to its start point is no improvement, and a one-position LineString
+    // is not valid GeoJSON, so leave such a route exactly as it arrived.
+    if (out.length < 2) {
+        return { points: [...points], spurs: [], removedMeters: 0 };
+    }
+
     return { points: out, spurs, removedMeters };
 }

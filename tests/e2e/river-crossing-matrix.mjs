@@ -146,7 +146,7 @@ async function runCase(page, testCase) {
         await page.waitForTimeout(2500);
     }
 
-    await page.locator('button', { hasText: new RegExp(`^${testCase.mode}$`) }).first().click();
+    await page.getByRole('button', { name: testCase.mode, exact: true }).first().click();
     await setReactInput(page, 'input[type="range"]', testCase.radius);
     await page.waitForTimeout(800);
 
@@ -169,6 +169,8 @@ async function runCase(page, testCase) {
     return result;
 }
 
+// outDir comes from argv: this is a developer script, not a served path.
+// eslint-disable-next-line security/detect-non-literal-fs-filename
 mkdirSync(outDir, { recursive: true });
 
 const browser = await chromium.launch();
@@ -201,6 +203,7 @@ for (const testCase of CASES) {
 
 await browser.close();
 
+// eslint-disable-next-line security/detect-non-literal-fs-filename
 writeFileSync(
     join(outDir, `results-${label}.json`),
     `${JSON.stringify({ label, baseUrl, results }, null, 2)}\n`

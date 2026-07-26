@@ -120,8 +120,9 @@ carry bridge crossings the router had to be told about, which are not part of wh
   surprising.
 - `properties.spurCleanup` = `{ spurs, removedMeters, longestMeters }`, attached only when something
   was removed.
-- `CACHE.routeKeyPrefix` is `route:v3:`. Without the bump, 24 hours of uncleaned routes would have
-  survived the deploy.
+- `CACHE.routeKeyPrefix` is `route:v4:`. Without a bump, a deploy keeps serving the previous
+  geometry for 24 hours — which is exactly how the v3 routes were caught coming back
+  byte-identical from a preview that had already shipped the new code.
 
 ## Results
 
@@ -129,22 +130,26 @@ Same scenarios, same measurement, before and after. From `tests/fixtures/baselin
 
 | scenario | length ratio | shorter by | self-overlap | removed | accuracy |
 |---|---|---|---|---|---|
-| `london-heart-foot` | 2.68 → **1.31** | 51% | 31 → **1**% | 813 m | 94 → 93% |
-| `london-heart-foot-sparse` | 1.83 → **1.39** | 24% | 14 → **6**% | 371 m | 89 → 88% |
-| `london-heart-bike` | 4.6 → **1.78** | 61% | 64 → **20**% | 1643 m | 90 → 90% |
-| `london-star-on-river` | 2.97 → **1.96** | 34% | 58 → **53**% | 1066 m | 85 → 81% |
-| `london-heart-car` | 8.85 → **4.81** | 46% | 76 → **59**% | 1618 m | 82 → 82% |
-| `london-heart-north` | 2.59 → **1.19** | 54% | 35 → **4**% | 500 m | 93 → 94% |
-| `paris-heart-foot` | 1.63 → **1.3** | 20% | 15 → **10**% | 354 m | 94 → 93% |
-| `budapest-heart-foot` | 1.83 → **1.62** | 11% | 9 → **7**% | 901 m | 92 → 91% |
-| `madrid-heart-foot` | 2.46 → **1.49** | 39% | 29 → **5**% | 1827 m | 94 → 94% |
-| `madrid-square-foot` | 1.27 → **1.19** | 6% | 1 → **0**% | 96 m | 80 → 79% |
-| `london-heart-image` | 2.24 → **1.36** | 39% | 25 → **9**% | 675 m | 95 → 94% |
-| `london-dino-image` | 2.58 → **1.37** | 47% | 33 → **11**% | 2068 m | 95 → 93% |
-| `warsaw-heart-foot` *(new)* | **1.93** | — | **12**% | 2903 m | 97% |
-| `amsterdam-heart-foot` | 2.25 → **1.62** | 28% | 22 → **15**% | 1497 m | 94 → 93% |
+| `london-heart-foot` | 2.68 → **1.38** | 49% | 31 → **1**% | 7780 m | 94 → 93% |
+| `london-heart-foot-sparse` | 1.83 → **1.42** | 22% | 14 → **6**% | 2467 m | 89 → 88% |
+| `london-heart-bike` | 4.6 → **1.79** | 61% | 64 → **19**% | 16877 m | 90 → 90% |
+| `london-star-on-river` | 2.97 → **1.96** | 34% | 58 → **51**% | 5160 m | 85 → 81% |
+| `london-heart-car` | 8.85 → **4.58** | 48% | 76 → **55**% | 25654 m | 82 → 82% |
+| `london-heart-north` | 2.59 → **1.25** | 52% | 35 → **5**% | 4849 m | 93 → 94% |
+| `paris-heart-foot` | 1.63 → **1.33** | 18% | 15 → **10**% | 1781 m | 94 → 93% |
+| `budapest-heart-foot` | 1.83 → **1.64** | 10% | 9 → **7**% | 1701 m | 92 → 91% |
+| `madrid-heart-foot` | 2.46 → **1.49** | 39% | 29 → **2**% | 5873 m | 94 → 94% |
+| `madrid-square-foot` | 1.27 → **1.22** | 4% | 1 → **0**% | 374 m | 80 → 79% |
+| `london-heart-image` | 2.24 → **1.43** | 36% | 25 → **9**% | 4845 m | 95 → 94% |
+| `london-dino-image` | 2.58 → **1.42** | 45% | 33 → **11**% | 8680 m | 95 → 93% |
+| `warsaw-heart-foot` *(new)* | **1.99** | — | **12**% | 12852 m | 97% |
+| `amsterdam-heart-foot` | 2.25 → **1.66** | 26% | 22 → **15**% | 3556 m | 94 → 93% |
 
-**A walking length ratio of 1.19–1.96 is close to the floor.** 1.0 would mean the street grid ran
+**Removed** is measured as the difference the cleanup made to the route's length, not summed
+from per-excursion estimates — those drift across passes, and this is the number the response
+reports.
+
+**A walking length ratio of 1.22–1.99 is close to the floor.** 1.0 would mean the street grid ran
 exactly along the drawn outline; before this change the matrix sat at 1.27–4.6.
 
 Accuracy is flat within a point almost everywhere, and `london-heart-north` *gains* one — which is

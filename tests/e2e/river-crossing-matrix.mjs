@@ -239,6 +239,14 @@ const page = await context.newPage();
 const only = process.env.MATRIX_ONLY;
 const selected = only ? CASES.filter(c => c.id.includes(only)) : CASES;
 
+// A filter that matches nothing would otherwise run no cases, keep the previous
+// results file, and report success without touching the scenario asked for.
+if (selected.length === 0) {
+    console.error(`MATRIX_ONLY="${only}" matched no case. Available:`);
+    for (const testCase of CASES) console.error(`  ${testCase.id}`);
+    process.exit(1);
+}
+
 console.log(`\n${label} — ${baseUrl}${only ? ` (only: ${only})` : ''}\n`);
 const results = [];
 

@@ -103,7 +103,7 @@ about 0.3 m, so 150-point shapes are not simplified at all. That means ~40 m way
 
 This turned out to be the cause of a second defect: at that density waypoints keep snapping to
 driveways and cul-de-sacs, and the router has to go in and come back out, so routes were
-spending 6-61% of their length on out-and-back spurs. Those are now removed from the returned
+spending 5-62% of their length on out-and-back spurs. Those are now removed from the returned
 geometry — see `docs/technical/SPUR_CLEANUP.md`, which also carries the post-cleanup baseline.
 The spacing itself is still unfixed.
 
@@ -189,6 +189,11 @@ Same scenarios, same measurement, before and after:
 | `paris-heart-foot` | 1.89x → 1.63x | 155 → 135 m | 314 → 314 | 126 → 126 | 34% → 15% | 94% → 94% |
 | `budapest-heart-foot` | 2.26x → 1.83x | 323 → 387 m | 802 → 642 | 382 → 354 | 34% → 9% | 92% → 92% |
 | `madrid-heart-foot` | 2.41x → 2.46x | 143 → 470 m | 0 | 0 | 27% → 29% | 95% → 94% |
+
+That 470 m edge is the road tunnel described under "Known limitations" below. The spur
+cleanup has since removed it and the edge is back to 143 m — see `SPUR_CLEANUP.md`; the
+table above is the state at the end of issue #47, before that change.
+
 | `madrid-square-foot` | 1.27x → 1.27x | 171 → 171 m | 0 | 0 | 1% → 1% | 80% → 80% |
 
 Added after the fix, so measured once (all satisfy every invariant):

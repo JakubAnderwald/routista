@@ -118,7 +118,6 @@ export function removeSpurs(
 
     let current = points;
     const spurs: Spur[] = [];
-    let removedMeters = 0;
 
     for (let pass = 0; pass < options.maxPasses; pass++) {
         const candidates = findExcursions(current, options);
@@ -137,14 +136,25 @@ export function removeSpurs(
 
         // Only what the cut actually took out: nested candidates can share a
         // start, and the outermost of those is the one that gets applied.
-        for (const candidate of applied) {
-            spurs.push(candidate);
-            removedMeters += candidate.meters;
-        }
+        spurs.push(...applied);
         current = next;
     }
 
-    return { points: current, spurs, removedMeters };
+    // Measured rather than accumulated. Per-spur lengths are estimates made
+    // before the cut, and summing them across passes drifts from what the
+    // route really lost — which is the number the response reports.
+    return {
+        points: current,
+        spurs,
+        removedMeters: Math.max(0, lengthOf(points) - lengthOf(current)),
+    };
+}
+
+/** Total length of a polyline, in meters. */
+function lengthOf(points: [number, number][]): number {
+    let total = 0;
+    for (let i = 0; i < points.length - 1; i++) total += calculateDistance(points[i], points[i + 1]);
+    return total;
 }
 
 /**
@@ -162,27 +172,29 @@ export function removeSpurs(
 function findExcursions(points: [number, number][], options: SpurCleanupOptions): Spur[] {
     const { snapMeters, maxSpurMeters, maxSpurPoints } = options;
 
-    /** Indices into `points` of the part that has not doubled back. */
-    const kept: number[] = [];
+    /** The part of the line that has not doubled back, as it would be cut. */
+    const kept: [number, number][] = [];
+    /** Source index of each kept point, or -1 for a rejoin the cut inserts. */
+    const source: number[] = [];
     /** Cumulative meters along `kept`. */
     const along: number[] = [];
     const found: Spur[] = [];
 
-    const push = (index: number) => {
-        const step =
-            kept.length === 0 ? 0 : calculateDistance(points[kept[kept.length - 1]], points[index]);
-        along.push((kept.length === 0 ? 0 : along[kept.length - 1]) + step);
-        kept.push(index);
+    const push = (point: [number, number], index: number) => {
+        const step = kept.length === 0 ? 0 : calculateDistance(kept[kept.length - 1], point);
+        along.push((kept.length === 0 ? 0 : along[along.length - 1]) + step);
+        kept.push(point);
+        source.push(index);
     };
 
     for (let i = 0; i < points.length; i++) {
         if (kept.length < 3) {
-            push(i);
+            push(points[i], i);
             continue;
         }
 
         const last = kept.length - 1;
-        const tail = calculateDistance(points[kept[last]], points[i]);
+        const tail = calculateDistance(kept[last], points[i]);
 
         // The earliest segment this point rejoins, since that is the biggest
         // cut. Segments nearer than two back are the line's own tip.
@@ -190,32 +202,41 @@ function findExcursions(points: [number, number][], options: SpurCleanupOptions)
         for (let k = last - 2; k >= 0; k--) {
             if (along[last] - along[k] + tail > maxSpurMeters) break;
             if (last - k > maxSpurPoints) break;
-            const gap = distanceToSegmentMeters(points[i], points[kept[k]], points[kept[k + 1]]);
-            if (gap <= snapMeters) join = k;
+            // Only project onto a segment of the *source* line. The two edges a
+            // previous cut introduced are real geometry too, but they cannot be
+            // written as an index range, so anything rejoining there is left
+            // for the next pass, which runs on the actual cut result.
+            if (source[k] < 0 || source[k + 1] !== source[k] + 1) continue;
+            if (distanceToSegmentMeters(points[i], kept[k], kept[k + 1]) <= snapMeters) join = k;
         }
 
         if (join < 0) {
-            push(i);
+            push(points[i], i);
             continue;
         }
 
-        const rejoin = projectOnSegment(points[i], points[kept[join]], points[kept[join] + 1]);
+        const rejoin = projectOnSegment(points[i], kept[join], kept[join + 1]);
         // What the cut actually saves: the route from where it came back,
         // around the excursion and up to the point that rejoined, less the one
         // short edge the cut leaves behind.
         const removed =
             along[last] -
             along[join] -
-            calculateDistance(points[kept[join]], rejoin) +
+            calculateDistance(kept[join], rejoin) +
             tail -
             calculateDistance(rejoin, points[i]);
 
-        found.push({ from: kept[join], to: i, rejoin, meters: Math.max(0, removed) });
+        found.push({ from: source[join], to: i, rejoin, meters: Math.max(0, removed) });
 
+        // Rewind to the join and lay down what the cut will emit, so a later
+        // candidate is measured against the line that will actually exist.
         while (kept.length > join + 1) {
             kept.pop();
+            source.pop();
             along.pop();
         }
+        push(rejoin, -1);
+        push(points[i], i);
     }
 
     return found;
@@ -312,8 +333,9 @@ function distanceToRange(
 /**
  * Distance from a point to the polyline once an excursion is cut out.
  *
- * The two ends of the cut are within `snapMeters` of each other, so the join
- * they collapse to is included as a segment in its own right.
+ * Measured against what `cut` actually emits in place of the excursion — the
+ * run up to the rejoin point and the short edge on from it — rather than the
+ * straight chord between the two ends, which is not the geometry that results.
  */
 function distanceWithoutSpur(
     p: [number, number],
@@ -321,7 +343,10 @@ function distanceWithoutSpur(
     spur: Spur,
     grid: SegmentGrid
 ): number {
-    let best = distanceToSegmentMeters(p, points[spur.from], points[spur.to]);
+    let best = Math.min(
+        distanceToSegmentMeters(p, points[spur.from], spur.rejoin),
+        distanceToSegmentMeters(p, spur.rejoin, points[spur.to])
+    );
 
     for (const i of grid.near(p)) {
         if (i >= spur.from && i < spur.to) continue;

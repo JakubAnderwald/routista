@@ -120,10 +120,10 @@ export const ROUTE_QUALITY = {
  * no bearings and no U-turn suppression to prevent it. So they are spliced out
  * of the geometry afterwards, by `src/lib/routeCleanup.ts`.
  *
- * Measured over the recorded scenario matrix, these settings remove 2-31% of
- * routed length — 355 excursions on `london-heart-foot`, longest 69 m — while
- * no scenario loses more than 2 points of its accuracy score, because a splice
- * can only move the line by `maxDeviationMeters` locally.
+ * Measured over the recorded scenario matrix, these settings remove 5-62% of
+ * routed length and take self-overlap from 31% to 1% on the reported case,
+ * while the accuracy score stays flat within a point almost everywhere — a cut
+ * can only leave a requested waypoint `maxShapeLossMeters` from the route.
  * See `docs/technical/SPUR_CLEANUP.md`.
  */
 export const SPUR_CLEANUP = {

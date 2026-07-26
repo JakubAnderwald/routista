@@ -146,6 +146,56 @@ describe("removeSpurs", () => {
         expect(result.spurs.length).toBeGreaterThanOrEqual(4);
     });
 
+    it("keeps interacting spurs on real geometry", () => {
+        // Two excursions close enough that the second rejoins where the first
+        // was cut. Nothing may be projected onto a chord the cut did not emit,
+        // so every returned point must lie on the line that was passed in.
+        const line = straightLine(12, 40);
+        const first = line[4];
+        const second = line[5];
+        const path: [number, number][] = [
+            ...line.slice(0, 5),
+            offsetEast(first, 50),
+            offsetNorth(offsetEast(first, 50), 12),
+            offsetNorth(first, 12),
+            second,
+            offsetEast(second, 45),
+            offsetNorth(offsetEast(second, 45), 10),
+            offsetNorth(second, 10),
+            ...line.slice(6),
+        ];
+
+        const result = removeSpurs(path, line, WALKING);
+
+        expect(result.spurs.length).toBeGreaterThanOrEqual(2);
+        expect(pathLengthMeters(result.points)).toBeLessThan(pathLengthMeters(path));
+        for (const point of result.points) {
+            let onPath = false;
+            for (let i = 0; i < path.length - 1 && !onPath; i++) {
+                onPath = distanceToSegmentMeters(point, path[i], path[i + 1]) < 0.5;
+            }
+            expect(onPath).toBe(true);
+        }
+    });
+
+    it("reports exactly the length it removed", () => {
+        // The diagnostic is what the response and the baseline report, so it
+        // has to equal what the route actually lost.
+        const line = straightLine(30, 40);
+        const path: [number, number][] = [];
+        for (const [index, point] of line.entries()) {
+            path.push(point);
+            if (index % 3 === 1) path.push(offsetEast(point, 45), offsetNorth(point, 8));
+        }
+
+        const result = removeSpurs(path, line, WALKING);
+
+        expect(result.removedMeters).toBeCloseTo(
+            pathLengthMeters(path) - pathLengthMeters(result.points),
+            0
+        );
+    });
+
     it("leaves a route that never doubles back untouched", () => {
         const line = straightLine(50, 40);
 

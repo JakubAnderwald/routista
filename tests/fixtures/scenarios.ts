@@ -197,6 +197,24 @@ export const SCENARIOS: Scenario[] = [
         role: "Fidelity: an irregular traced outline over the Thames.",
     },
     {
+        id: "castillonnes-heart-foot",
+        city: null,
+        shape: "heart",
+        // Farmland between Castillonnes and Ferrensac, Lot-et-Garonne. Lanes
+        // and farm tracks, hundreds of metres apart.
+        center: [44.6547, 0.6006],
+        radius: 1000,
+        mode: "foot-walking",
+        points: 150,
+        role:
+            "Control: a sparse rural network, where the nearest way to a waypoint is " +
+            "often hundreds of metres off. Every other scenario is a street grid, and " +
+            "the spur cleanup is measurably weaker here — its shape test ignores a " +
+            "waypoint already further than maxShapeLossMeters from an excursion, which " +
+            "off a grid is most of them. It satisfies every invariant; what this " +
+            "scenario is really guarding is accuracyPercent, pinned in the baseline.",
+    },
+    {
         id: "warsaw-heart-foot",
         // A 4.5 km radius spans ~81 km², over RIVER_CROSSING.maxDataAreaSqKm,
         // so the pipeline skips the water repair here and a Vistula fixture

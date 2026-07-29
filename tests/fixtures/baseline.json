@@ -191,6 +191,22 @@
     "removedSpurMeters": 8680,
     "maxRemovedSpurMeters": 252
   },
+  "castillonnes-heart-foot": {
+    "lengthRatio": 2.01,
+    "maxEdgeMeters": 240,
+    "longEdgeCount": 0,
+    "longEdgeMeters": 0,
+    "selfOverlapPercent": 34,
+    "badLegCount": 21,
+    "worstLegRatio": 37,
+    "accuracyPercent": 78,
+    "waterMeters": null,
+    "waterCrossings": null,
+    "maxContiguousWaterMeters": null,
+    "spurCount": 0,
+    "removedSpurMeters": 1877,
+    "maxRemovedSpurMeters": 326
+  },
   "warsaw-heart-foot": {
     "lengthRatio": 1.99,
     "maxEdgeMeters": 461,

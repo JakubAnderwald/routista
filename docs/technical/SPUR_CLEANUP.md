@@ -203,6 +203,26 @@ excursion must be removed when the shape does not follow it but kept when it doe
   would change fidelity for open shapes and letters, which is what issue #5 was about). It would
   roughly halve the Radar calls per route. Held back from this change because Radar fixtures are
   keyed by request URL, so changing the waypoints invalidates all 14 and forces a live re-record.
+- **The cleanup is weaker off a street grid.** The shape test ignores a waypoint already further
+  than `maxShapeLossMeters` from an excursion, on the grounds that it was not being served there
+  anyway. In a city that is sound. In a sparse rural network almost every waypoint is that far from
+  any road, so the guard protects little and the cleanup runs closer to unguarded — measured on a
+  heart over farmland near Castillonnès, accuracy went 58% → 48% against production while every
+  city case stayed within 4 points.
+
+  Two calibrations were tried and both measured worse overall, so neither shipped:
+
+  | | rural | rest of the matrix |
+  |---|---|---|
+  | shipped | 58 → 48% | best reduction, accuracy flat |
+  | protect when the excursion gains > 60 m | fixed | −4 `london-star-on-river`, −2 `budapest`/`car`, and two scenarios stop settling |
+  | protect when it gains > 20 m | fixed | accuracy restored but much weaker: `london-heart-bike` 1.79 → 3.49, `london-heart-foot` 1.38 → 1.74 |
+
+  `castillonnes-heart-foot` is in the matrix so the trade is pinned rather than invisible. It
+  satisfies every invariant; what it guards is `accuracyPercent` in the baseline. Note it is a
+  milder spot than the reported one — it measures 78%, not 48% — so it holds the line rather than
+  reproducing the worst case.
+
 - **Lollipops are only half-removed.** Where the router runs down a street, around a block, and
   back up the same street, the stick is an excursion and goes; the loop around the block is not a
   retrace and stays. This is why `london-heart-car` still sits at 59% self-overlap.

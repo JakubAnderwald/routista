@@ -116,7 +116,8 @@ Route segments from each chunk merged:
 
 Every waypoint is a forced via-point, so one that snapped to a driveway or a cul-de-sac made the
 router go in and come straight back out. Those out-and-backs are spliced out of the stitched
-geometry, which shortens routes by 5-62%.
+geometry. Across the scenario matrix that shortened every route by 5-62%; a route with no
+out-and-backs in it comes back untouched.
 
 An excursion is kept only when the shape needs it: if cutting it would leave a requested waypoint
 further than `maxShapeLossMeters` from the route — 60 m walking and cycling, 100 m driving — it

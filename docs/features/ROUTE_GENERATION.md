@@ -23,6 +23,8 @@ Repair River Crossings (foot/bike only, when needed)
     ↓
 Stitch Segments Together
     ↓
+Remove Out-and-Back Spurs
+    ↓
 Return GeoJSON LineString
 ```
 
@@ -109,6 +111,22 @@ Route segments from each chunk merged:
 - Remove duplicate points at boundaries
 - Verify continuity
 - Combine into single LineString
+
+### 6. Spur Removal
+
+Every waypoint is a forced via-point, so one that snapped to a driveway or a cul-de-sac made the
+router go in and come straight back out. Those out-and-backs are spliced out of the stitched
+geometry. Across the scenario matrix that shortened every route by 5-62%; a route with no
+out-and-backs in it comes back untouched.
+
+An excursion is kept only when the shape needs it: if cutting it would leave a requested waypoint
+further than `maxShapeLossMeters` from the route — 60 m walking and cycling, 100 m driving — it
+stays. So a detour into a cul-de-sac goes, and a headland the outline really traces does not.
+
+`properties.summary.distance` describes the cleaned geometry; Radar's own total is kept beside it
+as `routedDistance`, and `properties.legs` still describe the route before cleanup.
+
+See `docs/technical/SPUR_CLEANUP.md`.
 
 ## Accuracy Calculation
 

@@ -111,6 +111,95 @@ export const ROUTE_QUALITY = {
 } as const;
 
 /**
+ * Spur cleanup — removing out-and-back excursions from a returned route.
+ *
+ * Waypoints sit ~40 m apart and every one is a forced via-point, so whenever a
+ * waypoint's nearest way is a driveway, a service road, a cul-de-sac or the far
+ * carriageway of a divided road, Radar has to drive in and back out again.
+ * Enter plus exit is a spur, and Radar's directions API offers no snap radius,
+ * no bearings and no U-turn suppression to prevent it. So they are spliced out
+ * of the geometry afterwards, by `src/lib/routeCleanup.ts`.
+ *
+ * Measured over the recorded scenario matrix, these settings remove 5-62% of
+ * routed length and take self-overlap from 31% to 1% on the reported case,
+ * while the accuracy score stays flat within a point almost everywhere — a cut
+ * can only leave a requested waypoint `maxShapeLossMeters` from the route.
+ * See `docs/technical/SPUR_CLEANUP.md`.
+ */
+export const SPUR_CLEANUP = {
+    /**
+     * How close the line has to come back to itself to count as rejoining.
+     *
+     * Measured against a *segment* of the retained line, not its points. An
+     * earlier version matched points, which only sees a spur that returns
+     * through the very same OSM nodes — so a detour that walks up one pavement
+     * and back down the other was invisible, and most of the reported ones were
+     * exactly that. 20 m spans both sides of an ordinary street and the two
+     * carriageways of a divided one without joining separate parallel streets.
+     */
+    snapMeters: 20,
+
+    /**
+     * Longest excursion that may be removed.
+     *
+     * Bounds the search rather than expressing a judgement: whether an
+     * excursion goes is decided by `maxShapeLossMeters`. Set above the longest
+     * excursion seen in the matrix (1.2 km, on a driving route) so the decision
+     * is never made on length by accident.
+     */
+    maxSpurMeters: {
+        "foot-walking": 1500,
+        "cycling-regular": 1500,
+        "driving-car": 2500,
+    } as Record<TransportMode, number>,
+
+    /**
+     * How far a removal may leave a requested waypoint from the route.
+     *
+     * This is the control that matters, and it asks the only question that
+     * separates a pointless detour from a real one: does the shape need it?
+     * An excursion goes unless cutting it would strand a waypoint further than
+     * this — so a spur into a cul-de-sac goes (the waypoint that caused it sits
+     * on the main road, metres away), while a headland the outline genuinely
+     * traces stays (its waypoints are out there and nothing else reaches them).
+     *
+     * Distance from the route is not the same thing as "how far it strayed",
+     * which was the earlier test and could not tell the two apart at all.
+     *
+     * Measured across the matrix at 60 m: 5-50% of the remaining length goes
+     * and the accuracy score is flat or better almost everywhere — it rises 3
+     * points on `london-heart-car` and 1 on `london-heart-north`, which is what
+     * removing geometry that served no purpose looks like. 100 m removes more
+     * still but costs about a point on half the matrix.
+     *
+     * Waypoints sit ~40 m apart, so 60 m is roughly "the shape may lose a
+     * waypoint and a half here".
+     */
+    maxShapeLossMeters: {
+        "foot-walking": 60,
+        "cycling-regular": 60,
+        "driving-car": 100,
+    } as Record<TransportMode, number>,
+
+    /**
+     * Most geometry points a single excursion may contain.
+     *
+     * Purely a complexity guard: it bounds the rejoin scan even if a route
+     * arrives with a dense run of near-coincident points.
+     */
+    maxSpurPoints: 512,
+
+    /**
+     * How many detect-and-cut passes to run.
+     *
+     * Cutting one excursion can bring two stretches of the line together and
+     * expose another. The matrix settles in two passes; the third is there so a
+     * pathological route cannot loop.
+     */
+    maxPasses: 8,
+} as const;
+
+/**
  * River crossing repair — GitHub issue #47.
  *
  * Radar's foot and bike profiles route along ferry ways in the Thames, so

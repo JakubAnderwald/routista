@@ -11,11 +11,20 @@
 
 import { FeatureCollection } from "geojson";
 import { calculateDistance, distanceToSegmentMeters } from "./geoUtils";
-import { ROUTE_QUALITY } from "@/config";
+import { removeSpurs, spurCleanupOptionsFor } from "./routeCleanup";
+import { ROUTE_QUALITY, TransportMode } from "@/config";
 
 /**
  * Per-leg summary attached to a generated route under
  * `features[0].properties.legs`. One entry per consecutive waypoint pair.
+ *
+ * These describe the route **as Radar returned it**, before the spur cleanup in
+ * `routeCleanup.ts` runs. So `sum(routedMeters)` is greater than the length of
+ * the geometry beside them, and a leg can describe geometry that is no longer
+ * there at all. That is deliberate: the commonest spur goes out on one leg and
+ * back on the next, so a per-leg cleanup could not see it, and the river
+ * crossing repair and the detour ratios both want what the router actually did.
+ * `properties.summary.distance` is the geometry's length; use that for totals.
  */
 export interface RouteLegSummary {
     /** Index of the leg's start waypoint in the routed coordinate list. */
@@ -56,6 +65,20 @@ export interface RouteQualitySummary {
     worstLegRatio: number;
     /** Legs whose routed/straight ratio exceeds `ROUTE_QUALITY.badLegRatio`. */
     badLegCount: number;
+    /** Out-and-back excursions still present in the route. Zero after cleanup. */
+    spurs: SpurStats;
+}
+
+/** Out-and-back excursions found in a route. */
+export interface SpurStats {
+    /** How many separate excursions there are. */
+    count: number;
+    /** Their total length, in meters. */
+    meters: number;
+    /** The longest single one, in meters. */
+    maxMeters: number;
+    /** Their share of the route's length, between 0 and 1. */
+    fraction: number;
 }
 
 /**
@@ -243,17 +266,52 @@ export function selfOverlapFraction(
 }
 
 /**
+ * Counts the out-and-back excursions a route still contains.
+ *
+ * Measured with the same function `radarService` cleans with, so a route that
+ * has been through the cleanup reports zero here by construction — which makes
+ * this an exact assertion rather than a threshold.
+ *
+ * Unlike `selfOverlapFraction`, which needs the two halves to be 150 m apart
+ * along the route before it counts them, this sees the short spurs too: a
+ * 30 m detour into a driveway and back.
+ *
+ * @param route - Route GeoJSON.
+ * @param waypoints - The shape the route was asked to follow, as `[lat, lng]`.
+ * @param mode - Transport mode, which sets the bounds.
+ * @returns Count, total length, longest, and share of the route.
+ */
+export function spurStats(
+    route: FeatureCollection | null | undefined,
+    waypoints: [number, number][],
+    mode: TransportMode
+): SpurStats {
+    const points = routeToLatLngs(route);
+    const routeMeters = pathLengthMeters(points);
+    const { spurs, removedMeters } = removeSpurs(points, waypoints, spurCleanupOptionsFor(mode));
+
+    return {
+        count: spurs.length,
+        meters: removedMeters,
+        maxMeters: spurs.length === 0 ? 0 : Math.max(...spurs.map(spur => spur.meters)),
+        fraction: routeMeters === 0 ? 0 : removedMeters / routeMeters,
+    };
+}
+
+/**
  * Measures a route against the shape it was asked to follow.
  *
  * @param route - Route GeoJSON.
  * @param waypoints - The requested shape as `[lat, lng]`.
  * @param longEdgeThresholdMeters - Longest plausible edge for the mode.
+ * @param mode - Transport mode, for the spur bounds.
  * @returns All route quality metrics.
  */
 export function summarizeRoute(
     route: FeatureCollection | null | undefined,
     waypoints: [number, number][],
-    longEdgeThresholdMeters: number
+    longEdgeThresholdMeters: number,
+    mode: TransportMode
 ): RouteQualitySummary {
     const points = routeToLatLngs(route);
     const routeMeters = pathLengthMeters(points);
@@ -270,6 +328,7 @@ export function summarizeRoute(
         selfOverlapFraction: selfOverlapFraction(route),
         worstLegRatio: ratios.length === 0 ? 0 : Math.max(...ratios),
         badLegCount: ratios.filter(ratio => ratio > ROUTE_QUALITY.badLegRatio).length,
+        spurs: spurStats(route, waypoints, mode),
     };
 }
 

@@ -94,13 +94,21 @@ Note also that user-facing **accuracy is not a useful signal here**: `london-hea
 scores 88% while spending 23 km in the river, because the metric averages distance to the
 shape and a dense spur near the shape barely moves it.
 
-## Secondary finding, not part of this work
+## Secondary finding, followed up separately
 
 `SIMPLIFICATION_TOLERANCES["foot-walking"]` (0.00005) divided by
 `GEO.simplification.closedLoopDivisor` (20) gives an effective Douglas-Peucker tolerance of
 about 0.3 m, so 150-point shapes are not simplified at all. That means ~40 m waypoint spacing,
-~16 Radar requests per route, and a 2.4x length ratio even in a river-free city. Worth
-revisiting separately.
+~16 Radar requests per route, and a 2.4x length ratio even in a river-free city.
+
+This turned out to be the cause of a second defect: at that density waypoints keep snapping to
+driveways and cul-de-sacs, and the router has to go in and come back out, so routes were
+spending 5-62% of their length on out-and-back spurs. Those are now removed from the returned
+geometry — see `docs/technical/SPUR_CLEANUP.md`, which also carries the post-cleanup baseline.
+The spacing itself is still unfixed.
+
+**The numbers in the tables above are pre-cleanup.** `tests/fixtures/baseline.json` now holds
+the post-cleanup values; both are shown side by side in `SPUR_CLEANUP.md`.
 
 ## Reproducing
 
@@ -181,6 +189,11 @@ Same scenarios, same measurement, before and after:
 | `paris-heart-foot` | 1.89x → 1.63x | 155 → 135 m | 314 → 314 | 126 → 126 | 34% → 15% | 94% → 94% |
 | `budapest-heart-foot` | 2.26x → 1.83x | 323 → 387 m | 802 → 642 | 382 → 354 | 34% → 9% | 92% → 92% |
 | `madrid-heart-foot` | 2.41x → 2.46x | 143 → 470 m | 0 | 0 | 27% → 29% | 95% → 94% |
+
+That 470 m edge is the road tunnel described under "Known limitations" below. The spur
+cleanup has since removed it and the edge is back to 143 m — see `SPUR_CLEANUP.md`; the
+table above is the state at the end of issue #47, before that change.
+
 | `madrid-square-foot` | 1.27x → 1.27x | 171 → 171 m | 0 | 0 | 1% → 1% | 80% → 80% |
 
 Added after the fix, so measured once (all satisfy every invariant):
@@ -209,7 +222,12 @@ outline, and it comes out at 2.24x with a 96 m longest edge and 95% accuracy.
   the Thames with a 500 m radius puts a fifth of its waypoints in the water, and some runs have
   no bridge close enough to reach without a diversion longer than the shape. It improved
   six-fold and is listed under `knownIssues.waterTravel` so it cannot silently get worse.
-- **`madrid-heart-foot` contains a 470 m edge, and it is a real defect — a different one.**
+- **`madrid-heart-foot` contained a 470 m edge, and it was a real defect — a different one.
+  It is now fixed** by the spur cleanup, which removes the tunnel detour as an excursion the shape
+  does not need; the scenario's longest edge is 143 m and it no longer carries a known issue. The
+  description below is kept because the defect is still in Radar's graph.
+
+- **How it presented:**
   Radar's foot profile routes pedestrians through the **Calle de Bailén road tunnel** under
   Plaza de Oriente (`tunnel=yes`, `layer=-1`), turning a 40 m gap into a 1659 m detour with a
   470 m straight edge. Same class as the Thames ferries — Radar using ways pedestrians cannot
@@ -233,8 +251,9 @@ regress into the list unnoticed.
 | invariant | rule |
 |---|---|
 | `waterTravel` | longest unbroken run through water below 500 m — water is crossed, never travelled along |
-| `longEdge` | no edge over 400 m for walking or cycling; bridge spans in the matrix reach 387 m, so this only catches ferries and tunnels |
+| `longEdge` | no edge over 400 m for walking or cycling; bridge spans in the matrix reach 387 m, so this only catches ferries and tunnels. `WIDE_SPAN_METERS` raises it per scenario where a wider span has been verified against OSM |
 | `followsShape` | walking routes stay under 3.5x the shape length and 60% self-overlap |
+| `spurs` | no out-and-back excursions left in the geometry, in any mode. Added with the spur cleanup; see `SPUR_CLEANUP.md` |
 
 Backed by:
 

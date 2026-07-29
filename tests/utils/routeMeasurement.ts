@@ -5,6 +5,7 @@
  * lets it reach the real API, so both measure identically.
  */
 
+import { FeatureCollection } from "geojson";
 import { getRadarRoute } from "@/lib/radarService";
 import { calculateRouteAccuracy } from "@/lib/geoUtils";
 import { summarizeRoute } from "@/lib/routeQuality";
@@ -37,6 +38,31 @@ export interface ScenarioMetrics {
     waterCrossings: number | null;
     /** Longest unbroken run through water — a bridge is short, a ferry is not. */
     maxContiguousWaterMeters: number | null;
+    /** Out-and-back excursions left in the returned route. Zero after cleanup. */
+    spurCount: number;
+    /** Metres the cleanup removed, from `properties.spurCleanup`. */
+    removedSpurMeters: number;
+    /** Longest single excursion the cleanup removed. */
+    maxRemovedSpurMeters: number;
+}
+
+/** What the spur cleanup reported doing, or zeros when it found nothing. */
+interface SpurCleanupDiagnostics {
+    spurs: number;
+    removedMeters: number;
+    longestMeters: number;
+}
+
+/**
+ * Reads the spur cleanup diagnostics a route carries.
+ *
+ * @param route - Route GeoJSON from `getRadarRoute`.
+ * @returns The diagnostics, or zeros when nothing was removed.
+ */
+function spurCleanupOf(route: FeatureCollection): SpurCleanupDiagnostics {
+    const diagnostics = route.features?.[0]?.properties?.spurCleanup;
+    if (!diagnostics) return { spurs: 0, removedMeters: 0, longestMeters: 0 };
+    return diagnostics as SpurCleanupDiagnostics;
 }
 
 /**
@@ -55,9 +81,11 @@ export async function measureScenario(scenario: Scenario): Promise<ScenarioMetri
     const quality = summarizeRoute(
         route,
         waypoints,
-        ROUTE_QUALITY.longEdgeThresholdMeters[scenario.mode]
+        ROUTE_QUALITY.longEdgeThresholdMeters[scenario.mode],
+        scenario.mode
     );
     const water = scenario.city ? routeWaterStats(route, loadWaterIndex(scenario.city)) : null;
+    const cleanup = spurCleanupOf(route);
 
     return {
         lengthRatio: round(quality.lengthRatio, 2),
@@ -71,6 +99,9 @@ export async function measureScenario(scenario: Scenario): Promise<ScenarioMetri
         waterMeters: water ? Math.round(water.totalWaterMeters) : null,
         waterCrossings: water ? water.crossings : null,
         maxContiguousWaterMeters: water ? Math.round(water.maxContiguousWaterMeters) : null,
+        spurCount: quality.spurs.count,
+        removedSpurMeters: Math.round(cleanup.removedMeters),
+        maxRemovedSpurMeters: Math.round(cleanup.longestMeters),
     };
 }
 

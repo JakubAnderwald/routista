@@ -10,7 +10,8 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Routing Logic** | `src/lib/routeGenerator.ts` | Calls Radar API, handles batching, stitching, and error handling. |
 | **Shape Extraction** | `src/lib/imageProcessing.ts`, `src/lib/imageProcessingCore.ts` | Canvas wrapper + platform-agnostic algorithms (Otsu, boundary tracing). |
 | **Geo Calculations** | `src/lib/geoUtils.ts` | Distance, scaling, simplification, and accuracy scoring. Pure functions. |
-| **Route Quality Metrics** | `src/lib/routeQuality.ts` | Pure measurements of a generated route: long edges, length ratio, per-leg detours, self-overlap. See `docs/technical/ISSUE_47_BASELINE.md`. |
+| **Route Quality Metrics** | `src/lib/routeQuality.ts` | Pure measurements of a generated route: long edges, length ratio, per-leg detours, self-overlap, spur count. See `docs/technical/ISSUE_47_BASELINE.md`. |
+| **Spur Cleanup** | `src/lib/routeCleanup.ts` | Splices out-and-back excursions out of a routed polyline — the branch into a side street that turns round and comes straight back. See `docs/technical/SPUR_CLEANUP.md`. |
 | **Water Geometry** | `src/lib/waterGeometry.ts` | Pure point-in-water and route-in-water queries over OSM water polygons. Used to tell a bridge crossing from a route travelling along a river (issue #47). |
 | **River Crossings** | `src/lib/riverCrossing.ts` | Moves waypoints out of water onto bridges, and pins crossings into legs that still travel on water. See `docs/technical/ISSUE_47_BASELINE.md`. |
 | **OSM Water Data** | `src/lib/overpassService.ts` | Fetches water polygons and bridges from Overpass, cached in Redis for 30 days. Only called when a route shows signs of using a ferry. |
@@ -52,6 +53,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `rateLimit.ts`: Rate limiting helper using Upstash Redis.
 *   `geoUtils.ts`: **CRITICAL**. Math heavy. Handles coordinate geometry.
 *   `routeQuality.ts`: Route measurement metrics. Pure, no I/O.
+*   `routeCleanup.ts`: Out-and-back spur removal. Pure, no I/O.
 *   `waterGeometry.ts`: Water polygon queries. Pure, no I/O.
 *   `riverCrossing.ts`: Bridge selection and river crossing repair. Pure, no I/O.
 *   `overpassService.ts`: OSM water and bridge fetching, with Redis caching.
@@ -91,6 +93,8 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `fixtures/radar/`, `fixtures/water/`: Recorded Radar responses and OSM water/bridge geometry.
 *   `utils/shapes.ts`: Deterministic parametric shapes (heart, star, circle, square).
 *   `utils/routeMeasurement.ts`: Shared scenario measurement for the offline and live suites.
+*   `utils/routeInvariants.ts`: What a good route is, checked both ways per scenario.
+*   `utils/pathBuilders.ts`: Paths with exactly known spacing for the geometry unit suites.
 *   `unit/`: Unit tests for pure functions in `src/lib/`.
     *   `gpxGenerator.test.ts`: GPX XML generation tests.
     *   `geoUtils.test.ts`: Distance, route length, simplification tests.

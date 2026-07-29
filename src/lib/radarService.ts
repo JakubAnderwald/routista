@@ -1,5 +1,6 @@
 import { simplifyPoints, calculateDistance } from "./geoUtils";
-import { edgeLengths, RouteLegSummary } from "./routeQuality";
+import { edgeLengths, pathLengthMeters, RouteLegSummary } from "./routeQuality";
+import { removeSpurs, spurCleanupOptionsFor } from "./routeCleanup";
 import {
     BoundingBox,
     boundingBoxAreaSqKm,
@@ -510,6 +511,37 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
 
     console.log(`[RadarService] Route generated: ${routed.coordinates.length} route points, ${(routed.distance / 1000).toFixed(2)}km, ${Math.round(routed.duration / 60)}min`);
 
+    // Every waypoint is a forced via-point, so any that snapped to a driveway
+    // or a side street made the router go in and come straight back out. Splice
+    // those out-and-backs away, keeping only the ones the shape actually needs.
+    // This runs last: the river crossing repair's detector needs to see the
+    // geometry Radar actually returned.
+    //
+    // The shape is judged against the simplified coordinates, not the repaired
+    // waypoints: those carry bridge crossings the router had to be told about,
+    // which are not part of what the user drew.
+    const cleanup = removeSpurs(
+        routed.coordinates.map(([lng, lat]) => [lat, lng] as [number, number]),
+        simplifiedCoordinates as [number, number][],
+        spurCleanupOptionsFor(mode as TransportMode)
+    );
+    const cleanedMeters = pathLengthMeters(cleanup.points);
+
+    if (cleanup.spurs.length > 0) {
+        console.log(
+            `[RadarService] Spur cleanup: removed ${cleanup.spurs.length} out-and-back(s), ` +
+            `${Math.round(cleanup.removedMeters)}m, leaving ${cleanup.points.length} route points ` +
+            `and ${(cleanedMeters / 1000).toFixed(2)}km`
+        );
+    }
+
+    // Radar's own totals describe the route it drove, which is no longer the
+    // route being returned. Report the geometry, and keep the raw numbers for
+    // diagnostics. Duration is scaled rather than recomputed: nothing reads it,
+    // and an unscaled one would contradict the distance beside it.
+    const cleanedDuration =
+        routed.distance > 0 ? (routed.duration * cleanedMeters) / routed.distance : routed.duration;
+
     const result: FeatureCollection = {
         type: "FeatureCollection",
         features: [
@@ -517,15 +549,29 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
                 type: "Feature",
                 properties: {
                     summary: {
-                        distance: routed.distance,
-                        duration: routed.duration
+                        distance: cleanedMeters,
+                        duration: cleanedDuration,
+                        /** What Radar returned, before the spur cleanup. */
+                        routedDistance: routed.distance,
+                        routedDuration: routed.duration
                     },
                     legs: routed.legs,
-                    ...(repair ? { riverCrossing: repair.diagnostics } : {})
+                    ...(repair ? { riverCrossing: repair.diagnostics } : {}),
+                    ...(cleanup.spurs.length > 0
+                        ? {
+                              spurCleanup: {
+                                  spurs: cleanup.spurs.length,
+                                  removedMeters: cleanup.removedMeters,
+                                  longestMeters: Math.max(
+                                      ...cleanup.spurs.map(spur => spur.meters)
+                                  ),
+                              },
+                          }
+                        : {})
                 },
                 geometry: {
                     type: "LineString",
-                    coordinates: routed.coordinates
+                    coordinates: cleanup.points.map(([lat, lng]) => [lng, lat])
                 }
             }
         ]

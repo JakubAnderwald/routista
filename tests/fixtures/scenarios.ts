@@ -22,8 +22,9 @@ import path from "path";
  * - `waterTravel` — the route may cross water but never travel along it
  * - `longEdge` — no edge longer than any real street
  * - `followsShape` — length ratio and self-overlap stay within bounds
+ * - `spurs` — no branch off the road that turns round and comes straight back
  */
-export type Invariant = "waterTravel" | "longEdge" | "followsShape";
+export type Invariant = "waterTravel" | "longEdge" | "followsShape" | "spurs";
 
 export interface Scenario {
     /** Stable id; also the fixture filename. */
@@ -159,15 +160,9 @@ export const SCENARIOS: Scenario[] = [
         radius: 1000,
         mode: "foot-walking",
         points: 150,
-        role: "Control: no river, but ornamental fountains tagged as water.",
-        knownIssues: {
-            longEdge:
-                "Radar's foot profile routes through the Calle de Bailen road tunnel under " +
-                "Plaza de Oriente (tunnel=yes, layer=-1), producing a 470 m straight edge " +
-                "for a 40 m gap. Same class of defect as the Thames ferries — Radar using " +
-                "ways pedestrians cannot — but a different way type, and not water, so the " +
-                "river crossing repair correctly leaves it alone. Tracked separately.",
-        },
+        role:
+            "Control: no river, but ornamental fountains tagged as water. Also the " +
+            "Calle de Bailen road tunnel, which the spur cleanup now removes.",
     },
     {
         id: "madrid-square-foot",
@@ -200,6 +195,37 @@ export const SCENARIOS: Scenario[] = [
         mode: "foot-walking",
         points: 150,
         role: "Fidelity: an irregular traced outline over the Thames.",
+    },
+    {
+        id: "castillonnes-heart-foot",
+        city: null,
+        shape: "heart",
+        // Farmland between Castillonnes and Ferrensac, Lot-et-Garonne. Lanes
+        // and farm tracks, hundreds of metres apart.
+        center: [44.6547, 0.6006],
+        radius: 1000,
+        mode: "foot-walking",
+        points: 150,
+        role:
+            "Control: a sparse rural network, where the nearest way to a waypoint is " +
+            "often hundreds of metres off. Every other scenario is a street grid, and " +
+            "the spur cleanup is measurably weaker here — its shape test ignores a " +
+            "waypoint already further than maxShapeLossMeters from an excursion, which " +
+            "off a grid is most of them. It satisfies every invariant; what this " +
+            "scenario is really guarding is accuracyPercent, pinned in the baseline.",
+    },
+    {
+        id: "warsaw-heart-foot",
+        // A 4.5 km radius spans ~81 km², over RIVER_CROSSING.maxDataAreaSqKm,
+        // so the pipeline skips the water repair here and a Vistula fixture
+        // would be a large file that changes nothing.
+        city: null,
+        shape: "heart",
+        center: [52.2297, 21.0122],
+        radius: 4500,
+        mode: "foot-walking",
+        points: 150,
+        role: "The reported spur bug: 66.6 km for a 4.5 km-radius heart on foot.",
     },
     {
         id: "amsterdam-heart-foot",

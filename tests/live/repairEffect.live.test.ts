@@ -56,8 +56,8 @@ describe.skipIf(process.env.RUN_LIVE_ROUTE_TESTS !== "1")("repair effect (live R
 
             const waterBefore = routeWaterStats(before, water);
             const waterAfter = routeWaterStats(after, water);
-            const qualityBefore = summarizeRoute(before, waypoints, threshold);
-            const qualityAfter = summarizeRoute(after, waypoints, threshold);
+            const qualityBefore = summarizeRoute(before, waypoints, threshold, scenario.mode);
+            const qualityAfter = summarizeRoute(after, waypoints, threshold, scenario.mode);
 
             // Without the repair this shape travels kilometres along the Thames.
             expect(waterBefore.maxContiguousWaterMeters).toBeGreaterThan(

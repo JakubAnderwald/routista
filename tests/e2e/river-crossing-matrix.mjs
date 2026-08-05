@@ -25,7 +25,7 @@
  * Each case generates a real route, so this consumes Radar quota.
  */
 
-import { chromium } from 'playwright';
+import { chromium, errors } from 'playwright';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -189,13 +189,29 @@ async function runCase(page, testCase) {
 
     if (testCase.search) {
         if (!testCase.expect) {
-            throw new Error(`case "${testCase.id}" has a search but no expect — see the note below`);
+            throw new Error(
+                `case "${testCase.id}" has a search but no expect: give it the substring the ` +
+                    `chosen autocomplete suggestion must contain`
+            );
         }
         const search = 'input[placeholder^="Search location"]';
         await page.click(search);
         await page.fill(search, testCase.search);
-        // Autocomplete is debounced and goes through the Radar proxy.
-        await page.waitForSelector('.absolute.top-full button', { timeout: 30_000 });
+
+        // Autocomplete is debounced and goes through the Radar proxy. The
+        // dropdown is gated on `suggestions.length > 0` in AreaSelector.tsx, so
+        // an empty result never renders and lands here rather than falling
+        // through to the match check — which is also how the 10 req/min limit
+        // shows up mid-matrix.
+        try {
+            await page.waitForSelector('.absolute.top-full button', { timeout: 30_000 });
+        } catch (error) {
+            if (!(error instanceof errors.TimeoutError)) throw error;
+            throw new Error(
+                `"${testCase.search}" returned no autocomplete suggestion within 30s — ` +
+                    `Radar may be rate limiting, so retry this case with MATRIX_ONLY=${testCase.id}`
+            );
+        }
 
         // Pick the suggestion by name, never by position. Radar ranked a hamlet
         // called Paris in Castillonnès above the capital, so taking the first
@@ -209,7 +225,7 @@ async function runCase(page, testCase) {
         if (index === -1) {
             throw new Error(
                 `"${testCase.search}" offered no suggestion matching "${testCase.expect}" — ` +
-                    `got: ${offered.join(' | ') || '(none)'}`
+                    `got: ${offered.join(' | ')}`
             );
         }
         await options.nth(index).click();

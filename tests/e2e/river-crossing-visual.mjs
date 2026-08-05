@@ -18,7 +18,7 @@
  * Exits 0 when every check passes, 1 otherwise.
  */
 
-import { chromium } from 'playwright';
+import { chromium, errors } from 'playwright';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -114,14 +114,43 @@ try {
 
     // The route has to be drawn, not merely computed. React-Leaflet may use
     // either the SVG or the canvas renderer, so accept both.
-    const drawn = await page.evaluate(() => {
-        const map = document.querySelector('.leaflet-container');
-        if (!map) return { paths: 0, canvases: 0 };
-        return {
-            paths: map.querySelectorAll('svg path').length,
-            canvases: map.querySelectorAll('canvas').length,
-        };
-    });
+    //
+    // Poll rather than sample once. `has-route` flips as soon as the route is in
+    // state, but ResultMap keys itself on the centre and so re-mounts while
+    // MapUpdater refits the bounds, leaving the overlay pane briefly empty. A
+    // single evaluate() lands in that gap and reports a route that is plainly on
+    // screen as missing.
+    const countDrawn = () =>
+        page.evaluate(() => {
+            const map = document.querySelector('.leaflet-container');
+            if (!map) return { paths: 0, canvases: 0 };
+            return {
+                paths: map.querySelectorAll('svg path').length,
+                canvases: map.querySelectorAll('canvas').length,
+            };
+        });
+
+    try {
+        await page.waitForFunction(
+            () => {
+                const map = document.querySelector('.leaflet-container');
+                if (!map) return false;
+                return (
+                    map.querySelectorAll('svg path').length > 0 ||
+                    map.querySelectorAll('canvas').length > 0
+                );
+            },
+            { timeout: 30_000 }
+        );
+    } catch (error) {
+        // A timeout means the overlay genuinely never appeared: fall through so
+        // the counts below report what was actually there and the remaining
+        // checks still run. Anything else — a detached frame, an evaluation
+        // fault — is a real error, and reporting it as "0 svg paths" would hide
+        // the cause behind the same misleading result this check used to give.
+        if (!(error instanceof errors.TimeoutError)) throw error;
+    }
+    const drawn = await countDrawn();
     check(
         'route drawn on the map',
         drawn.paths > 0 || drawn.canvases > 0,

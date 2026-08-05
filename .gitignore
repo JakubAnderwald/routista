@@ -57,3 +57,7 @@ test_output*.txt
 
 # e2e run artifacts (screenshots written beside the scripts)
 tests/e2e/*.png
+
+# Scenario matrix output: a screenshot pair per case plus results-<label>.json,
+# written by river-crossing-matrix.mjs. Regenerated per run, never reviewed.
+tests/e2e/matrix/

@@ -18,7 +18,7 @@
  * Exits 0 when every check passes, 1 otherwise.
  */
 
-import { chromium } from 'playwright';
+import { chromium, errors } from 'playwright';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -142,9 +142,13 @@ try {
             },
             { timeout: 30_000 }
         );
-    } catch {
-        // Swallow the timeout so the counts below report what was actually
-        // there and the remaining checks still run.
+    } catch (error) {
+        // A timeout means the overlay genuinely never appeared: fall through so
+        // the counts below report what was actually there and the remaining
+        // checks still run. Anything else — a detached frame, an evaluation
+        // fault — is a real error, and reporting it as "0 svg paths" would hide
+        // the cause behind the same misleading result this check used to give.
+        if (!(error instanceof errors.TimeoutError)) throw error;
     }
     const drawn = await countDrawn();
     check(

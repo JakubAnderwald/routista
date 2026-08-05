@@ -25,7 +25,7 @@
  * Each case generates a real route, so this consumes Radar quota.
  */
 
-import { chromium } from 'playwright';
+import { chromium, errors } from 'playwright';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -45,6 +45,11 @@ if (!baseUrl || !label) {
 /**
  * The cases worth looking at. `search` is left out for London so the wizard's
  * own default centre is used — 51.505,-0.09 is the reported case exactly.
+ *
+ * Every case that does search must also carry `expect`: a substring the chosen
+ * autocomplete suggestion has to contain. Radar's ranking is not stable enough
+ * to trust by position, and a case that quietly lands in the wrong place still
+ * produces a length and an accuracy, so it reads as a result rather than a bug.
  */
 const CASES = [
     {
@@ -72,7 +77,10 @@ const CASES = [
         id: '4-heart-paris-walk',
         title: 'Heart over the Seine, walking — control, already worked',
         shape: 'heart',
-        search: 'Paris, France',
+        // "Paris, France" ranks a hamlet called Paris in Castillonnès above the
+        // capital; naming the region puts the real one first. See `expect`.
+        search: 'Paris, Île-de-France, France',
+        expect: 'IDF',
         radius: 1000,
         mode: 'Walk',
     },
@@ -81,6 +89,7 @@ const CASES = [
         title: 'Heart over Madrid, walking — control, no river',
         shape: 'heart',
         search: 'Madrid, Spain',
+        expect: 'MD ES',
         radius: 1000,
         mode: 'Walk',
     },
@@ -89,6 +98,7 @@ const CASES = [
         title: 'Heart over Amsterdam, walking — control, canals everywhere',
         shape: 'heart',
         search: 'Amsterdam, Netherlands',
+        expect: 'NH NL',
         radius: 1000,
         mode: 'Walk',
     },
@@ -97,6 +107,7 @@ const CASES = [
         title: 'Heart over Warsaw at 4500 m, walking — the reported spur case',
         shape: 'heart',
         search: 'Warsaw, Poland',
+        expect: 'Mazovia',
         radius: 4500,
         mode: 'Walk',
     },
@@ -105,6 +116,7 @@ const CASES = [
         title: 'Heart over Warsaw at 1500 m, walking — where the cleanup helps most',
         shape: 'heart',
         search: 'Warsaw, Poland',
+        expect: 'Mazovia',
         radius: 1500,
         mode: 'Walk',
     },
@@ -176,12 +188,47 @@ async function runCase(page, testCase) {
     });
 
     if (testCase.search) {
+        if (!testCase.expect) {
+            throw new Error(
+                `case "${testCase.id}" has a search but no expect: give it the substring the ` +
+                    `chosen autocomplete suggestion must contain`
+            );
+        }
         const search = 'input[placeholder^="Search location"]';
         await page.click(search);
         await page.fill(search, testCase.search);
-        // Autocomplete is debounced and goes through the Radar proxy.
-        await page.waitForSelector('.absolute.top-full button', { timeout: 30_000 });
-        await page.locator('.absolute.top-full button').first().click();
+
+        // Autocomplete is debounced and goes through the Radar proxy. The
+        // dropdown is gated on `suggestions.length > 0` in AreaSelector.tsx, so
+        // an empty result never renders and lands here rather than falling
+        // through to the match check — which is also how the 10 req/min limit
+        // shows up mid-matrix.
+        try {
+            await page.waitForSelector('.absolute.top-full button', { timeout: 30_000 });
+        } catch (error) {
+            if (!(error instanceof errors.TimeoutError)) throw error;
+            throw new Error(
+                `"${testCase.search}" returned no autocomplete suggestion within 30s — ` +
+                    `Radar may be rate limiting, so retry this case with MATRIX_ONLY=${testCase.id}`
+            );
+        }
+
+        // Pick the suggestion by name, never by position. Radar ranked a hamlet
+        // called Paris in Castillonnès above the capital, so taking the first
+        // entry ran the Seine control over farmland 500 km away — and reported
+        // its 48% as a routing result rather than a broken case. Matching on
+        // `expect` turns that class of miss into a loud failure.
+        const options = page.locator('.absolute.top-full button');
+        const offered = await options.allInnerTexts();
+        const wanted = testCase.expect.toLowerCase();
+        const index = offered.findIndex(text => text.toLowerCase().includes(wanted));
+        if (index === -1) {
+            throw new Error(
+                `"${testCase.search}" offered no suggestion matching "${testCase.expect}" — ` +
+                    `got: ${offered.join(' | ')}`
+            );
+        }
+        await options.nth(index).click();
         await page.waitForTimeout(2500);
     }
 

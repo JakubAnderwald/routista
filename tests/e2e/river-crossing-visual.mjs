@@ -114,14 +114,39 @@ try {
 
     // The route has to be drawn, not merely computed. React-Leaflet may use
     // either the SVG or the canvas renderer, so accept both.
-    const drawn = await page.evaluate(() => {
-        const map = document.querySelector('.leaflet-container');
-        if (!map) return { paths: 0, canvases: 0 };
-        return {
-            paths: map.querySelectorAll('svg path').length,
-            canvases: map.querySelectorAll('canvas').length,
-        };
-    });
+    //
+    // Poll rather than sample once. `has-route` flips as soon as the route is in
+    // state, but ResultMap keys itself on the centre and so re-mounts while
+    // MapUpdater refits the bounds, leaving the overlay pane briefly empty. A
+    // single evaluate() lands in that gap and reports a route that is plainly on
+    // screen as missing.
+    const countDrawn = () =>
+        page.evaluate(() => {
+            const map = document.querySelector('.leaflet-container');
+            if (!map) return { paths: 0, canvases: 0 };
+            return {
+                paths: map.querySelectorAll('svg path').length,
+                canvases: map.querySelectorAll('canvas').length,
+            };
+        });
+
+    try {
+        await page.waitForFunction(
+            () => {
+                const map = document.querySelector('.leaflet-container');
+                if (!map) return false;
+                return (
+                    map.querySelectorAll('svg path').length > 0 ||
+                    map.querySelectorAll('canvas').length > 0
+                );
+            },
+            { timeout: 30_000 }
+        );
+    } catch {
+        // Swallow the timeout so the counts below report what was actually
+        // there and the remaining checks still run.
+    }
+    const drawn = await countDrawn();
     check(
         'route drawn on the map',
         drawn.paths > 0 || drawn.canvases > 0,

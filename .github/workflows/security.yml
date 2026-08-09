@@ -26,6 +26,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Linting (including security rules)
+        run: npm run lint
+
+      - name: Run Tests with Coverage
+        run: npm run test:coverage
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # The audits run LAST, after lint/tests/Sonar, and this order is load-bearing.
+      #
+      # `npm audit` reads a live advisory database, so it can start failing with no
+      # change on our side. When it ran first, that failure short-circuited the whole
+      # job: lint, tests and the Sonar scan were skipped, so every open PR lost its
+      # test signal — and, because the Sonar step never ran, the required
+      # `SonarCloud Code Analysis` check was never posted and PRs stalled waiting for
+      # a status that could not arrive. Keep the audits at the end so an advisory
+      # fails the job without hiding whether the code actually works.
       - name: Security Audit (production dependencies)
         run: npm audit --audit-level=high --omit=dev
 
@@ -72,11 +93,17 @@ jobs:
             exit 1
           fi
 
+          # These findings are labelled by what is actually known — that the blocking
+          # production audit above did not fail on them — rather than asserted to be
+          # dev-only. The two steps are separate `npm audit` calls against a live
+          # advisory feed, so an advisory published between them would show up here
+          # while the production audit ran before it existed. Calling that "dev-only"
+          # would be a guess; the next run's production audit blocks it either way.
           count=$(jq -r '.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' audit.json)
           if [ "$count" -gt 0 ]; then
-            echo "::warning::$count high/critical advisories remain in the full tree (dev-only, not blocking)."
+            echo "::warning::$count high/critical advisories in the full tree, not blocking (see summary)."
             {
-              echo "### Informational: $count high/critical advisories (dev-only)"
+              echo "### Informational: $count high/critical advisories not caught by the production audit"
               jq -r '.vulnerabilities | to_entries[]
                      | select(.value.severity == "high" or .value.severity == "critical")
                      | "- **\(.key)** (\(.value.severity)): `\(.value.range)`"' audit.json
@@ -84,15 +111,3 @@ jobs:
           else
             echo "No high/critical advisories in the full dependency tree."
           fi
-
-      - name: Linting (including security rules)
-        run: npm run lint
-        
-      - name: Run Tests with Coverage
-        run: npm run test:coverage
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v8
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

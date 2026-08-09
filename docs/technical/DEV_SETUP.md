@@ -282,8 +282,9 @@ Safe to ignore - app works without Redis (caching disabled). To fix:
 ### CI fails with a security audit advisory
 
 The build itself no longer runs `npm audit` — only CI does, so an advisory blocks the merge,
-not the deploy. Advisories often appear on transitive dependencies with no code change on
-your side.
+not the deploy. Only advisories in the **production** dependency tree (`--omit=dev`) are
+blocking; dev-only findings are reported to the job summary and do not fail the job.
+Advisories often appear on transitive dependencies with no code change on your side.
 
 ```bash
 # Check what's failing

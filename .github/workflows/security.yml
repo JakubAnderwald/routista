@@ -93,11 +93,17 @@ jobs:
             exit 1
           fi
 
+          # These findings are labelled by what is actually known — that the blocking
+          # production audit above did not fail on them — rather than asserted to be
+          # dev-only. The two steps are separate `npm audit` calls against a live
+          # advisory feed, so an advisory published between them would show up here
+          # while the production audit ran before it existed. Calling that "dev-only"
+          # would be a guess; the next run's production audit blocks it either way.
           count=$(jq -r '.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' audit.json)
           if [ "$count" -gt 0 ]; then
-            echo "::warning::$count high/critical advisories remain in the full tree (dev-only, not blocking)."
+            echo "::warning::$count high/critical advisories in the full tree, not blocking (see summary)."
             {
-              echo "### Informational: $count high/critical advisories (dev-only)"
+              echo "### Informational: $count high/critical advisories not caught by the production audit"
               jq -r '.vulnerabilities | to_entries[]
                      | select(.value.severity == "high" or .value.severity == "critical")
                      | "- **\(.key)** (\(.value.severity)): `\(.value.range)`"' audit.json

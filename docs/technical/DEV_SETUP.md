@@ -279,18 +279,26 @@ Safe to ignore - app works without Redis (caching disabled). To fix:
 1. Set up Upstash account
 2. Add `KV_REST_API_URL` and `KV_REST_API_TOKEN` to `.env.local`
 
-### Build fails with security audit
+### CI fails with a security audit advisory
+
+The build itself no longer runs `npm audit` — only CI does, so an advisory blocks the merge,
+not the deploy. Advisories often appear on transitive dependencies with no code change on
+your side.
 
 ```bash
 # Check what's failing
 npm audit
 
-# Fix if possible
+# Usually enough: in-range patch bumps, lockfile only
 npm audit fix
 
-# Skip audit for dev (not recommended for production)
-npm run dev
+# Confirm the CI gate passes
+npm audit --audit-level=high --omit=dev
 ```
+
+Prefer `npm audit fix` over regenerating the lockfile from scratch — a full regeneration
+with a different npm version can silently rewrite unrelated metadata (for example the
+`libc` fields on the `@next/swc-linux-*` binaries).
 
 ### TypeScript errors in IDE but build works
 

@@ -467,10 +467,15 @@ Tests run automatically on:
 - Every push (GitHub Actions)
 - Every PR (with coverage upload to SonarCloud)
 
-Pre-push checks (`npm run prebuild`):
-1. `npm audit --audit-level=high`
-2. `npm run lint`
-3. `npm test`
+Pre-build checks (`npm run prebuild`):
+1. `npm run lint`
+2. `npm test` (skipped on Vercel, where `$VERCEL` is set — CI already runs the suite)
+
+The dependency audit deliberately does *not* run here. `npm audit` queries a live advisory
+database, so gating the build on it makes deploys non-deterministic: a newly published
+advisory on an unrelated transitive dependency breaks deploys with no code change. The
+audit is a blocking step in `.github/workflows/security.yml` instead, where it gates the
+merge rather than the deploy.
 
 ---
 

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "prebuild": "npm audit --audit-level=high --omit=dev && npm run lint && ([ -n \"$VERCEL\" ] || npm test)",
+    "prebuild": "npm run lint && ([ -n \"$VERCEL\" ] || npm test)",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -107,7 +107,13 @@ See `docs/technical/ISSUE_47_BASELINE.md`.
 - API route errors captured with context
 - Rate limit blocks logged as warnings
 
-**Files:** `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/app/global-error.tsx`
+Every event is tagged with `environment` (`production` / `preview` / `development`) so one
+shared Sentry project can separate the three. Filter by environment in the Sentry UI.
+
+**Files:** `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/app/global-error.tsx`
+
+> Client init must live in `instrumentation-client.ts`, not `sentry.client.config.ts`. This
+> project builds with Turbopack, and `@sentry/nextjs` only injects the former on that path.
 
 ### Product Analytics (PostHog)
 

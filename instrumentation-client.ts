@@ -1,11 +1,24 @@
 // This file configures the initialization of Sentry on the client.
 // The config you add here will be used whenever a user loads a page in their browser.
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
+//
+// It MUST be named `instrumentation-client.ts`. This project builds with Turbopack, and
+// the Turbopack path in @sentry/nextjs only injects `instrumentation-client.*` — it never
+// looks for the older `sentry.client.config.ts`, which webpack builds still honour. While
+// the config lived in that file the browser SDK was never initialized at all, so no
+// client-side error or replay ever reached Sentry.
 
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+
+    // Production, preview and local dev all report into the same Sentry project, so tag
+    // every event with its origin. Without this they arrive indistinguishable and a
+    // preview-only error looks like a production incident. Vercel injects
+    // NEXT_PUBLIC_VERCEL_ENV as production/preview/development; it is absent off-Vercel,
+    // where the only thing running is local dev.
+    environment: process.env.NEXT_PUBLIC_VERCEL_ENV ?? 'development',
 
     // Adjust this value in production, or use tracesSampler for greater control
     tracesSampleRate: 1,
@@ -28,3 +41,7 @@ Sentry.init({
         }),
     ],
 });
+
+// Required for App Router navigation tracing; without it client-side route changes are
+// not instrumented.
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

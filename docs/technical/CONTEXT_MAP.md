@@ -66,7 +66,9 @@ This file maps concepts and features to their source of truth in the codebase. U
 
 ### Infrastructure (root)
 *   `middleware.ts`: Rate limiting for `/api/radar/*` routes, i18n routing.
-*   `sentry.client.config.ts`: Client-side Sentry initialization.
+*   `instrumentation-client.ts`: Client-side Sentry initialization. Must use this filename —
+    Turbopack builds ignore the older `sentry.client.config.ts`.
+*   `instrumentation.ts`: Loads the server/edge Sentry config via `register()`.
 *   `sentry.server.config.ts`: Server-side Sentry initialization.
 *   `sentry.edge.config.ts`: Edge runtime Sentry initialization.
 *   `next.config.ts`: Next.js config wrapped with Sentry.

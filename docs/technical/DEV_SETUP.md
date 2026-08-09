@@ -16,18 +16,28 @@ For full agent rules, see `.agent/rules/project_rules.md`.
 
 ## Prerequisites
 
-- **Node.js** v20.9+ (required by `sharp` 0.35; CI and Vercel both build on v24) ([Download](https://nodejs.org/))
+- **Node.js** v24 — pinned in `.nvmrc` and `engines.node`, matching CI and Vercel ([Download](https://nodejs.org/))
 - **npm** (comes with Node.js)
 - **Git** ([Download](https://git-scm.com/))
 - **Vercel CLI** (recommended): `brew install vercel-cli`
 
 Verify installation:
 ```bash
-node --version    # Should show v20.9 or higher
+node --version    # Must be v24.x — see below
 npm --version     # Should show 10.x or higher
 git --version
 vercel --version  # Optional, for pulling env vars
 ```
+
+> **Node must be v24.** CI and Vercel both build on 24, and the fixture-replay suite in
+> `tests/integration/` is sensitive to the runtime: on other majors the computed waypoints
+> drift out of the recorded fixture keys and the tests fail locally while passing in CI.
+> With a version manager, `nvm use` / `fnm use` picks up `.nvmrc`. With Homebrew:
+>
+> ```bash
+> brew install node@24
+> brew unlink node && brew link --overwrite --force node@24
+> ```
 
 ## Quick Start (5 minutes)
 
@@ -112,6 +122,28 @@ git worktree prune
 - **Quick switching**: No need to stash/commit changes when switching features
 
 ## Environment Variables
+
+### How the three environments differ
+
+Production is deliberately isolated from Preview and Development:
+
+| Service | Production | Preview + Development | Local |
+|---|---|---|---|
+| **Redis / KV** | `routista-cache` (Upstash) | *none* — cache and rate limiting disabled | *none* |
+| **Sentry** | shared project, `environment: production` | shared project, `environment: preview` | `environment: development`, no DSN so inert |
+| **Radar key** | live key | a *different* live key | test key (see below) |
+| **PostHog / Strava** | shared across all environments | shared | absent |
+
+Two consequences worth knowing:
+
+- **Preview and dev have no Redis by design.** `getRedisClient()` returns `null` when
+  `KV_REST_API_*` is unset, so route caching and API rate limiting silently switch off
+  rather than erroring. This keeps preview traffic out of production's cache at zero cost.
+  If you need to exercise those code paths, attach a Redis store to Preview in Vercel.
+- **Local dev keeps a Radar *test* key.** `.env.local` sets `NEXT_PUBLIC_RADAR_LIVE_PK=`
+  empty so the `LIVE_PK || TEST_PK` fallback in `radarService.ts` picks the test key. That
+  key exists only locally — `vercel env pull` will overwrite `.env.local` and hand you a
+  live key, so re-add both Radar lines afterwards.
 
 ### Required for Full Functionality
 

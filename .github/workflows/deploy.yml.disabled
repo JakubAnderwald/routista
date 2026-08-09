@@ -34,9 +34,7 @@ jobs:
 
       - name: Run Tests
         run: npm test
-        env:
-          ORS_API_KEY: ${{ secrets.ORS_API_KEY }}
-      
+
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:

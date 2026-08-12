@@ -37,6 +37,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **UI Variant Config** | `src/config.ts`, `src/components/ABTestProvider.tsx` | Feature flag for UI variant (A or B). See `docs/features/UI_VARIANTS.md`. |
 | **App Configuration** | `src/config.ts`, `src/config/` | Centralized config: routing tolerances, API settings, geo constants, image processing, feature toggles (`stravaEnabled`, `uiVariant`). |
 | **Deployment & Hosting** | `docs/technical/ARCHITECTURE.md` (Deployment section) | Vercel setup, environments (Production/Preview), env vars. |
+| **Cloud Session Skills** | `.claude/hooks/sync-cloud-skills.sh`, `.claude/settings.json` | `SessionStart` hook that clones the personal skills repo into `.claude/skills/` on cloud session VMs only. See `docs/technical/CLOUD_SESSIONS.md`. |
 
 ## 📂 File Tree & Purpose
 
@@ -201,3 +202,4 @@ Architecture and developer guides:
 | `TESTING_STRATEGY.md` | Test pyramid, coverage requirements, browser automation |
 | `DEBUGGING.md` | Console logs, troubleshooting |
 | `CONTEXT_MAP.md` | This file - concept-to-file mapping |
+| `CLOUD_SESSIONS.md` | Personal skills in cloud sessions: the SessionStart hook, its setup, and why a hook |

@@ -55,6 +55,14 @@ test_output*.txt
 .claude/settings.local.json
 .claude/*.lock
 
+# personal skills cloned per cloud session by .claude/hooks/sync-cloud-skills.sh
+# stay ignored — /push runs `git add -A` and would otherwise commit the clone.
+# The placeholder keeps the directory in the checkout so Claude Code watches it
+# (see docs/technical/CLOUD_SESSIONS.md). Later patterns win, so the negation
+# for .gitkeep must come last.
+.claude/skills/*
+!.claude/skills/.gitkeep
+
 # e2e run artifacts (screenshots written beside the scripts)
 tests/e2e/*.png
 

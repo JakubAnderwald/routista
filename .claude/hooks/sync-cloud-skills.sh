@@ -101,6 +101,13 @@ for skill in $SKILLS; do
       in_fm && $0 == "---" { in_fm = 0; print; next }
       in_fm && /^disable-model-invocation:/ { next }
       { print }
+      END {
+        # Frontmatter never closed: the whole file was swallowed as frontmatter,
+        # so the guard line lands on line 2 and the grep below would pass on a
+        # skill Claude Code cannot load. Fail instead, and let the else branch
+        # remove it and name it.
+        if (in_fm) exit 1
+      }
     ' "$SRC/SKILL.md" >"$SRC/SKILL.md.guarded" &&
     mv "$SRC/SKILL.md.guarded" "$SRC/SKILL.md" &&
     cp -R "$SRC" "$DEST/$skill" 2>/dev/null &&

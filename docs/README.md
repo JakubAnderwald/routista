@@ -36,6 +36,7 @@ Architecture, infrastructure, and developer guides:
 | **Context Map** | Concept-to-file mapping for quick navigation | [CONTEXT_MAP.md](technical/CONTEXT_MAP.md) |
 | **Debugging** | Console logs, troubleshooting common issues | [DEBUGGING.md](technical/DEBUGGING.md) |
 | **Testing Strategy** | Test pyramid, coverage requirements, browser automation | [TESTING_STRATEGY.md](technical/TESTING_STRATEGY.md) |
+| **Cloud Sessions** | How personal skills reach cloud sessions, and why via a hook | [CLOUD_SESSIONS.md](technical/CLOUD_SESSIONS.md) |
 
 ## Project Overview
 

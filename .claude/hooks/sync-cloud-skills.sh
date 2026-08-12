@@ -30,6 +30,16 @@ DEST="${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/skills"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+# Clear the managed skill directories before the clone, not after it. A cloud
+# VM's workspace survives a resume, so a session that installed these skills and
+# is later resumed with a failing clone would otherwise keep the old copies on
+# disk — usable, silently outdated, and contradicting the "not available in this
+# session" message below. Only the directories named in SKILLS are touched, so
+# .gitkeep and anything else in here is left alone.
+for skill in $SKILLS; do
+  rm -rf "$DEST/$skill"
+done
+
 # Never prompt for credentials: a prompt would hang until the hook times out.
 export GIT_TERMINAL_PROMPT=0
 
@@ -61,9 +71,8 @@ fi
 INSTALLED=""
 FAILED=""
 for skill in $SKILLS; do
-  # Clear first, unconditionally: a skill deleted or renamed upstream must not
-  # survive in a resumed session as a stale copy of what it used to be.
-  rm -rf "$DEST/$skill"
+  # Already cleared above, before the clone: a skill deleted or renamed upstream
+  # must not survive in a resumed session as a stale copy of what it used to be.
   if [ ! -f "$TMP/skills/$skill/SKILL.md" ]; then
     # Named, not skipped: this means the list above has gone stale.
     FAILED="$FAILED /$skill"
@@ -78,8 +87,13 @@ for skill in $SKILLS; do
   # The rewrite happens in the clone, not in .claude/skills/, so no half-built
   # directory is ever visible to Claude Code's skill watcher.
   SRC="$TMP/skills/$skill"
-  if awk '
+  if awk -v bom="$(printf '\357\273\277')" '
       NR == 1 {
+        # Strip a UTF-8 BOM so a byte-order mark cannot hide the "---" opener
+        # and get real frontmatter demoted into the body, yielding a skill too
+        # broken to load. Passed in as bytes and matched with index/substr: a
+        # /^\357\273\277/ regex silently fails to fire on macOS awk.
+        if (index($0, bom) == 1) $0 = substr($0, length(bom) + 1)
         if ($0 == "---") { print; print "disable-model-invocation: true"; in_fm = 1 }
         else { print "---"; print "disable-model-invocation: true"; print "---"; print }
         next
@@ -105,5 +119,18 @@ fi
 
 [ -n "$INSTALLED" ] || exit 0
 
-echo "Personal skills installed for this cloud session from $SKILLS_REPO:$INSTALLED (in .claude/skills/). If one is not in the / menu yet, read .claude/skills/<name>/SKILL.md and follow it directly."
+# The read-it-directly fallback is deliberately scoped to /push. This hook's
+# stdout is injected into the session as model-readable context, and
+# disable-model-invocation only blocks the Skill tool — not a Read followed by
+# Bash. Telling the session it may read any SKILL.md and follow it would hand
+# back exactly the bypass the stamp above exists to block. /push is safe to
+# reach that way; /merge stays behind the human gate.
+MSG="Personal skills installed for this cloud session from $SKILLS_REPO:$INSTALLED (in .claude/skills/)."
+case "$INSTALLED" in
+  *"/push"*) MSG="$MSG If /push is not in the / menu yet, read .claude/skills/push/SKILL.md and follow it directly." ;;
+esac
+case "$INSTALLED" in
+  *"/merge"*) MSG="$MSG Do not do the same for /merge: run it only when the human explicitly asks for it, never on your own initiative." ;;
+esac
+echo "$MSG"
 exit 0

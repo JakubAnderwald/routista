@@ -41,10 +41,14 @@ Behaviour worth knowing:
   cloud session (an auto-fix run, a routine) could load `/merge` on its own and merge past the
   human gate. Typing `/push` or `/merge` still works normally. The rewrite touches the frontmatter
   block only, and happens inside the clone, so the skill watcher never sees a half-built
-  directory.
-- **Each destination is cleared before the copy**, so a skill deleted or renamed upstream cannot
-  survive as a stale copy in a resumed session. Only the specific directories in `SKILLS` are
-  removed; `.gitkeep` is never touched.
+  directory. The flag blocks the Skill tool, not a `Read` followed by `Bash` — so the hook's
+  session-start message, which lands in the session as model-readable context, offers the
+  read-the-file-directly fallback for `/push` only and tells the session not to do it for
+  `/merge`.
+- **Each destination is cleared before the clone**, so a skill deleted or renamed upstream cannot
+  survive as a stale copy in a resumed session — and neither can one whose re-clone failed, since
+  a cloud VM's workspace outlives a resume. Only the specific directories in `SKILLS` are removed;
+  `.gitkeep` is never touched.
 - **It reports honestly and always exits 0.** A skill counts as installed only after its guarded
   `SKILL.md` is verified in place; anything that fails is named, never silently skipped. A clone
   failure prints a one-line diagnosis naming the fix and the session carries on without the

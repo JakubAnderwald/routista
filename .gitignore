@@ -60,6 +60,8 @@ test_output*.txt
 # The placeholder keeps the directory in the checkout so Claude Code watches it
 # (see docs/technical/CLOUD_SESSIONS.md). Later patterns win, so the negation
 # for .gitkeep must come last.
+# NOTE: this ignores the whole directory. A genuine Routista project skill added
+# here needs its own negation below, or `git add` will silently skip it.
 .claude/skills/*
 !.claude/skills/.gitkeep
 

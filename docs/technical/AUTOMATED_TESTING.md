@@ -69,11 +69,15 @@ node tests/e2e/preview-smoke.mjs https://www.routista.eu baseline
 node tests/e2e/preview-smoke.mjs https://routista-git-<branch>-jakubanderwalds-projects.vercel.app my-pr
 ```
 
-26 checks. For `/en`, `/en/about` and `/en/create`: HTTP 200, no visible error boundary,
+28 checks. For `/en`, `/en/about` and `/en/create`: HTTP 200, no visible error boundary,
 non-trivial rendered content, no page exceptions, no console errors, and at least one
 `<svg>`. Then it drives the create wizard — loads a test image, waits for shape
-extraction, advances to step 2, and confirms Leaflet mounts — and makes one
-`POST /api/radar/directions` call. Screenshots land beside the script.
+extraction, advances to step 2, and confirms Leaflet mounts — checks that Sentry
+envelopes were sent through the `/monitoring` tunnel and none was redirected or rejected,
+and makes one `POST /api/radar/directions` call. Screenshots land beside the script.
+
+Console errors are reported with their source URL: a failed resource load names no URL in
+its message text, which is how the tunnel 404 went unexplained for a while.
 
 Exit code 0 or 1, so it works as a merge gate.
 

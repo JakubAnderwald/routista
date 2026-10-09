@@ -78,7 +78,10 @@ const IGNORED_ERRORS = /posthog|sentry|speed-insights|vitals|_vercel\/insights|f
 
 function watch(page, sink) {
     page.on('console', (m) => {
-        if (m.type() === 'error' && !IGNORED_ERRORS.test(m.text())) sink.console.push(m.text());
+        if (m.type() !== 'error' || IGNORED_ERRORS.test(m.text())) return;
+        // "Failed to load resource" names no URL in its text; the location does.
+        const url = m.location()?.url;
+        sink.console.push(url ? `${m.text()} [${url}]` : m.text());
     });
     page.on('pageerror', (e) => {
         if (!IGNORED_ERRORS.test(e.message)) sink.page.push(e.message);
@@ -90,6 +93,17 @@ const probe = (page, id) =>
 
 const browser = await chromium.launch();
 const context = await browser.newContext({ extraHTTPHeaders: headers, viewport: { width: 1280, height: 900 } });
+
+/**
+ * Sentry's browser SDK posts through the `tunnelRoute` in next.config.ts. If the
+ * middleware matcher stops excluding it, i18n redirects it to /en/monitoring, which
+ * 404s, and every client event is silently lost.
+ */
+const isTunnel = (url) => new URL(url).pathname.split('/').filter(Boolean).at(-1) === 'monitoring';
+const tunnelResponses = [];
+context.on('response', (r) => {
+    if (isTunnel(r.url())) tunnelResponses.push(r);
+});
 
 console.log(`\n=== routista preview smoke: ${label} ===`);
 console.log(`base: ${baseUrl}\n`);
@@ -177,6 +191,19 @@ console.log('\n- create wizard: upload -> shape -> area (map)');
     check(errs.page.length === 0, 'wizard: no page exceptions', errs.page.slice(0, 3).join(' | '));
     check(errs.console.length === 0, 'wizard: no console errors', errs.console.slice(0, 3).join(' | '));
     await page.close();
+}
+
+// Every page load above sends at least one envelope (tracesSampleRate is 1), so an
+// empty list means the SDK or the tunnel config is gone, not that all is well.
+console.log('\n- sentry tunnel');
+{
+    const rejected = tunnelResponses.filter((r) => r.status() >= 300);
+    check(tunnelResponses.length > 0, 'sentry tunnel: envelopes sent', 'no request reached the tunnel');
+    check(
+        rejected.length === 0,
+        `sentry tunnel: envelopes accepted (${tunnelResponses.length} sent)`,
+        rejected.slice(0, 3).map((r) => `${r.status()} ${new URL(r.url()).pathname}`).join(' | '),
+    );
 }
 
 // One call only — vitest.config.ts already notes Radar rate limiting.

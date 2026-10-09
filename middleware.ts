@@ -72,7 +72,10 @@ export const config = {
     matcher: [
         // API routes for rate limiting
         '/api/radar/:path*',
-        // i18n routes (excluding static files, manifest, and generated icons)
-        '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|.*\\.(?:png|jpg|jpeg|svg|gif|webp)).*)'
+        // i18n routes (excluding static files, manifest, generated icons, and the
+        // Sentry tunnel). `monitoring` must stay in sync with `tunnelRoute` in
+        // next.config.ts: if i18n redirects it to /en/monitoring, Sentry's rewrite
+        // never fires and every browser event 404s.
+        '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|monitoring(?:/|$)|.*\\.(?:png|jpg|jpeg|svg|gif|webp)).*)'
     ]
 };

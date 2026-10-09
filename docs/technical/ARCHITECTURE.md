@@ -110,7 +110,13 @@ See `docs/technical/ISSUE_47_BASELINE.md`.
 Every event is tagged with `environment` (`production` / `preview` / `development`) so one
 shared Sentry project can separate the three. Filter by environment in the Sentry UI.
 
-**Files:** `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/app/global-error.tsx`
+Browser events go through the `/monitoring` tunnel (`tunnelRoute` in `next.config.ts`) so
+ad-blockers do not drop them. `@sentry/nextjs` implements it as a rewrite, which only runs
+if middleware lets the request through, so the `middleware.ts` matcher must exclude
+`monitoring`. Otherwise i18n redirects it to `/en/monitoring`, which 404s, and every client
+event is lost. `tests/unit/middleware.test.ts` and the smoke suite both guard this.
+
+**Files:** `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/app/global-error.tsx`, `next.config.ts`, `middleware.ts`
 
 > Client init must live in `instrumentation-client.ts`, not `sentry.client.config.ts`. This
 > project builds with Turbopack, and `@sentry/nextjs` only injects the former on that path.

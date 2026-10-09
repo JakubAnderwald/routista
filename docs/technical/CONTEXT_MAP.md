@@ -66,7 +66,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `analytics.ts`: Type-safe PostHog analytics wrapper. See Analytics Events below.
 
 ### Infrastructure (root)
-*   `middleware.ts`: Rate limiting for `/api/radar/*` routes, i18n routing.
+*   `middleware.ts`: Rate limiting for `/api/radar/*` routes, i18n routing. Its matcher must exclude the Sentry tunnel `/monitoring` (see `next.config.ts`).
 *   `instrumentation-client.ts`: Client-side Sentry initialization. Must use this filename —
     Turbopack builds ignore the older `sentry.client.config.ts`.
 *   `instrumentation.ts`: Loads the server/edge Sentry config via `register()`.
@@ -105,6 +105,7 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `shareImageGenerator.test.ts`: Mobile detection, platform URL tests.
     *   `radarService.test.ts`: Coordinate hashing tests.
     *   `rateLimit.test.ts`: Rate limiting logic tests.
+    *   `middleware.test.ts`: Middleware matcher (Sentry tunnel and static assets excluded) and handler routing.
     *   `routeGenerator.test.ts`: Route generation client tests.
     *   `utils.test.ts`: Utility function tests.
     *   `analytics.test.ts`: Analytics service tests (tracking, localhost, timing).

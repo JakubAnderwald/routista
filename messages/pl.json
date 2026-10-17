@@ -262,6 +262,8 @@
         "error": "Nie udało się wygenerować obrazu. Spróbuj ponownie.",
         "clipboardFailed": "Nie udało się skopiować. Spróbuj pobrać.",
         "pasteHint": "Obraz skopiowany! Wklej go podczas tworzenia posta.",
-        "openPlatformHint": "Następnie otwórz"
+        "openPlatformHint": "Następnie otwórz",
+        "shareTitle": "Mój rysunek na mapie",
+        "shareText": "Zobacz mój rysunek na mapie stworzony w aplikacji Routista!"
     }
 }

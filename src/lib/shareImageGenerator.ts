@@ -102,10 +102,20 @@ export function getModeEmoji(mode: string): string {
 }
 
 /**
- * Gets the share URL for a platform's web intent
+ * Localized message that accompanies a shared route (ShareModal.shareTitle /
+ * ShareModal.shareText in messages/*.json).
  */
-export function getPlatformShareUrl(platform: SharePlatform): string {
-    const text = encodeURIComponent('Check out my GPS art route created with Routista! 🏃‍♂️');
+export interface ShareMessage {
+    title: string;
+    text: string;
+}
+
+/**
+ * Gets the share URL for a platform's web intent.
+ * The link points at the site root, so each recipient lands in their own language.
+ */
+export function getPlatformShareUrl(platform: SharePlatform, message: ShareMessage): string {
+    const text = encodeURIComponent(`${message.text} 🏃‍♂️`);
     const url = encodeURIComponent(SITE_URL);
     
     switch (platform) {
@@ -429,7 +439,7 @@ export async function captureMapToCanvas(map: L.Map, routeCoordinates?: [number,
  * Triggers the Web Share API (for mobile)
  * Returns true if native share was used, false if cancelled/failed
  */
-export async function shareNative(blob: Blob, platform: SharePlatform): Promise<boolean> {
+export async function shareNative(blob: Blob, platform: SharePlatform, message: ShareMessage): Promise<boolean> {
     const file = new File([blob], `routista-${platform}.png`, { type: 'image/png' });
     
     // Check if Web Share API is available and supports files
@@ -438,8 +448,8 @@ export async function shareNative(blob: Blob, platform: SharePlatform): Promise<
         try {
             await navigator.share({
                 files: [file],
-                title: 'Routista Route',
-                text: 'Check out my GPS art route created with Routista!',
+                title: message.title,
+                text: message.text,
             });
             return true;
         } catch {

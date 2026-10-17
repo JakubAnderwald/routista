@@ -215,9 +215,36 @@ describe('ShareModal', () => {
     });
 
     describe('mobile actions', () => {
-        it.skip('should render share button on mobile', () => {
-            // Mobile testing requires dynamic re-import with mocked isMobile().
-            // Covered by integration tests instead.
+        it('should pass the translated share message to native share', async () => {
+            mockIsMobile.mockReturnValue(true);
+            mockShareNative.mockResolvedValue(true);
+            render(<ShareModal {...defaultProps} />);
+
+            fireEvent.click(screen.getByTestId('share-modal-share-button'));
+
+            await waitFor(() => {
+                expect(mockShareNative).toHaveBeenCalledWith(expect.any(Blob), 'instagram', {
+                    title: 'shareTitle',
+                    text: 'shareText',
+                });
+            });
+        });
+    });
+
+    describe('platform web intent', () => {
+        it('should build the platform link from the translated share message', () => {
+            mockGetPlatformShareUrl.mockReturnValue('https://twitter.com/intent/tweet');
+            vi.spyOn(window, 'open').mockImplementation(() => null);
+            render(<ShareModal {...defaultProps} />);
+
+            fireEvent.click(screen.getByTestId('share-platform-twitter'));
+            fireEvent.click(screen.getByText('platforms.twitter', { selector: 'button:not([data-testid])' }));
+
+            expect(mockGetPlatformShareUrl).toHaveBeenCalledWith('twitter', {
+                title: 'shareTitle',
+                text: 'shareText',
+            });
+            expect(window.open).toHaveBeenCalledWith('https://twitter.com/intent/tweet', '_blank', 'noopener,noreferrer');
         });
     });
 

@@ -262,6 +262,8 @@
         "error": "Failed to generate image. Please try again.",
         "clipboardFailed": "Could not copy to clipboard. Try downloading instead.",
         "pasteHint": "Image copied! Paste it when creating your post.",
-        "openPlatformHint": "Then open"
+        "openPlatformHint": "Then open",
+        "shareTitle": "Routista Route",
+        "shareText": "Check out my GPS art route created with Routista!"
     }
 }

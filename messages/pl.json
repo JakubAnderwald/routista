@@ -14,7 +14,7 @@
             },
             "share": {
                 "title": "Podziel się zabawą",
-                "description": "Twórz wyjątkowe GPS art na urodziny, wydarzenia lub po prostu aby urozmaicić codzienne treningi."
+                "description": "Twórz wyjątkowe rysunki na mapie – na urodziny, wydarzenia lub po prostu, aby urozmaicić codzienne treningi."
             }
         },
         "support": {
@@ -88,7 +88,7 @@
         "creator": {
             "title": "Twórca",
             "by": "Zbudowane z ❤️ przez <span class=\"font-semibold\">Jakuba Anderwalda</span>",
-            "description": "Routista to projekt z pasji, stworzony, aby wnieść kreatywność w aktywności fitness. Bez względu na to, czy planujesz trasę w kształcie serca na Walentynki, czy chcesz wypisać swoje inicjały przez całe miasto, Routista sprawia, że GPS art jest dostępny dla wszystkich."
+            "description": "Routista to projekt z pasji, stworzony, aby wnieść kreatywność w aktywności fitness. Bez względu na to, czy planujesz trasę w kształcie serca na Walentynki, czy chcesz wypisać swoje inicjały przez całe miasto, Routista sprawia, że tworzenie rysunków na mapie jest dostępne dla wszystkich."
         },
         "support": {
             "title": "Wesprzyj projekt",
@@ -216,16 +216,16 @@
         "title": "Routista - Zamień kształty w trasy",
         "description": "Generuj prawdziwe trasy GPS z dowolnego kształtu lub obrazu.",
         "home": {
-            "title": "Routista – zamień dowolny kształt w trasę GPS art",
-            "description": "Wgraj obraz lub narysuj kształt, a Routista zamieni go w prawdziwą trasę biegową, rowerową lub samochodową. Darmowy generator GPS art z eksportem GPX."
+            "title": "Routista – zamień dowolny kształt w rysunek na mapie",
+            "description": "Wgraj obraz lub narysuj kształt, a Routista wyznaczy trasę biegową, rowerową lub samochodową, która odtworzy go na mapie. Za darmo, z eksportem GPX."
         },
         "about": {
-            "title": "O generatorze tras GPS art",
-            "description": "Zobacz, jak Routista zamienia obrazy i odręczne kształty w prawdziwe trasy GPS, które możesz przebiec, przejechać rowerem lub samochodem."
+            "title": "O generatorze rysunków na mapie",
+            "description": "Zobacz, jak Routista zamienia obrazy i odręczne kształty w rysunki na mapie – prawdziwe trasy GPS do przebiegnięcia, przejechania rowerem lub autem."
         },
         "create": {
-            "title": "Stwórz trasę GPS art z obrazu",
-            "description": "Wgraj obraz lub narysuj kształt, wybierz miejsce na mapie i otrzymaj pasującą trasę pieszą, rowerową lub samochodową. Pobierz jako GPX lub wyślij do Stravy."
+            "title": "Stwórz rysunek na mapie z obrazu",
+            "description": "Wgraj obraz lub narysuj kształt, wybierz miejsce na mapie i otrzymaj trasę pieszą, rowerową lub samochodową. Pobierz GPX lub wyślij do Stravy."
         }
     },
     "StravaButton": {

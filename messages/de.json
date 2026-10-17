@@ -167,11 +167,11 @@
     },
     "ImageUpload": {
         "title": "Lade deine Form hoch",
-        "description": "Ziehen Sie ein Bild hierher oder klicken Sie, um eine Datei auszuwählen.",
+        "description": "Zieh ein Bild hierher oder klick, um eine Datei auszuwählen.",
         "instruction": "Funktioniert am besten mit dunklen Formen auf hellem Hintergrund (z.B. schwarze Silhouetten, Strichzeichnungen, Logos).",
         "button": "Bild auswählen",
         "selected": "Bild ausgewählt",
-        "warning": "Mehrere kleine Formen erkannt. Dies kann auf Schatten oder Rauschen hinweisen. Verwenden Sie die Schaltfläche 'Form bearbeiten' oder versuchen Sie ein klareres Bild."
+        "warning": "Mehrere kleine Formen erkannt. Dies kann auf Schatten oder Rauschen hinweisen. Nutze die Schaltfläche 'Form bearbeiten' oder versuch es mit einem klareren Bild."
     },
     "ShapeEditor": {
         "title": "Form zeichnen",
@@ -216,16 +216,16 @@
         "title": "Routista - Formen in Routen verwandeln",
         "description": "Generiere echte GPS-Routen aus jeder Form oder jedem Bild.",
         "home": {
-            "title": "Routista – Verwandle jede Form in eine GPS-Art-Route",
-            "description": "Lade ein Bild hoch oder zeichne eine Form – Routista macht daraus eine echte Lauf-, Rad- oder Autoroute. Kostenloser GPS-Art-Generator mit GPX-Export."
+            "title": "Routista – GPS-Art-Routen aus Bildern und Formen",
+            "description": "Lade ein Bild hoch oder zeichne eine Form – Routista findet passende Straßen und plant daraus eine Lauf-, Rad- oder Autoroute. Kostenlos, mit GPX-Export."
         },
         "about": {
-            "title": "Über den GPS-Art-Routengenerator",
-            "description": "Erfahre, wie Routista Bilder und gezeichnete Formen in echte GPS-Routen verwandelt, die du laufen, radeln oder fahren kannst."
+            "title": "Über den Routenplaner für GPS-Art",
+            "description": "So funktioniert Routista: Aus Bildern und gezeichneten Formen werden echte GPS-Routen, die du laufen, radeln oder fahren kannst."
         },
         "create": {
-            "title": "GPS-Art-Route aus einem Bild erstellen",
-            "description": "Bild hochladen oder Form zeichnen, Ort auf der Karte wählen und eine passende Route zum Gehen, Radfahren oder Autofahren erhalten. Als GPX herunterladen oder an Strava senden."
+            "title": "GPS-Art-Route aus Bild oder Skizze erstellen",
+            "description": "Bild hochladen oder Form zeichnen, Gebiet auf der Karte wählen – Routista plant eine passende Route zum Gehen, Radfahren oder Autofahren."
         }
     },
     "StravaButton": {

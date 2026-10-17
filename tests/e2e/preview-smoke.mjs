@@ -96,7 +96,7 @@ const context = await browser.newContext({ extraHTTPHeaders: headers, viewport: 
 
 /**
  * Sentry's browser SDK posts through the `tunnelRoute` in next.config.ts. If the
- * middleware matcher stops excluding it, i18n redirects it to /en/monitoring, which
+ * middleware matcher stops excluding it, i18n rewrites it to /en/monitoring, which
  * 404s, and every client event is silently lost.
  */
 const isTunnel = (url) => new URL(url).pathname.split('/').filter(Boolean).at(-1) === 'monitoring';
@@ -109,9 +109,10 @@ console.log(`\n=== routista preview smoke: ${label} ===`);
 console.log(`base: ${baseUrl}\n`);
 
 for (const route of [
-    { path: '/en', name: 'home' },
-    { path: '/en/about', name: 'about' },
-    { path: '/en/create', name: 'create' },
+    { path: '/', name: 'home' },
+    { path: '/about', name: 'about' },
+    { path: '/create', name: 'create' },
+    { path: '/de/about', name: 'about (de)' },
 ]) {
     console.log(`- ${route.path}`);
     const page = await context.newPage();
@@ -151,7 +152,11 @@ console.log('\n- create wizard: upload -> shape -> area (map)');
     watch(page, errs);
 
     try {
-        await page.goto(baseUrl + '/en/create', { waitUntil: 'networkidle', timeout: 60000 });
+        // The /de/about visit above set NEXT_LOCALE=de in this shared context, which
+        // would redirect /create to /de/create.
+        await context.clearCookies({ name: 'NEXT_LOCALE' });
+        await page.goto(baseUrl + '/create', { waitUntil: 'networkidle', timeout: 60000 });
+        check(new URL(page.url()).pathname === '/create', 'wizard: stays on English /create', `landed on ${page.url()}`);
         check((await probe(page, 'current-step')) === 'upload', 'wizard: starts at upload step');
 
         // Test controls live in a display:none div, so a real click is impossible —
@@ -204,6 +209,51 @@ console.log('\n- sentry tunnel');
         `sentry tunnel: envelopes accepted (${tunnelResponses.length} sent)`,
         rejected.slice(0, 3).map((r) => `${r.status()} ${new URL(r.url()).pathname}`).join(' | '),
     );
+}
+
+// What Search Console sees: one canonical URL per page, permanent /en strip, and
+// crawler files served rather than locale-redirected. See ARCHITECTURE.md.
+console.log('\n- seo');
+try {
+    const get = (path) => context.request.get(baseUrl + path, { maxRedirects: 0, timeout: 30000 });
+
+    const strip = await get('/en/about');
+    check(strip.status() === 308, 'seo: /en/about redirects permanently', `status ${strip.status()}`);
+    check(
+        new URL(strip.headers()['location'] ?? '', baseUrl).pathname === '/about',
+        'seo: /en/about redirects to /about',
+        `location ${strip.headers()['location']}`,
+    );
+
+    const robots = await get('/robots.txt');
+    const robotsText = await robots.text();
+    check(robots.status() === 200, 'seo: robots.txt served', `status ${robots.status()}`);
+    check(
+        robotsText.includes('Sitemap: https://www.routista.eu/sitemap.xml'),
+        'seo: robots.txt points at the www sitemap',
+    );
+
+    const sitemap = await get('/sitemap.xml');
+    const sitemapXml = await sitemap.text();
+    const locs = [...sitemapXml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+    check(sitemap.status() === 200, 'seo: sitemap.xml served', `status ${sitemap.status()}`);
+    check(locs.length === 12, 'seo: sitemap lists 12 URLs', `found ${locs.length}`);
+    check(!/routista\.eu\/en(\/|"|<)/.test(sitemapXml), 'seo: sitemap has no /en URLs');
+
+    const about = await get('/about');
+    const aboutHtml = await about.text();
+    const head = aboutHtml.slice(0, aboutHtml.indexOf('</head>'));
+    check(
+        head.includes('<link rel="canonical" href="https://www.routista.eu/about"/>'),
+        'seo: /about declares its www canonical in <head>',
+    );
+    const hreflangs = head.match(/<link rel="alternate" hreflang="[^"]+"/gi) ?? [];
+    check(hreflangs.length === 5, 'seo: /about lists 5 hreflang alternates', `found ${hreflangs.length}`);
+
+    const unknown = await get('/nonexistent.png');
+    check(unknown.status() === 404, 'seo: unknown path is a real 404', `status ${unknown.status()}`);
+} catch (err) {
+    check(false, 'seo: checks reachable', err.message.split('\n')[0]);
 }
 
 // One call only — vitest.config.ts already notes Radar rate limiting.

@@ -72,7 +72,7 @@ const page = await context.newPage();
 try {
     console.log(`\nRiver crossing visual check — ${baseUrl}`);
 
-    await page.goto(`${baseUrl}/en/create`, { waitUntil: 'networkidle' });
+    await page.goto(`${baseUrl}/create`, { waitUntil: 'networkidle' });
 
     // Load the heart through the hidden test control, since the OS file
     // picker cannot be driven. The controls live in a display:none block, so

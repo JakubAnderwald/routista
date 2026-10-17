@@ -214,7 +214,19 @@
     },
     "metadata": {
         "title": "Routista - Formen in Routen verwandeln",
-        "description": "Generiere echte GPS-Routen aus jeder Form oder jedem Bild."
+        "description": "Generiere echte GPS-Routen aus jeder Form oder jedem Bild.",
+        "home": {
+            "title": "Routista – Verwandle jede Form in eine GPS-Art-Route",
+            "description": "Lade ein Bild hoch oder zeichne eine Form – Routista macht daraus eine echte Lauf-, Rad- oder Autoroute. Kostenloser GPS-Art-Generator mit GPX-Export."
+        },
+        "about": {
+            "title": "Über den GPS-Art-Routengenerator",
+            "description": "Erfahre, wie Routista Bilder und gezeichnete Formen in echte GPS-Routen verwandelt, die du laufen, radeln oder fahren kannst."
+        },
+        "create": {
+            "title": "GPS-Art-Route aus einem Bild erstellen",
+            "description": "Bild hochladen oder Form zeichnen, Ort auf der Karte wählen und eine passende Route zum Gehen, Radfahren oder Autofahren erhalten. Als GPX herunterladen oder an Strava senden."
+        }
     },
     "StravaButton": {
         "exportToStrava": "Zu Strava exportieren",

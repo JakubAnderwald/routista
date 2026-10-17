@@ -23,6 +23,8 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Social Sharing** | `src/components/ShareModal.tsx`, `src/lib/shareImageGenerator.ts` | Branded image generation for social media. See `docs/features/SHARE.md`. |
 | **Strava Integration** | `src/components/StravaButton.tsx`, `src/lib/gpxGenerator.ts`, `tests/components/StravaButton.test.tsx` | **Enabled — manual GPX import.** Downloads a GPX and opens Strava's route-import page (no OAuth/API; direct route push remains impossible, see #22). See `docs/features/STRAVA_INTEGRATION.md`. |
 | **Route Caching** | `src/lib/radarService.ts` | Caches routes in Upstash Redis (24h TTL). |
+| **SEO (canonical, hreflang, sitemap)** | `src/lib/seo.ts`, `src/i18n/pageMetadata.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/config/site.ts` | Self-canonical + hreflang per page, localized titles, crawler files. See ARCHITECTURE.md "Internationalisation & SEO". |
+| **i18n Routing** | `src/i18n/routing.ts`, `middleware.ts` | `localePrefix: 'as-needed'`: English unprefixed, `/en/*` 308s to it, other locales prefixed. |
 | **Rate Limiting** | `middleware.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis. |
 | **Error Tracking** | `sentry.*.config.ts`, `src/app/global-error.tsx` | Sentry SDK for client/server/edge error capture. |
 | **Product Analytics** | `src/lib/analytics.ts`, `src/components/PostHogProvider.tsx` | PostHog analytics with typed events and automatic pageview tracking. |
@@ -31,7 +33,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Test Coverage** | `vitest.config.ts` | Coverage config. Run `npm run test:coverage` for reports. |
 | **Code Quality (SonarCloud)** | `sonar-project.properties`, `.github/workflows/security.yml` | Static analysis, coverage tracking. Dashboard: sonarcloud.io |
 | **Code Quality (CodeRabbit)** | `.coderabbit.yaml` | AI-powered PR code reviews. Free for open source. |
-| **Translations** | `messages/[locale].json` | i18n strings for all pages. Supported locales: `en` (English), `de` (German), `pl` (Polish), `da` (Danish). |
+| **Translations** | `messages/[locale].json` | i18n strings for all pages. Supported locales: `en` (English), `de` (German), `pl` (Polish), `da` (Danish). Page titles and descriptions live in `metadata.{home,about,create}`. |
 | **Page Structure** | `src/app/[locale]/[page]/page.tsx` | All pages support dynamic locale routing via Next.js App Router with next-intl. |
 | **Page Layouts** | `src/app/[locale]/layout.tsx` | Root layout that sets up i18n providers and metadata. |
 | **UI Variant Config** | `src/config.ts`, `src/components/ABTestProvider.tsx` | Feature flag for UI variant (A or B). See `docs/features/UI_VARIANTS.md`. |
@@ -46,6 +48,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `image.ts`: Image processing constants (dimensions, thresholds).
 *   `api.ts`: Radar API settings, cache TTL, rate limiting.
 *   `geo.ts`: Geographic constants (earth radius, accuracy settings).
+*   `site.ts`: `SITE_URL` (canonical www origin) and `SITE_NAME`.
 *   `../config.ts`: Main entry point, re-exports all config modules.
 
 ### Core Logic (`src/lib/`)
@@ -64,9 +67,10 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `gpxGenerator.ts`: Utility for file export.
 *   `shareImageGenerator.ts`: Branded image generation for social sharing. Uses `leaflet-image` + Canvas API.
 *   `analytics.ts`: Type-safe PostHog analytics wrapper. See Analytics Events below.
+*   `seo.ts`: Localized URLs, canonical/hreflang alternates and page metadata. Pure, no I/O.
 
 ### Infrastructure (root)
-*   `middleware.ts`: Rate limiting for `/api/radar/*` routes, i18n routing. Its matcher must exclude the Sentry tunnel `/monitoring` (see `next.config.ts`).
+*   `middleware.ts`: Rate limiting for `/api/radar/*` routes, i18n routing. Upgrades next-intl's `/en/*` prefix-strip redirect to 308. Its matcher must exclude the Sentry tunnel `/monitoring` (see `next.config.ts`), `robots.txt` and `sitemap.xml`.
 *   `instrumentation-client.ts`: Client-side Sentry initialization. Must use this filename —
     Turbopack builds ignore the older `sentry.client.config.ts`.
 *   `instrumentation.ts`: Loads the server/edge Sentry config via `register()`.
@@ -106,7 +110,9 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `shareImageGenerator.test.ts`: Mobile detection, platform URL tests.
     *   `radarService.test.ts`: Coordinate hashing tests.
     *   `rateLimit.test.ts`: Rate limiting logic tests.
-    *   `middleware.test.ts`: Middleware matcher (Sentry tunnel and static assets excluded) and handler routing.
+    *   `middleware.test.ts`: Middleware matcher (Sentry tunnel, crawler files and static assets excluded), handler routing, and the 308 `/en` prefix strip.
+    *   `seo.test.ts`: Localized URLs, canonical/hreflang alternates, page metadata.
+    *   `sitemap.test.ts`: Sitemap entries and robots rules.
     *   `routeGenerator.test.ts`: Route generation client tests.
     *   `utils.test.ts`: Utility function tests.
     *   `analytics.test.ts`: Analytics service tests (tracking, localhost, timing).
@@ -135,7 +141,11 @@ This file maps concepts and features to their source of truth in the codebase. U
 
 ### Pages (`src/app/`)
 *   `[locale]/create/page.tsx`: Wrapper for `CreateClient`.
+*   `[locale]/about/page.tsx`: About page.
 *   `[locale]/page.tsx`: Landing page.
+*   `sitemap.ts`, `robots.ts`: Crawler files at the app root (outside `[locale]`).
+
+Every page exports `generateMetadata` via `getPageMetadata` (`src/i18n/pageMetadata.ts`).
 
 ## 📊 Analytics Events
 

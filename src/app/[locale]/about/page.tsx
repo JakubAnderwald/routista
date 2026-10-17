@@ -4,6 +4,11 @@ import { Heart, Coffee } from "lucide-react";
 import { Github } from "@/components/icons/BrandIcons";
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { SupportButton } from "@/components/SupportButton";
+import { getPageMetadata } from '@/i18n/pageMetadata';
+
+export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+    return getPageMetadata(params, 'about');
+}
 
 export default async function About({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;

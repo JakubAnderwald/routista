@@ -3,6 +3,11 @@ import { Button } from "@/components/ui/Button";
 import { Map, Share2, Download, Coffee } from "lucide-react";
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { SupportButton } from "@/components/SupportButton";
+import { getPageMetadata } from '@/i18n/pageMetadata';
+
+export function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  return getPageMetadata(params, 'home');
+}
 
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

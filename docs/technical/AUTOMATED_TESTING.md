@@ -69,12 +69,14 @@ node tests/e2e/preview-smoke.mjs https://www.routista.eu baseline
 node tests/e2e/preview-smoke.mjs https://routista-git-<branch>-jakubanderwalds-projects.vercel.app my-pr
 ```
 
-28 checks. For `/en`, `/en/about` and `/en/create`: HTTP 200, no visible error boundary,
-non-trivial rendered content, no page exceptions, no console errors, and at least one
-`<svg>`. Then it drives the create wizard — loads a test image, waits for shape
+45 checks. For `/`, `/about`, `/create` and `/de/about`: HTTP 200, no visible error
+boundary, non-trivial rendered content, no page exceptions, no console errors, and at
+least one `<svg>`. Then it drives the create wizard — loads a test image, waits for shape
 extraction, advances to step 2, and confirms Leaflet mounts — checks that Sentry
 envelopes were sent through the `/monitoring` tunnel and none was redirected or rejected,
-and makes one `POST /api/radar/directions` call. Screenshots land beside the script.
+checks what Search Console sees (`/en/about` 308s to `/about`, `robots.txt` and
+`sitemap.xml` are served, `/about` declares its www canonical and 5 hreflang alternates,
+an unknown path is a real 404), and makes one `POST /api/radar/directions` call. Screenshots land beside the script.
 
 Console errors are reported with their source URL: a failed resource load names no URL in
 its message text, which is how the tunnel 404 went unexplained for a while.
@@ -148,7 +150,7 @@ before trusting any new assertion.
    every route. Match against visible `innerText` instead.
 
 2. **Leaflet only mounts from wizard step 2 onward.** Asserting `.leaflet-container` on a
-   freshly loaded `/en/create` always fails — the map genuinely is not there yet.
+   freshly loaded `/create` always fails — the map genuinely is not there yet.
 
 3. **The test-controls block is `display:none`.** Playwright refuses to click or wait for
    anything inside it, so dispatch clicks with `locator(...).evaluate(el => el.click())` and

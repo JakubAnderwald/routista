@@ -7,6 +7,7 @@
 
 import QRCode from 'qrcode';
 import type L from 'leaflet';
+import { SITE_URL } from '@/config/site';
 
 export type SharePlatform = 'instagram' | 'facebook' | 'twitter';
 
@@ -36,7 +37,6 @@ const PLATFORM_DIMENSIONS: Record<SharePlatform, PlatformDimensions> = {
     twitter: { width: 1200, height: 675, bannerHeight: 80 },
 };
 
-const ROUTISTA_URL = 'https://routista.eu';
 const BRAND_COLOR = '#2563eb'; // blue-600
 
 /**
@@ -106,7 +106,7 @@ export function getModeEmoji(mode: string): string {
  */
 export function getPlatformShareUrl(platform: SharePlatform): string {
     const text = encodeURIComponent('Check out my GPS art route created with Routista! 🏃‍♂️');
-    const url = encodeURIComponent(ROUTISTA_URL);
+    const url = encodeURIComponent(SITE_URL);
     
     switch (platform) {
         case 'twitter':
@@ -175,7 +175,7 @@ export async function generateShareImage(options: ShareImageOptions): Promise<Bl
     
     // Generate QR code with tracking params for Vercel Analytics
     const qrSize = platform === 'instagram' ? 120 : Math.min(dims.bannerHeight - 20, 100);
-    const trackingUrl = `${ROUTISTA_URL}?ref=share&platform=${platform}`;
+    const trackingUrl = `${SITE_URL}?ref=share&platform=${platform}`;
     const qrDataUrl = await generateQRCode(trackingUrl, qrSize);
     const qrImage = await loadImage(qrDataUrl);
     

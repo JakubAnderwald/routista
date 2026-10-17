@@ -57,7 +57,7 @@ const page = await context.newPage();
 let bad = 0;
 
 // --- Github, rendered on the about page ---------------------------------------
-await page.goto(baseUrl + '/en/about', { waitUntil: 'networkidle' });
+await page.goto(baseUrl + '/about', { waitUntil: 'networkidle' });
 const gh = page.locator('svg.lucide-github');
 const ghCount = await gh.count();
 console.log(`about: svg.lucide-github count = ${ghCount}`);
@@ -79,7 +79,7 @@ if (ghCount < 1) {
 }
 
 // --- Drive the wizard all the way to a generated route -------------------------
-await page.goto(baseUrl + '/en/create', { waitUntil: 'networkidle' });
+await page.goto(baseUrl + '/create', { waitUntil: 'networkidle' });
 await page.locator('[data-testid="test-load-star"]').evaluate((el) => el.click());
 await page.waitForFunction(
     () => document.querySelector('[data-testid="has-shape-points"]')?.textContent?.trim() === 'true',

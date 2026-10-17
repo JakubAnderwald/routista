@@ -69,7 +69,7 @@ node tests/e2e/preview-smoke.mjs https://www.routista.eu baseline
 node tests/e2e/preview-smoke.mjs https://routista-git-<branch>-jakubanderwalds-projects.vercel.app my-pr
 ```
 
-44 checks. For `/`, `/about`, `/create` and `/de/about`: HTTP 200, no visible error
+45 checks. For `/`, `/about`, `/create` and `/de/about`: HTTP 200, no visible error
 boundary, non-trivial rendered content, no page exceptions, no console errors, and at
 least one `<svg>`. Then it drives the create wizard — loads a test image, waits for shape
 extraction, advances to step 2, and confirms Leaflet mounts — checks that Sentry

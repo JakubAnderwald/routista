@@ -152,7 +152,11 @@ console.log('\n- create wizard: upload -> shape -> area (map)');
     watch(page, errs);
 
     try {
+        // The /de/about visit above set NEXT_LOCALE=de in this shared context, which
+        // would redirect /create to /de/create.
+        await context.clearCookies({ name: 'NEXT_LOCALE' });
         await page.goto(baseUrl + '/create', { waitUntil: 'networkidle', timeout: 60000 });
+        check(new URL(page.url()).pathname === '/create', 'wizard: stays on English /create', `landed on ${page.url()}`);
         check((await probe(page, 'current-step')) === 'upload', 'wizard: starts at upload step');
 
         // Test controls live in a display:none div, so a real click is impossible —

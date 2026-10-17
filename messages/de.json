@@ -262,6 +262,8 @@
         "error": "Bild konnte nicht erstellt werden. Bitte versuche es erneut.",
         "clipboardFailed": "Kopieren fehlgeschlagen. Versuche stattdessen herunterzuladen.",
         "pasteHint": "Bild kopiert! Füge es beim Erstellen deines Posts ein.",
-        "openPlatformHint": "Dann öffne"
+        "openPlatformHint": "Dann öffne",
+        "shareTitle": "Meine Routista-Route",
+        "shareText": "Schau dir meine GPS-Art-Route an – erstellt mit Routista!"
     }
 }

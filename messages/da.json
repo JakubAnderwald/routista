@@ -1,11 +1,11 @@
 {
     "HomePage": {
-        "title": "Forvandl former til <span class=\"text-blue-600\">Ruter</span>",
+        "title": "Forvandl former til <span class=\"text-blue-600\">ruter</span>",
         "description": "Upload et billede eller tegn en form, og Routista skaber en GPS-rute i den virkelige verden, der matcher den. Perfekt til løb, cykling eller bare udforskning.",
         "cta": "Lav din rute",
         "features": {
             "anyShape": {
-                "title": "Enhver Form, Hvor Som Helst",
+                "title": "Enhver form, hvor som helst",
                 "description": "Upload et hjerte, en stjerne eller dit logo. Vi finder de bedst matchende veje i dit valgte område."
             },
             "export": {
@@ -13,7 +13,7 @@
                 "description": "Download som GPX eller send direkte til Strava med et klik."
             },
             "share": {
-                "title": "Del det Sjove",
+                "title": "Del det sjove",
                 "description": "Opret unik GPS-kunst til fødselsdage, begivenheder eller bare for at pifte din daglige træning op."
             }
         },
@@ -35,11 +35,11 @@
             "title": "Sådan fungerer det",
             "steps": {
                 "1": {
-                    "title": "Vælg Område",
+                    "title": "Vælg område",
                     "description": "Vælg hvor du vil løbe eller cykle"
                 },
                 "2": {
-                    "title": "Indtast Form",
+                    "title": "Indtast form",
                     "description": "Upload billede, rediger punkter eller tegn form"
                 },
                 "3": {
@@ -56,19 +56,19 @@
             "title": "Funktioner",
             "items": {
                 "magic": {
-                    "title": "Magiske Ruter:",
+                    "title": "Magiske ruter:",
                     "description": " Vælg blandt færdige eksempler, upload et billede, finjuster punkter manuelt, eller tegn fra bunden"
                 },
                 "mapping": {
-                    "title": "Interaktiv Kortlægning:",
+                    "title": "Interaktiv kortlægning:",
                     "description": " Drevet af Leaflet, vælg enhver placering i verden"
                 },
                 "export": {
-                    "title": "GPX Eksport:",
+                    "title": "GPX-eksport:",
                     "description": " Kompatibel med Strava, Garmin og andre fitness-apps"
                 },
                 "strava": {
-                    "title": "Strava Integration:",
+                    "title": "Strava-integration:",
                     "description": " Send ruter direkte til Strava med et klik – ingen GPX download nødvendig"
                 },
                 "pwa": {
@@ -80,18 +80,18 @@
                     "description": " Dine billeder forlader aldrig din enhed. Ruter genereres via eksterne korttjenester."
                 },
                 "free": {
-                    "title": "Helt Gratis:",
+                    "title": "Helt gratis:",
                     "description": " Ingen betalingsmure eller abonnementer"
                 }
             }
         },
         "creator": {
-            "title": "Skabt Af",
+            "title": "Skabt af",
             "by": "Bygget med ❤️ af <span class=\"font-semibold\">Jakub Anderwald</span>",
             "description": "Routista er et passionsprojekt designet til at bringe kreativitet ind i fitnessaktiviteter. Uanset om du planlægger en hjerteformet løbetur til Valentinsdag eller vil stave dine initialer på tværs af din by, gør Routista GPS-kunst tilgængelig for alle."
         },
         "support": {
-            "title": "Støt Projektet",
+            "title": "Støt projektet",
             "description": "Hvis du nyder at bruge Routista, så overvej at købe mig en kop kaffe! Din støtte hjælper med at holde tjenesten gratis og giver energi til nye funktioner.",
             "button": "Giv en kop kaffe",
             "github": "Se på GitHub",
@@ -103,30 +103,30 @@
         "steps": {
             "upload": "Upload",
             "area": "Område",
-            "areaMode": "Område & Transport",
+            "areaMode": "Område & transport",
             "mode": "Transport",
             "result": "Resultat"
         },
         "upload": {
-            "title": "Upload Din Form",
+            "title": "Upload din form",
             "description": "Vælg et billede med en tydelig form (f.eks. et hjerte, stjerne eller logo).",
             "editShape": "Rediger form",
             "drawManually": "Tegn manuelt",
-            "next": "Næste: Vælg Område",
+            "next": "Næste: Vælg område",
             "error": "Kunne ikke udtrække form fra billede. Prøv venligst et andet billede."
         },
         "area": {
-            "title": "Vælg Område",
-            "titleCombined": "Vælg Område & Transport",
+            "title": "Vælg område",
+            "titleCombined": "Vælg område & transport",
             "back": "Tilbage",
-            "next": "Næste: Vælg Transport",
-            "generate": "Generer Rute",
+            "next": "Næste: Vælg transport",
+            "generate": "Generer rute",
             "error": "Fejl ved generering af rute. Prøv venligst igen."
         },
         "mode": {
             "title": "Vælg transportmiddel",
             "back": "Tilbage",
-            "generate": "Generer Rute",
+            "generate": "Generer rute",
             "error": "Fejl ved generering af rute. Prøv venligst igen."
         },
         "processing": {
@@ -134,9 +134,9 @@
             "description": "Matcher din form til vejnettet."
         },
         "result": {
-            "title": "Din Rute",
+            "title": "Din rute",
             "stats": {
-                "length": "Rute Længde",
+                "length": "Rutelængde",
                 "accuracy": "Formnøjagtighed"
             },
             "back": "Tilbage",
@@ -156,18 +156,18 @@
         "title": "Upload din form",
         "description": "Træk og slip et billede her, eller klik for at vælge en fil.",
         "instruction": "Virker bedst med mørke former på lys baggrund (f.eks. sorte silhuetter, stregtegninger, logoer).",
-        "button": "Vælg Billede",
-        "selected": "Billede Valgt",
+        "button": "Vælg billede",
+        "selected": "Billede valgt",
         "warning": "Flere små former registreret. Dette kan indikere skygger eller støj i stedet for din tilsigtede form. Brug knappen 'Rediger form' eller prøv et tydeligere billede."
     },
     "ShapeEditor": {
-        "title": "Tegn Form",
+        "title": "Tegn form",
         "undo": "Fortryd",
         "clear": "Ryd",
         "instructionStart": "Klik for at starte med at tegne",
         "instructionContinue": "Klik for at tilføje punkt",
         "cancel": "Annuller",
-        "save": "Gem Form",
+        "save": "Gem form",
         "minPointsError": "Du skal bruge mindst 3 punkter for at danne en form."
     },
     "AreaSelector": {
@@ -191,7 +191,7 @@
         "rights": "Alle rettigheder forbeholdes."
     },
     "ReportIssueButton": {
-        "text": "Rapporter Problem"
+        "text": "Rapporter problem"
     },
     "ExampleSelector": {
         "title": "Eller vælg et eksempel",
@@ -213,7 +213,7 @@
         "toggle_theme": "Skift tema"
     },
     "metadata": {
-        "title": "Routista - Lav Former om til Ruter",
+        "title": "Routista - Lav former om til ruter",
         "description": "Generer GPS-ruter i den virkelige verden fra enhver form eller billede.",
         "home": {
             "title": "Routista – GPS-kunst ud fra billeder og former",
@@ -262,6 +262,8 @@
         "error": "Kunne ikke generere billede. Prøv venligst igen.",
         "clipboardFailed": "Kunne ikke kopiere. Prøv at downloade i stedet.",
         "pasteHint": "Billede kopieret! Indsæt det når du opretter dit opslag.",
-        "openPlatformHint": "Åbn derefter"
+        "openPlatformHint": "Åbn derefter",
+        "shareTitle": "Min Routista-rute",
+        "shareText": "Se min GPS-kunstrute – lavet med Routista!"
     }
 }

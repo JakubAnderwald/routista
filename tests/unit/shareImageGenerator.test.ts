@@ -78,12 +78,13 @@ describe('shareImageGenerator', () => {
     });
 
     describe('getPlatformShareUrl', () => {
+        const message = { title: 'Mój rysunek na mapie', text: 'Zobacz mój rysunek na mapie!' };
+
         it('should return Twitter intent URL', async () => {
             const { getPlatformShareUrl } = await getShareImageModule();
-            const url = getPlatformShareUrl('twitter');
+            const url = getPlatformShareUrl('twitter', message);
 
             expect(url).toContain('https://twitter.com/intent/tweet');
-            expect(url).toContain('text=');
             expect(url).toContain('url=');
             // The canonical www host, so shared links don't hop through the apex redirect.
             expect(url).toContain(`url=${encodeURIComponent('https://www.routista.eu')}`);
@@ -91,17 +92,49 @@ describe('shareImageGenerator', () => {
 
         it('should return Facebook sharer URL', async () => {
             const { getPlatformShareUrl } = await getShareImageModule();
-            const url = getPlatformShareUrl('facebook');
+            const url = getPlatformShareUrl('facebook', message);
 
             expect(url).toContain('https://www.facebook.com/sharer/sharer.php');
             expect(url).toContain(`u=${encodeURIComponent('https://www.routista.eu')}`);
         });
 
+        it.each(['twitter', 'facebook'] as const)('should send the localized text to %s', async (platform) => {
+            const { getPlatformShareUrl } = await getShareImageModule();
+            const url = getPlatformShareUrl(platform, message);
+
+            expect(url).toContain(encodeURIComponent(message.text));
+            expect(url).not.toContain('Check%20out');
+        });
+
         it('should return Instagram URL for instagram platform', async () => {
             const { getPlatformShareUrl } = await getShareImageModule();
-            const url = getPlatformShareUrl('instagram');
+            const url = getPlatformShareUrl('instagram', message);
 
             expect(url).toBe('https://www.instagram.com/');
+        });
+    });
+
+    describe('shareNative', () => {
+        const message = { title: 'Meine Routista-Route', text: 'Schau dir meine GPS-Art-Route an!' };
+
+        it('should pass the localized title and text to the Web Share API', async () => {
+            const share = vi.fn().mockResolvedValue(undefined);
+            vi.stubGlobal('navigator', { userAgent: '', share, canShare: () => true });
+            const { shareNative } = await getShareImageModule();
+
+            const shared = await shareNative(new Blob(['png'], { type: 'image/png' }), 'instagram', message);
+
+            expect(shared).toBe(true);
+            expect(share).toHaveBeenCalledWith(
+                expect.objectContaining({ title: message.title, text: message.text })
+            );
+        });
+
+        it('should return false when the Web Share API cannot share files', async () => {
+            vi.stubGlobal('navigator', { userAgent: '' });
+            const { shareNative } = await getShareImageModule();
+
+            expect(await shareNative(new Blob(['png']), 'instagram', message)).toBe(false);
         });
     });
 

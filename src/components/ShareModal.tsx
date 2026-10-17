@@ -193,7 +193,10 @@ export function ShareModal({ isOpen, onClose, getMap, routeData, stats, mode }: 
         const blob = await generateImage();
         if (!blob) return;
 
-        const shared = await shareNative(blob, selectedPlatform);
+        const shared = await shareNative(blob, selectedPlatform, {
+            title: t("shareTitle"),
+            text: t("shareText"),
+        });
         if (shared) {
             // Track social share - native share action
             track('social_share', {
@@ -202,10 +205,13 @@ export function ShareModal({ isOpen, onClose, getMap, routeData, stats, mode }: 
             });
             onClose();
         }
-    }, [generateImage, selectedPlatform, onClose]);
+    }, [generateImage, selectedPlatform, onClose, t]);
 
     const handleOpenPlatform = (platform: SharePlatform) => {
-        const url = getPlatformShareUrl(platform);
+        const url = getPlatformShareUrl(platform, {
+            title: t("shareTitle"),
+            text: t("shareText"),
+        });
         if (url) {
             window.open(url, '_blank', 'noopener,noreferrer');
         }

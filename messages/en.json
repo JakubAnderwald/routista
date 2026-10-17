@@ -214,7 +214,19 @@
     },
     "metadata": {
         "title": "Routista - Turn Shapes into Routes",
-        "description": "Generate real-world GPS routes from any shape or image."
+        "description": "Generate real-world GPS routes from any shape or image.",
+        "home": {
+            "title": "Routista – Turn Any Shape into a GPS Art Route",
+            "description": "Upload an image or draw a shape and Routista turns it into a real running, cycling or driving route. Free GPS art generator with GPX export."
+        },
+        "about": {
+            "title": "About the GPS Art Route Generator",
+            "description": "Learn how Routista turns pictures and hand-drawn shapes into real-world GPS routes you can run, ride or drive."
+        },
+        "create": {
+            "title": "Create a GPS Art Route from an Image",
+            "description": "Upload a picture or draw a shape, pick a place on the map and get a matching walking, cycling or driving route. Download as GPX or send to Strava."
+        }
     },
     "StravaButton": {
         "exportToStrava": "Export to Strava",

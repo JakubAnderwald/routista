@@ -21,7 +21,7 @@ describe('Christmas Shapes E2E Tests', () => {
     
     it('should load and process Christmas Tree image', async () => {
         // 1. Navigate to create page
-        // await page.goto('http://localhost:3000/en/create');
+        // await page.goto('http://localhost:3000/create');
         
         // 2. Load Christmas tree image via test button
         // await page.click('[data-testid="test-load-christmas-tree"]');
@@ -50,7 +50,7 @@ describe('Christmas Shapes E2E Tests', () => {
     
     it('should load and process Snowflake image', async () => {
         // Similar test for snowflake
-        // await page.goto('http://localhost:3000/en/create');
+        // await page.goto('http://localhost:3000/create');
         // await page.click('[data-testid="test-load-snowflake"]');
         // await page.waitForFunction(() => {
         //     return document.querySelector('[data-testid="has-shape-points"]')
@@ -73,7 +73,7 @@ describe('Christmas Shapes E2E Tests', () => {
     
     it('should load and process Gift Box image', async () => {
         // Similar test for gift box
-        // await page.goto('http://localhost:3000/en/create');
+        // await page.goto('http://localhost:3000/create');
         // await page.click('[data-testid="test-load-gift-box"]');
         // await page.waitForFunction(() => {
         //     return document.querySelector('[data-testid="has-shape-points"]')
@@ -102,7 +102,7 @@ describe('Christmas Shapes E2E Tests', () => {
  * 
  * test.describe('Christmas Shapes E2E Tests', () => {
  *     test('should load and process Christmas Tree image', async ({ page }) => {
- *         await page.goto('http://localhost:3000/en/create');
+ *         await page.goto('http://localhost:3000/create');
  *         await page.click('[data-testid="test-load-christmas-tree"]');
  *         await page.waitForFunction(() => {
  *             return document.querySelector('[data-testid="has-shape-points"]')

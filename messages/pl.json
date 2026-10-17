@@ -214,7 +214,19 @@
     },
     "metadata": {
         "title": "Routista - Zamień kształty w trasy",
-        "description": "Generuj prawdziwe trasy GPS z dowolnego kształtu lub obrazu."
+        "description": "Generuj prawdziwe trasy GPS z dowolnego kształtu lub obrazu.",
+        "home": {
+            "title": "Routista – zamień dowolny kształt w trasę GPS art",
+            "description": "Wgraj obraz lub narysuj kształt, a Routista zamieni go w prawdziwą trasę biegową, rowerową lub samochodową. Darmowy generator GPS art z eksportem GPX."
+        },
+        "about": {
+            "title": "O generatorze tras GPS art",
+            "description": "Zobacz, jak Routista zamienia obrazy i odręczne kształty w prawdziwe trasy GPS, które możesz przebiec, przejechać rowerem lub samochodem."
+        },
+        "create": {
+            "title": "Stwórz trasę GPS art z obrazu",
+            "description": "Wgraj obraz lub narysuj kształt, wybierz miejsce na mapie i otrzymaj pasującą trasę pieszą, rowerową lub samochodową. Pobierz jako GPX lub wyślij do Stravy."
+        }
     },
     "StravaButton": {
         "exportToStrava": "Eksportuj do Stravy",

@@ -85,6 +85,8 @@ describe('shareImageGenerator', () => {
             expect(url).toContain('https://twitter.com/intent/tweet');
             expect(url).toContain('text=');
             expect(url).toContain('url=');
+            // The canonical www host, so shared links don't hop through the apex redirect.
+            expect(url).toContain(`url=${encodeURIComponent('https://www.routista.eu')}`);
         });
 
         it('should return Facebook sharer URL', async () => {
@@ -92,7 +94,7 @@ describe('shareImageGenerator', () => {
             const url = getPlatformShareUrl('facebook');
 
             expect(url).toContain('https://www.facebook.com/sharer/sharer.php');
-            expect(url).toContain('u=');
+            expect(url).toContain(`u=${encodeURIComponent('https://www.routista.eu')}`);
         });
 
         it('should return Instagram URL for instagram platform', async () => {

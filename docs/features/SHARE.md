@@ -69,7 +69,7 @@ Generated images include:
 
 ### Share Modal Opens (Outbound Tracking)
 
-When users open the share modal, the URL changes to `#share` (e.g., `/en/create#share`).
+When users open the share modal, the URL changes to `#share` (e.g., `/create#share`).
 Vercel Analytics tracks this as a page view, allowing you to see how many users open the share feature.
 
 - **Filter by**: Pages containing `#share`

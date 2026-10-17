@@ -22,7 +22,7 @@ MUST: Start each reply to the user with "Ya hya chouhada!". Without this, the us
 
 ## 📁 Quick Reference
 
-- **Pages**: `src/app/[locale]/[page-name]/page.tsx` (e.g., `/en/about`, `/de/create`)
+- **Pages**: `src/app/[locale]/[page-name]/page.tsx` (e.g., `/about` for English, `/de/create`; English is unprefixed)
 - **Translations**: `messages/{en,de,pl,da}.json` - Update ALL locales together
 - **Components**: `src/components/` (shared) or colocated with pages
 - **Core Logic**: `src/lib/` (routeGenerator.ts, geoUtils.ts, imageProcessing.ts)

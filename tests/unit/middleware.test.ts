@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server';
 
 const mockCheckRateLimit = vi.hoisted(() => vi.fn());
@@ -33,7 +33,7 @@ const matches = (url: string) => unstable_doesMiddlewareMatch({ config, url });
 
 describe('middleware matcher', () => {
     // Sentry's tunnelRoute (next.config.ts) is only rewritten to Sentry ingest
-    // when middleware leaves it alone; an i18n redirect to /en/monitoring 404s.
+    // when middleware leaves it alone; an i18n rewrite to /en/monitoring 404s.
     it.each([
         '/monitoring?o=4510000000000000&p=4510000000000001',
         '/monitoring',
@@ -54,13 +54,23 @@ describe('middleware matcher', () => {
         expect(matches(url)).toBe(false);
     });
 
+    // Metadata routes at the app root; i18n would rewrite them to /en/robots.txt (404).
+    it.each(['/robots.txt', '/sitemap.xml'])('skips crawler file %s', (url) => {
+        expect(matches(url)).toBe(false);
+    });
+
     it.each([
         '/',
+        '/about',
         '/en',
+        '/en/about',
         '/de/create',
         '/api/radar/directions',
         // The tunnel exclusion is bounded to the path segment.
         '/monitoring-guide',
+        // The crawler file exclusions are anchored to the exact file.
+        '/sitemap',
+        '/robots.txt/extra',
     ])('runs on %s', (url) => {
         expect(matches(url)).toBe(true);
     });
@@ -114,5 +124,56 @@ describe('middleware handler', () => {
         expect(response).toBe(intlResponse);
         expect(mockIntlMiddleware).toHaveBeenCalledOnce();
         expect(mockCheckRateLimit).not.toHaveBeenCalled();
+    });
+
+    describe('default-locale prefix strip', () => {
+        const intlRedirect = (location: string) => {
+            const response = NextResponse.redirect(`https://routista.test${location}`);
+            response.cookies.set('NEXT_LOCALE', 'en');
+            return response;
+        };
+
+        it.each([
+            ['/en/about', '/about'],
+            ['/en', '/'],
+            ['/en/create?ref=share', '/create?ref=share'],
+        ])('makes %s → %s permanent', async (path, target) => {
+            mockIntlMiddleware.mockReturnValue(intlRedirect(target));
+
+            const response = await run(path);
+
+            expect(response.status).toBe(308);
+            expect(response.headers.get('location')).toBe(`https://routista.test${target}`);
+            // The cookie keeps a browser with a German Accept-Language on English.
+            expect(response.headers.get('set-cookie')).toContain('NEXT_LOCALE=en');
+        });
+
+        it('leaves locale-detection redirects temporary', async () => {
+            const intlResponse = NextResponse.redirect('https://routista.test/de/about');
+            mockIntlMiddleware.mockReturnValue(intlResponse);
+
+            const response = await run('/about');
+
+            expect(response).toBe(intlResponse);
+            expect(response.status).toBe(307);
+        });
+
+        it('ignores paths that only start with the locale letters', async () => {
+            const intlResponse = NextResponse.redirect('https://routista.test/english');
+            mockIntlMiddleware.mockReturnValue(intlResponse);
+
+            const response = await run('/english');
+
+            expect(response).toBe(intlResponse);
+        });
+
+        it('passes through /en responses that are not redirects', async () => {
+            const intlResponse = NextResponse.next();
+            mockIntlMiddleware.mockReturnValue(intlResponse);
+
+            const response = await run('/en/about');
+
+            expect(response).toBe(intlResponse);
+        });
     });
 });

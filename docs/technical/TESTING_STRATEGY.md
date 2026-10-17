@@ -408,7 +408,7 @@ Document test scenarios for manual execution with Cursor browser.
 
 ### Prerequisites
 - Dev server running: `npm run dev`
-- Navigate to: http://localhost:3000/en/create
+- Navigate to: http://localhost:3000/create
 
 ### Steps
 1. Use `browser_snapshot` to verify page loaded

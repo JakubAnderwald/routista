@@ -214,7 +214,19 @@
     },
     "metadata": {
         "title": "Routista - Lav Former om til Ruter",
-        "description": "Generer GPS-ruter i den virkelige verden fra enhver form eller billede."
+        "description": "Generer GPS-ruter i den virkelige verden fra enhver form eller billede.",
+        "home": {
+            "title": "Routista – Forvandl enhver form til en GPS-kunstrute",
+            "description": "Upload et billede eller tegn en form, og Routista laver den om til en rigtig løbe-, cykel- eller bilrute. Gratis GPS-kunstgenerator med GPX-eksport."
+        },
+        "about": {
+            "title": "Om GPS-kunst-rutegeneratoren",
+            "description": "Se hvordan Routista forvandler billeder og håndtegnede former til rigtige GPS-ruter, du kan løbe, cykle eller køre."
+        },
+        "create": {
+            "title": "Lav en GPS-kunstrute ud fra et billede",
+            "description": "Upload et billede eller tegn en form, vælg et sted på kortet og få en matchende gå-, cykel- eller bilrute. Download som GPX eller send til Strava."
+        }
     },
     "StravaButton": {
         "exportToStrava": "Eksporter til Strava",

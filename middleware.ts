@@ -7,6 +7,30 @@ import * as Sentry from '@sentry/nextjs';
 
 const intlMiddleware = createMiddleware(routing);
 
+const DEFAULT_LOCALE_PREFIX = `/${routing.defaultLocale}`;
+
+function hasDefaultLocalePrefix(pathname: string): boolean {
+    return pathname === DEFAULT_LOCALE_PREFIX || pathname.startsWith(`${DEFAULT_LOCALE_PREFIX}/`);
+}
+
+/**
+ * next-intl answers every redirect with a 307. Stripping the default-locale
+ * prefix (/en/about → /about) is deterministic, because a path prefix outranks
+ * the cookie and Accept-Language, so it is made permanent and Google drops the
+ * /en URLs. Locale-detection redirects (/ → /de) stay 307.
+ *
+ * Headers are kept, including the NEXT_LOCALE cookie that lets a browser with
+ * a German Accept-Language stay on English. That cookie is also why this can't
+ * be a next.config redirect, which would run before next-intl.
+ */
+function withPermanentPrefixStrip(request: NextRequest, response: Response): Response {
+    const location = response.headers.get('location');
+    if (response.status !== 307 || !location || !hasDefaultLocalePrefix(request.nextUrl.pathname)) {
+        return response;
+    }
+    return NextResponse.redirect(location, { status: 308, headers: response.headers });
+}
+
 export default async function middleware(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
 
@@ -62,7 +86,7 @@ export default async function middleware(request: NextRequest) {
     }
 
     // For non-API routes, use the i18n middleware
-    return intlMiddleware(request);
+    return withPermanentPrefixStrip(request, intlMiddleware(request));
 }
 
 export const config = {
@@ -72,10 +96,11 @@ export const config = {
     matcher: [
         // API routes for rate limiting
         '/api/radar/:path*',
-        // i18n routes (excluding static files, manifest, generated icons, and the
-        // Sentry tunnel). `monitoring` must stay in sync with `tunnelRoute` in
-        // next.config.ts: if i18n redirects it to /en/monitoring, Sentry's rewrite
-        // never fires and every browser event 404s.
-        '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|monitoring(?:/|$)|.*\\.(?:png|jpg|jpeg|svg|gif|webp)).*)'
+        // i18n routes (excluding static files, manifest, generated icons, robots,
+        // sitemap, and the Sentry tunnel). `monitoring` must stay in sync with
+        // `tunnelRoute` in next.config.ts: if i18n rewrites it to /en/monitoring,
+        // Sentry's rewrite never fires and every browser event 404s. robots.txt and
+        // sitemap.xml would likewise be rewritten to a 404 (or redirected to /de/...).
+        '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|robots\\.txt$|sitemap\\.xml$|monitoring(?:/|$)|.*\\.(?:png|jpg|jpeg|svg|gif|webp)).*)'
     ]
 };

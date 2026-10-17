@@ -10,6 +10,7 @@ export * from './config/routing';
 export * from './config/image';
 export * from './config/api';
 export * from './config/geo';
+export * from './config/site';
 
 // App-level configuration
 

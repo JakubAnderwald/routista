@@ -113,7 +113,7 @@ shared Sentry project can separate the three. Filter by environment in the Sentr
 Browser events go through the `/monitoring` tunnel (`tunnelRoute` in `next.config.ts`) so
 ad-blockers do not drop them. `@sentry/nextjs` implements it as a rewrite, which only runs
 if middleware lets the request through, so the `middleware.ts` matcher must exclude
-`monitoring`. Otherwise i18n redirects it to `/en/monitoring`, which 404s, and every client
+`monitoring`. Otherwise i18n rewrites it to `/en/monitoring`, which 404s, and every client
 event is lost. `tests/unit/middleware.test.ts` and the smoke suite both guard this.
 
 **Files:** `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/app/global-error.tsx`, `next.config.ts`, `middleware.ts`
@@ -167,6 +167,42 @@ User Action → track() → isLocalhost? → PostHog API
 | `NEXT_PUBLIC_POSTHOG_KEY` | PostHog project API key (analytics) |
 | `NEXT_PUBLIC_POSTHOG_HOST` | PostHog API host (eu.i.posthog.com) |
 
+### Internationalisation & SEO
+
+**URL scheme.** next-intl runs with `localePrefix: 'as-needed'` (`src/i18n/routing.ts`):
+English, the default locale, is unprefixed (`/`, `/about`, `/create`); de, da and pl are
+prefixed (`/de/about`). These are the URLs Google indexes.
+
+**Redirects.**
+- `/en/*` → unprefixed: **308**. next-intl answers every redirect with 307; `middleware.ts`
+  upgrades this one, because a path prefix outranks the cookie and `Accept-Language`, so
+  the target never varies. It has to happen in middleware rather than `next.config`
+  `redirects()`: the response carries the `NEXT_LOCALE=en` cookie that lets a browser with
+  a German `Accept-Language` stay on English.
+- Locale detection (`/` → `/de` from cookie or `Accept-Language`): stays **307**, since it
+  varies by visitor. Googlebot sends neither, so it gets English with a 200.
+- Host normalisation (`routista.eu` → `www`, `http` → `https`) is a Vercel domain setting,
+  not repo code.
+
+**Canonical and hreflang.** Every indexable page exports `generateMetadata` via
+`getPageMetadata` (`src/i18n/pageMetadata.ts`), which builds a self-referencing
+canonical, hreflang alternates for all locales plus `x-default` (→ English), Open Graph
+and a localized title from `metadata.<page>` in `messages/*.json`. URLs come from
+`src/lib/seo.ts` and are absolute on `SITE_URL` (`src/config/site.ts`), so previews and
+`routista.vercel.app` also point crawlers at www. The layout sets `metadataBase` and the
+`%s | Routista` title template but never a canonical, which pages would inherit. The HTML
+is the only hreflang source: next-intl's `Link` header is off (`alternateLinks: false`)
+because it builds URLs from the request host.
+
+**Crawler files.** `src/app/sitemap.ts` (every page × locale, with alternates) and
+`src/app/robots.ts`. The middleware matcher excludes `robots.txt` and `sitemap.xml`;
+otherwise i18n rewrites them to `/en/...`, which 404s.
+
+**Unknown paths.** The `[locale]` layout calls `notFound()` for anything that isn't a
+locale, so `/nonexistent.png` is a 404 rather than the home page with `lang="nonexistent.png"`.
+
+**Files:** `src/i18n/routing.ts`, `middleware.ts`, `src/lib/seo.ts`, `src/i18n/pageMetadata.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/config/site.ts`
+
 ## Deployment & Hosting
 
 ### Platform
@@ -196,7 +232,7 @@ User Action → track() → isLocalhost? → PostHog API
 
 | Environment | Branch | URL | Purpose |
 |-------------|--------|-----|---------|
-| Production | `main` | routista.eu | Live user traffic |
+| Production | `main` | www.routista.eu (apex and `routista.vercel.app` canonicalise to it) | Live user traffic |
 | Preview | Any other branch | `routista-git-<branch>-*.vercel.app` | Testing before merge |
 
 ### Preview Deployments

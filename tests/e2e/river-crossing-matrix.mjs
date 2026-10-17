@@ -169,7 +169,7 @@ async function setReactInput(page, selector, value) {
 async function runCase(page, testCase) {
     const result = { id: testCase.id, title: testCase.title, ok: false };
 
-    await page.goto(`${baseUrl}/en/create`, { waitUntil: 'networkidle' });
+    await page.goto(`${baseUrl}/create`, { waitUntil: 'networkidle' });
 
     // The test-controls block is display:none, so the click has to be
     // dispatched and the status spans waited for as "attached".

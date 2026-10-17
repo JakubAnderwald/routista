@@ -119,6 +119,7 @@ Make 11 requests in 1 minute from the same IP. The 11th should return:
 ## Sentry Error Tracking
 
 ### Verifying Sentry Works
+Sentry only reports from Vercel deployments (see below), so verify on a preview URL, not on localhost:
 1. Check Sentry dashboard for "Session Started" events after page load
 2. Trigger an error (e.g., generate route with bad params)
 3. Check Sentry Issues for the error with stack trace
@@ -126,8 +127,8 @@ Make 11 requests in 1 minute from the same IP. The 11th should return:
 ### Rate Limit Blocks in Sentry
 Blocked requests appear as warnings with level "warning" and message "Rate limit exceeded". Check `extra` data for IP and path.
 
-### Disabling Sentry Locally
-Remove `NEXT_PUBLIC_SENTRY_DSN` from `.env.local` — Sentry SDK no-ops gracefully.
+### Sentry Is Off Locally
+The SDK is disabled whenever the environment is `development`: off-Vercel, where `NEXT_PUBLIC_VERCEL_ENV` is absent, and under `vercel dev`. This holds even with `NEXT_PUBLIC_SENTRY_DSN` in `.env.local`. The org is on Sentry's Free plan, so local events and replays would use up the same monthly quota as real traffic.
 
 ## Visualization
 

@@ -5,11 +5,16 @@
 
 import * as Sentry from "@sentry/nextjs";
 
+// See instrumentation-client.ts — one project, events separated by environment tag.
+const environment = process.env.NEXT_PUBLIC_VERCEL_ENV ?? 'development';
+
 Sentry.init({
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-    // See sentry.client.config.ts — one project, events separated by environment tag.
-    environment: process.env.NEXT_PUBLIC_VERCEL_ENV ?? 'development',
+    environment,
+
+    // See instrumentation-client.ts — local dev stays out of the Free-plan quota.
+    enabled: environment !== 'development',
 
     // Adjust this value in production, or use tracesSampler for greater control
     tracesSampleRate: 1,

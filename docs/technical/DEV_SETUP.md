@@ -130,7 +130,7 @@ Production is deliberately isolated from Preview and Development:
 | Service | Production | Preview + Development | Local |
 |---|---|---|---|
 | **Redis / KV** | `routista-cache` (Upstash) | *none* — cache and rate limiting disabled | *none* |
-| **Sentry** | shared project, `environment: production` | shared project, `environment: preview` | `environment: development`, no DSN so inert |
+| **Sentry** | shared project, `environment: production` | shared project, `environment: preview` | `environment: development`, SDK disabled (`enabled: false`) |
 | **Radar key** | live key | a *different* live key | test key (see below) |
 | **PostHog / Strava** | shared across all environments | shared | absent |
 

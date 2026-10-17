@@ -10,15 +10,21 @@
 
 import * as Sentry from "@sentry/nextjs";
 
+// Production and preview report into the same Sentry project, so tag every event with
+// its origin. Without this they arrive indistinguishable and a preview-only error looks
+// like a production incident. Vercel injects NEXT_PUBLIC_VERCEL_ENV as
+// production/preview/development; it is absent off-Vercel, where the only thing running
+// is local dev.
+const environment = process.env.NEXT_PUBLIC_VERCEL_ENV ?? 'development';
+
 Sentry.init({
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-    // Production, preview and local dev all report into the same Sentry project, so tag
-    // every event with its origin. Without this they arrive indistinguishable and a
-    // preview-only error looks like a production incident. Vercel injects
-    // NEXT_PUBLIC_VERCEL_ENV as production/preview/development; it is absent off-Vercel,
-    // where the only thing running is local dev.
-    environment: process.env.NEXT_PUBLIC_VERCEL_ENV ?? 'development',
+    environment,
+
+    // Local dev stays silent: the org is on Sentry's Free plan, where local events and
+    // replays count against the same monthly quota as real traffic.
+    enabled: environment !== 'development',
 
     // Adjust this value in production, or use tracesSampler for greater control
     tracesSampleRate: 1,

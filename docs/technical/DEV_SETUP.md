@@ -331,7 +331,25 @@ npm audit --audit-level=high --omit=dev
 
 Prefer `npm audit fix` over regenerating the lockfile from scratch — a full regeneration
 with a different npm version can silently rewrite unrelated metadata (for example the
-`libc` fields on the `@next/swc-linux-*` binaries).
+`libc` fields on the `@next/swc-linux-*` binaries), and pulls every in-range transitive
+bump along with it.
+
+**No patched release exists.** Find the one consumer that pulls the vulnerable package in
+(`npm ls <pkg>`) and swap that dependency with a scoped `overrides` entry for an
+API-compatible package. Scope it to the consumer so nothing else changes, then
+`npm install` (not a full regeneration) so the lockfile diff only removes the vulnerable
+chain. The current example in `package.json`:
+
+```json
+"@next/eslint-plugin-next": { "fast-glob": "npm:tinyglobby@^0.2.17" }
+```
+
+`braces` (GHSA-vfj7-8cjw-p6xm) has no fixed version, and `@next/eslint-plugin-next` was
+its only route into our tree, via `fast-glob` → `micromatch`. The plugin calls only
+`globSync(pattern, { onlyDirectories: true })` (`dist/utils/get-root-dirs.js`), and only
+when `settings.next.rootDir` is set. `tinyglobby` exports the same function and doesn't
+depend on `braces`. Drop the override once the plugin stops depending on `fast-glob`, or
+once `braces` ships a fix.
 
 ### TypeScript errors in IDE but build works
 

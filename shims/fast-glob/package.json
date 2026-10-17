@@ -1,0 +1,10 @@
+{
+  "name": "fast-glob",
+  "version": "3.3.1-tinyglobby-shim",
+  "private": true,
+  "description": "fast-glob's globSync for @next/eslint-plugin-next, backed by tinyglobby. See index.js.",
+  "main": "index.js",
+  "dependencies": {
+    "tinyglobby": "^0.2.17"
+  }
+}

@@ -58,10 +58,10 @@ jobs:
       #
       # Fix findings anyway when a safe route exists. GHSA-vfj7-8cjw-p6xm (braces,
       # no patched release) reached us only via @next/eslint-plugin-next ->
-      # fast-glob -> micromatch -> braces, so package.json overrides that one
-      # fast-glob with tinyglobby, which has the same globSync API and no braces
-      # dependency. See docs/technical/DEV_SETUP.md, "CI fails with a security
-      # audit advisory".
+      # fast-glob -> micromatch -> braces. package.json overrides that one fast-glob
+      # with shims/fast-glob, which implements the plugin's single globSync call on
+      # tinyglobby (no braces). See docs/technical/DEV_SETUP.md, "CI fails with a
+      # security audit advisory".
       - name: Security Audit (all dependencies, informational)
         run: |
           set +e

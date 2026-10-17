@@ -335,21 +335,32 @@ with a different npm version can silently rewrite unrelated metadata (for exampl
 bump along with it.
 
 **No patched release exists.** Find the one consumer that pulls the vulnerable package in
-(`npm ls <pkg>`) and swap that dependency with a scoped `overrides` entry for an
-API-compatible package. Scope it to the consumer so nothing else changes, then
-`npm install` (not a full regeneration) so the lockfile diff only removes the vulnerable
-chain. The current example in `package.json`:
+(`npm ls <pkg>`) and replace that dependency for that consumer only, with a scoped
+`overrides` entry. Then run `npm install` (not a full regeneration), so the lockfile diff
+just swaps the vulnerable chain for the replacement and its own dependencies.
+
+The current case is `braces` (GHSA-vfj7-8cjw-p6xm), which has no fixed version.
+`@next/eslint-plugin-next` was its only route into our tree, via `fast-glob` →
+`micromatch`. The plugin calls only `globSync(pattern, { onlyDirectories: true })`
+(`dist/utils/get-root-dirs.js`), and only when `settings.next.rootDir` is set. So
+`package.json` swaps in `shims/fast-glob`, a few lines that implement that `globSync` on
+`tinyglobby` (no `braces` dependency):
 
 ```json
-"@next/eslint-plugin-next": { "fast-glob": "npm:tinyglobby@^0.2.17" }
+"devDependencies": { "fast-glob": "file:./shims/fast-glob" },
+"overrides": { "@next/eslint-plugin-next": { "fast-glob": "$fast-glob" } }
 ```
 
-`braces` (GHSA-vfj7-8cjw-p6xm) has no fixed version, and `@next/eslint-plugin-next` was
-its only route into our tree, via `fast-glob` → `micromatch`. The plugin calls only
-`globSync(pattern, { onlyDirectories: true })` (`dist/utils/get-root-dirs.js`), and only
-when `settings.next.rootDir` is set. `tinyglobby` exports the same function and doesn't
-depend on `braces`. Drop the override once the plugin stops depending on `fast-glob`, or
-once `braces` ships a fix.
+- **Why a shim, not `npm:tinyglobby` directly:** `tinyglobby` expands a literal directory
+  pattern recursively by default, so `rootDir: "src"` would return every directory under
+  `src`. The shim passes `expandDirectories: false`, which matches fast-glob.
+- **Why the root devDependency plus `$fast-glob`:** npm resolves a `file:` spec written
+  inside `overrides` relative to the overridden package's folder, not the repo root, and
+  that leaves a broken link. `$fast-glob` reuses the root entry, whose path resolves
+  correctly.
+
+Drop all of this once the plugin stops depending on `fast-glob`, or once `braces` ships a
+fix.
 
 ### TypeScript errors in IDE but build works
 

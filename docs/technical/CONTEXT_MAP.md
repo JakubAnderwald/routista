@@ -73,6 +73,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `sentry.server.config.ts`: Server-side Sentry initialization.
 *   `sentry.edge.config.ts`: Edge runtime Sentry initialization.
 *   `next.config.ts`: Next.js config wrapped with Sentry.
+*   `shims/fast-glob/`: Stands in for `fast-glob` under `@next/eslint-plugin-next` (via `package.json` `overrides`), on top of `tinyglobby`, so the unpatched `braces` advisory stays out of the tree. See `docs/technical/DEV_SETUP.md` ("CI fails with a security audit advisory").
 
 ### Analytics (`src/lib/`, `src/components/`)
 *   `analytics.ts`: Type-safe event tracking with localhost protection and timing utilities.
@@ -109,6 +110,7 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `routeGenerator.test.ts`: Route generation client tests.
     *   `utils.test.ts`: Utility function tests.
     *   `analytics.test.ts`: Analytics service tests (tracking, localhost, timing).
+    *   `fastGlobShim.test.ts`: The ESLint plugin resolves `fast-glob` to `shims/fast-glob`, and literal directories aren't expanded.
 *   `components/`: Component tests using React Testing Library.
     *   `ImageUpload.test.tsx`: File upload, drag-drop, preview tests.
     *   `ModeSelector.test.tsx`: Transport mode selection tests.

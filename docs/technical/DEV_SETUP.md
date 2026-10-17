@@ -331,7 +331,36 @@ npm audit --audit-level=high --omit=dev
 
 Prefer `npm audit fix` over regenerating the lockfile from scratch — a full regeneration
 with a different npm version can silently rewrite unrelated metadata (for example the
-`libc` fields on the `@next/swc-linux-*` binaries).
+`libc` fields on the `@next/swc-linux-*` binaries), and pulls every in-range transitive
+bump along with it.
+
+**No patched release exists.** Find the one consumer that pulls the vulnerable package in
+(`npm ls <pkg>`) and replace that dependency for that consumer only, with a scoped
+`overrides` entry. Then run `npm install` (not a full regeneration), so the lockfile diff
+just swaps the vulnerable chain for the replacement and its own dependencies.
+
+The current case is `braces` (GHSA-vfj7-8cjw-p6xm), which has no fixed version.
+`@next/eslint-plugin-next` was its only route into our tree, via `fast-glob` →
+`micromatch`. The plugin calls only `globSync(pattern, { onlyDirectories: true })`
+(`dist/utils/get-root-dirs.js`), and only when `settings.next.rootDir` is set. So
+`package.json` swaps in `shims/fast-glob`, a few lines that implement that `globSync` on
+`tinyglobby` (no `braces` dependency):
+
+```json
+"devDependencies": { "fast-glob": "file:./shims/fast-glob" },
+"overrides": { "@next/eslint-plugin-next": { "fast-glob": "$fast-glob" } }
+```
+
+- **Why a shim, not `npm:tinyglobby` directly:** `tinyglobby` expands a literal directory
+  pattern recursively by default, so `rootDir: "src"` would return every directory under
+  `src`. The shim passes `expandDirectories: false`, which matches fast-glob.
+- **Why the root devDependency plus `$fast-glob`:** npm resolves a `file:` spec written
+  inside `overrides` relative to the overridden package's folder, not the repo root, and
+  that leaves a broken link. `$fast-glob` reuses the root entry, whose path resolves
+  correctly.
+
+Drop all of this once the plugin stops depending on `fast-glob`, or once `braces` ships a
+fix.
 
 ### TypeScript errors in IDE but build works
 

@@ -62,8 +62,9 @@ function RecenterMap({ center, radius, isProgrammaticMoveRef }: { center: [numbe
 
         // Mark this as a programmatic move
         isProgrammaticMoveRef.current = true;
-        // Use setView instead of flyTo to remove animation
-        map.setView(center, zoom);
+        // No animation: setView still animates zoom by default, and an in-flight
+        // zoom when the map unmounts crashes Leaflet (ROUTISTA-4)
+        map.setView(center, zoom, { animate: false });
     }, [center, radius, map, isProgrammaticMoveRef]);
     return null;
 }

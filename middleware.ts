@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 import { routing } from './src/i18n/routing';
-import { checkRateLimit, getClientIP, DEFAULT_RATE_LIMIT } from './src/lib/rateLimit';
-import * as Sentry from '@sentry/nextjs';
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -31,76 +29,23 @@ function withPermanentPrefixStrip(request: NextRequest, response: Response): Res
     return NextResponse.redirect(location, { status: 308, headers: response.headers });
 }
 
-export default async function middleware(request: NextRequest) {
-    const pathname = request.nextUrl.pathname;
-
-    // Skip i18n middleware for all API routes
-    if (pathname.startsWith('/api/')) {
-        // Only apply rate limiting to /api/radar/* routes
-        if (!pathname.startsWith('/api/radar')) {
-            return NextResponse.next();
-        }
-    }
-
-    // Handle rate limiting for /api/radar/* routes
-    if (pathname.startsWith('/api/radar')) {
-        const clientIP = getClientIP(request);
-        const result = await checkRateLimit(clientIP, DEFAULT_RATE_LIMIT);
-
-        if (!result.success) {
-            // Log rate limit block to Sentry
-            Sentry.captureMessage("Rate limit exceeded", {
-                level: "warning",
-                extra: {
-                    ip: clientIP,
-                    path: pathname,
-                    remaining: result.remaining,
-                    reset: result.reset,
-                }
-            });
-
-            return NextResponse.json(
-                {
-                    error: "Too many requests",
-                    message: "Rate limit exceeded. Please try again later.",
-                    retryAfter: result.reset,
-                },
-                {
-                    status: 429,
-                    headers: {
-                        'Retry-After': String(result.reset - Math.floor(Date.now() / 1000)),
-                        'X-RateLimit-Limit': String(DEFAULT_RATE_LIMIT.limit),
-                        'X-RateLimit-Remaining': String(result.remaining),
-                        'X-RateLimit-Reset': String(result.reset),
-                    },
-                }
-            );
-        }
-
-        // Add rate limit headers to successful responses
-        const response = NextResponse.next();
-        response.headers.set('X-RateLimit-Limit', String(DEFAULT_RATE_LIMIT.limit));
-        response.headers.set('X-RateLimit-Remaining', String(result.remaining));
-        response.headers.set('X-RateLimit-Reset', String(result.reset));
-        return response;
-    }
-
-    // For non-API routes, use the i18n middleware
+export default function middleware(request: NextRequest) {
     return withPermanentPrefixStrip(request, intlMiddleware(request));
 }
 
 export const config = {
-    // Match:
-    // - All pathnames for i18n (except static files)
-    // - /api/radar/* for rate limiting
+    // i18n only. Every middleware run bills Vercel Active CPU, which the Hobby
+    // plan caps, so it skips everything that isn't a page:
+    // - `api`: the radar routes rate-limit themselves (src/lib/apiRateLimit.ts).
+    // - `_next`, `_vercel`: framework assets and Vercel analytics scripts.
+    // - `monitoring`: Sentry's tunnelRoute (next.config.ts). If i18n rewrote it
+    //   to /en/monitoring, Sentry's rewrite would never fire and every browser
+    //   event would 404. Keep it in sync with `tunnelRoute`.
+    // - `icon`, `apple-icon`: generated app icons.
+    // - Any path with a dot: static files, robots.txt, sitemap.xml, the
+    //   manifest, and bot probes such as /wp-login.php or /.env. i18n would
+    //   otherwise rewrite them to /en/robots.txt (404) or redirect them to /de/….
     matcher: [
-        // API routes for rate limiting
-        '/api/radar/:path*',
-        // i18n routes (excluding static files, manifest, generated icons, robots,
-        // sitemap, and the Sentry tunnel). `monitoring` must stay in sync with
-        // `tunnelRoute` in next.config.ts: if i18n rewrites it to /en/monitoring,
-        // Sentry's rewrite never fires and every browser event 404s. robots.txt and
-        // sitemap.xml would likewise be rewritten to a 404 (or redirected to /de/...).
-        '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|robots\\.txt$|sitemap\\.xml$|monitoring(?:/|$)|.*\\.(?:png|jpg|jpeg|svg|gif|webp)).*)'
+        '/((?!api(?:/|$)|_next|_vercel|monitoring(?:/|$)|icon|apple-icon|.*\\..*).*)'
     ]
 };

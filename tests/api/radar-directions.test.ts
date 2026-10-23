@@ -7,6 +7,11 @@ vi.mock('../../src/lib/radarService', () => ({
     getRadarRoute: vi.fn(),
 }));
 
+// Rate limiting has its own tests (tests/unit/apiRateLimit.test.ts); keep these off Redis.
+vi.mock('../../src/lib/apiRateLimit', () => ({
+    withRateLimit: (_request: Request, handler: () => Promise<Response>) => handler(),
+}));
+
 // Mock Sentry
 vi.mock('@sentry/nextjs', () => ({
     captureException: vi.fn(),

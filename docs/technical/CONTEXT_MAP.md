@@ -17,6 +17,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **OSM Water Data** | `src/lib/overpassService.ts` | Fetches water polygons and bridges from Overpass, cached in Redis for 30 days. Only called when a route shows signs of using a ferry. |
 | **Main UI Flow** | `src/app/[locale]/create/CreateClient.tsx` | State machine for the "Create" wizard (Upload -> Area -> Mode -> Result). |
 | **Map Visualization** | `src/components/ResultMap.tsx` | Displays the generated route and original shape on Leaflet. |
+| **Leaflet Patches** | `src/lib/leafletPatches.ts` | Guards Leaflet 1.9's zoom-animation fallback timer from crashing after `map.remove()` (Sentry ROUTISTA-4). Imported by every map component. |
 | **Image Upload** | `src/components/ImageUpload.tsx` | Handles file drop and preview. **See Testing Note below.** |
 | **Area Selection** | `src/components/AreaSelector.tsx` | Map interface for choosing center point and radius. |
 | **GPX Export** | `src/lib/gpxGenerator.ts` | Converts Route data to GPX XML format. |

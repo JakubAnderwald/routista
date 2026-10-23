@@ -6,6 +6,7 @@ import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility
 import "leaflet-defaulticon-compatibility";
 import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import L from "leaflet";
+import "@/lib/leafletPatches";
 
 import { GeoJsonObject } from "geojson";
 
@@ -30,19 +31,17 @@ function MapInstanceCapture({ onMapReady }: { onMapReady: (map: L.Map) => void }
     return null;
 }
 
-function MapUpdater({ center, zoom, routeData }: ResultMapProps) {
+function MapUpdater({ routeData }: Pick<ResultMapProps, "routeData">) {
     const map = useMap();
 
-    useEffect(() => {
-        map.setView(center, zoom);
-    }, [center, zoom, map]);
-
+    // center/zoom are applied by MapContainer (re-keyed on change), so only fit the route here.
+    // No animation: an in-flight zoom when the map unmounts triggers a Leaflet crash (ROUTISTA-4).
     useEffect(() => {
         if (routeData) {
             const geoJsonLayer = L.geoJSON(routeData);
             const bounds = geoJsonLayer.getBounds();
             if (bounds.isValid()) {
-                map.fitBounds(bounds, { padding: [50, 50] });
+                map.fitBounds(bounds, { padding: [50, 50], animate: false });
             }
         }
     }, [routeData, map]);
@@ -77,7 +76,7 @@ const ResultMap = forwardRef<ResultMapRef, ResultMapProps>(function ResultMap(
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <MapInstanceCapture onMapReady={(map) => { mapInstanceRef.current = map; }} />
-            <MapUpdater center={center} zoom={zoom} routeData={routeData} />
+            <MapUpdater routeData={routeData} />
             {routeData && <GeoJSON data={routeData} style={{ color: 'blue', weight: 4 }} />}
         </MapContainer>
     );

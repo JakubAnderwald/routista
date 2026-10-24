@@ -95,11 +95,13 @@ See `docs/technical/ISSUE_47_BASELINE.md`.
 
 ### Rate Limiting
 - IP-based rate limiting: 10 requests per minute per IP
-- Implemented in middleware using sliding window algorithm
+- Sliding window algorithm, applied inside each `/api/radar/*` route handler by `withRateLimit`.
+  It is not in middleware: there it made every API call two billed Vercel invocations
+  (middleware + function) against the Hobby plan's Active CPU cap.
 - Returns 429 with `Retry-After` header when exceeded
 - Blocked requests logged to Sentry
 
-**Files:** `middleware.ts`, `src/lib/rateLimit.ts`
+**Files:** `src/lib/apiRateLimit.ts`, `src/lib/rateLimit.ts`, `src/app/api/radar/*/route.ts`
 
 ### Error Tracking (Sentry)
 - Client, server, and edge runtime error capture
@@ -195,8 +197,8 @@ is the only hreflang source: next-intl's `Link` header is off (`alternateLinks: 
 because it builds URLs from the request host.
 
 **Crawler files.** `src/app/sitemap.ts` (every page × locale, with alternates) and
-`src/app/robots.ts`. The middleware matcher excludes `robots.txt` and `sitemap.xml`;
-otherwise i18n rewrites them to `/en/...`, which 404s.
+`src/app/robots.ts`. The middleware matcher excludes every path with a dot, `robots.txt` and
+`sitemap.xml` included; otherwise i18n rewrites them to `/en/...`, which 404s.
 
 **Unknown paths.** The `[locale]` layout calls `notFound()` for anything that isn't a
 locale, so `/nonexistent.png` is a 404 rather than the home page with `lang="nonexistent.png"`.

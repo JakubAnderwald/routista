@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 
-export const runtime = 'edge'
-
+// No `runtime = 'edge'`: an edge route can't be prerendered, so it drew this
+// PNG on every request. On the default runtime it's generated once at build.
 export const size = {
     width: 32,
     height: 32,

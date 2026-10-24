@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRadarAutocomplete } from "@/lib/radarService";
+import { withRateLimit } from "@/lib/apiRateLimit";
 import * as Sentry from "@sentry/nextjs";
 
 export async function POST(request: NextRequest) {
+    return withRateLimit(request, () => autocomplete(request));
+}
+
+async function autocomplete(request: NextRequest) {
     try {
         const body = await request.json();
         const { query } = body;

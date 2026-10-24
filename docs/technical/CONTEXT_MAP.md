@@ -26,7 +26,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Route Caching** | `src/lib/radarService.ts` | Caches routes in Upstash Redis (24h TTL). |
 | **SEO (canonical, hreflang, sitemap)** | `src/lib/seo.ts`, `src/i18n/pageMetadata.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/config/site.ts` | Self-canonical + hreflang per page, localized titles, crawler files. See ARCHITECTURE.md "Internationalisation & SEO". |
 | **i18n Routing** | `src/i18n/routing.ts`, `middleware.ts` | `localePrefix: 'as-needed'`: English unprefixed, `/en/*` 308s to it, other locales prefixed. |
-| **Rate Limiting** | `middleware.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis. |
+| **Rate Limiting** | `src/lib/apiRateLimit.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis, applied inside the `/api/radar/*` route handlers. |
 | **Error Tracking** | `instrumentation-client.ts`, `sentry.*.config.ts`, `src/app/global-error.tsx`, `tests/unit/sentryConfig.test.ts` | Sentry SDK for client/server/edge error capture. Disabled off-Vercel (`environment: development`) to keep local runs out of the Free-plan quota. |
 | **Product Analytics** | `src/lib/analytics.ts`, `src/components/PostHogProvider.tsx` | PostHog analytics with typed events and automatic pageview tracking. |
 | **Testing Hooks** | `src/app/[locale]/create/CreateClient.tsx` | Contains hidden `data-testid` controls and `window.__routistaTestHelpers`. |
@@ -71,7 +71,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `seo.ts`: Localized URLs, canonical/hreflang alternates and page metadata. Pure, no I/O.
 
 ### Infrastructure (root)
-*   `middleware.ts`: Rate limiting for `/api/radar/*` routes, i18n routing. Upgrades next-intl's `/en/*` prefix-strip redirect to 308. Its matcher must exclude the Sentry tunnel `/monitoring` (see `next.config.ts`), `robots.txt` and `sitemap.xml`.
+*   `middleware.ts`: i18n routing only. Upgrades next-intl's `/en/*` prefix-strip redirect to 308. Its matcher skips `/api`, `_next`, `_vercel`, the Sentry tunnel `/monitoring` (see `next.config.ts`), the generated icons and every path with a dot (`robots.txt`, `sitemap.xml`, static files, bot probes). Each middleware run bills Vercel Active CPU.
 *   `instrumentation-client.ts`: Client-side Sentry initialization. Must use this filename —
     Turbopack builds ignore the older `sentry.client.config.ts`.
 *   `instrumentation.ts`: Loads the server/edge Sentry config via `register()`.
@@ -111,7 +111,8 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `shareImageGenerator.test.ts`: Mobile detection, platform URL tests.
     *   `radarService.test.ts`: Coordinate hashing tests.
     *   `rateLimit.test.ts`: Rate limiting logic tests.
-    *   `middleware.test.ts`: Middleware matcher (Sentry tunnel, crawler files and static assets excluded), handler routing, and the 308 `/en` prefix strip.
+    *   `apiRateLimit.test.ts`: `withRateLimit` wrapper: headers on allowed requests, 429 + Sentry warning on blocked ones.
+    *   `middleware.test.ts`: Middleware matcher (API, Sentry tunnel, dotted paths and static assets excluded), handler routing, and the 308 `/en` prefix strip.
     *   `sentryConfig.test.ts`: The client/server/edge Sentry configs set `environment` from `NEXT_PUBLIC_VERCEL_ENV` and stay disabled locally (`development`) but enabled on preview and production.
     *   `seo.test.ts`: Localized URLs, canonical/hreflang alternates, page metadata.
     *   `sitemap.test.ts`: Sitemap entries and robots rules.

@@ -63,6 +63,10 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+// Only the prerendered locales exist. Without this, any unknown single-segment
+// path (/apple-touch-icon.png, bot probes) ran a server render just to 404.
+export const dynamicParams = false;
+
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 

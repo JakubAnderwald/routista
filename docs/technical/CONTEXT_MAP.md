@@ -27,7 +27,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **SEO (canonical, hreflang, sitemap)** | `src/lib/seo.ts`, `src/i18n/pageMetadata.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/config/site.ts` | Self-canonical + hreflang per page, localized titles, crawler files. See ARCHITECTURE.md "Internationalisation & SEO". |
 | **i18n Routing** | `src/i18n/routing.ts`, `middleware.ts` | `localePrefix: 'as-needed'`: English unprefixed, `/en/*` 308s to it, other locales prefixed. |
 | **Rate Limiting** | `src/lib/apiRateLimit.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis, applied inside the `/api/radar/*` route handlers. |
-| **Error Tracking** | `instrumentation-client.ts`, `sentry.*.config.ts`, `src/app/global-error.tsx`, `tests/unit/sentryConfig.test.ts` | Sentry SDK for client/server/edge error capture. Disabled off-Vercel (`environment: development`) to keep local runs out of the Free-plan quota. |
+| **Error Tracking** | `instrumentation-client.ts`, `sentry.*.config.ts`, `src/app/global-error.tsx`, `tests/unit/sentryConfig.test.ts` | Sentry SDK for client/server/edge error capture. Disabled off-Vercel (`environment: development`) to keep local runs out of the Free-plan quota. The client config drops browser-extension noise (`ignoreErrors` / `denyUrls`, Sentry ROUTISTA-5). |
 | **Product Analytics** | `src/lib/analytics.ts`, `src/components/PostHogProvider.tsx` | PostHog analytics with typed events and automatic pageview tracking. |
 | **Testing Hooks** | `src/app/[locale]/create/CreateClient.tsx` | Contains hidden `data-testid` controls and `window.__routistaTestHelpers`. |
 | **Unit Tests** | `tests/unit/*.test.ts` | Pure function tests for `src/lib/` modules. Run with `npm test`. |
@@ -113,7 +113,7 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `rateLimit.test.ts`: Rate limiting logic tests.
     *   `apiRateLimit.test.ts`: `withRateLimit` wrapper: headers on allowed requests, 429 + Sentry warning on blocked ones.
     *   `middleware.test.ts`: Middleware matcher (API, Sentry tunnel, dotted paths and static assets excluded), handler routing, and the 308 `/en` prefix strip.
-    *   `sentryConfig.test.ts`: The client/server/edge Sentry configs set `environment` from `NEXT_PUBLIC_VERCEL_ENV` and stay disabled locally (`development`) but enabled on preview and production.
+    *   `sentryConfig.test.ts`: The client/server/edge Sentry configs set `environment` from `NEXT_PUBLIC_VERCEL_ENV` and stay disabled locally (`development`) but enabled on preview and production. The client config drops browser-extension errors (ROUTISTA-5), checked through the SDK's real event filter.
     *   `seo.test.ts`: Localized URLs, canonical/hreflang alternates, page metadata.
     *   `sitemap.test.ts`: Sitemap entries and robots rules.
     *   `routeGenerator.test.ts`: Route generation client tests.

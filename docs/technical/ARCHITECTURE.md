@@ -118,6 +118,15 @@ if middleware lets the request through, so the `middleware.ts` matcher must excl
 `monitoring`. Otherwise i18n rewrites it to `/en/monitoring`, which 404s, and every client
 event is lost. `tests/unit/middleware.test.ts` and the smoke suite both guard this.
 
+The browser SDK drops browser-extension noise before it is sent. Extension content scripts
+run inside the page, so their failures reach the SDK's global handlers and look like ours.
+`ignoreErrors` matches known extension-runtime messages, such as Safari's "Invalid call to
+runtime.sendMessage(). Tab not found." (ROUTISTA-5). These usually arrive as stackless
+promise rejections. `denyUrls` drops errors whose top frame is an extension script
+(`*-extension://`, or Safari's `webkit-masked-url://hidden/`). Dropping an error also skips
+its error replay, which saves Free-plan quota. `tests/unit/sentryConfig.test.ts` guards both
+lists.
+
 **Files:** `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/app/global-error.tsx`, `next.config.ts`, `middleware.ts`
 
 > Client init must live in `instrumentation-client.ts`, not `sentry.client.config.ts`. This

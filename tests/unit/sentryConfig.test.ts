@@ -105,6 +105,11 @@ describe('client Sentry config: browser-extension filters', () => {
         expect(shouldDrop(exception("undefined is not an object (evaluating 'route.coordinates')", frames, 'TypeError'))).toBe(false);
     });
 
+    it('keeps an app error that quotes the extension message', () => {
+        const frames = [{ filename: 'https://www.routista.eu/_next/static/chunks/app.js' }];
+        expect(shouldDrop(exception('Route failed: Invalid call to runtime.sendMessage(). Tab not found.', frames))).toBe(false);
+    });
+
     it('keeps an app error that merely mentions an extension URL in its message', () => {
         const frames = [{ filename: 'https://www.routista.eu/_next/static/chunks/app.js' }];
         expect(shouldDrop(exception('Failed to load safari-web-extension://x/icon.png', frames))).toBe(false);

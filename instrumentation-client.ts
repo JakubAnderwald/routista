@@ -25,8 +25,10 @@ const environment = process.env.NEXT_PUBLIC_VERCEL_ENV ?? 'development';
 const EXTENSION_ERROR_MESSAGES: RegExp[] = [
     // Safari's Web Extension bridge rejects `browser.runtime.*` calls from a content script
     // when it can't resolve the tab, e.g. "Invalid call to runtime.sendMessage(). Tab not
-    // found." (Sentry ROUTISTA-5, WebKit bug 246620).
-    /Invalid call to runtime\.\w+\(\)/,
+    // found." (Sentry ROUTISTA-5, WebKit bug 246620). Anchored, so an app error that quotes
+    // this text (e.g. "Route failed: Invalid call to …") is still reported. The SDK also
+    // tests the bare exception value, which is where the anchor matches.
+    /^Invalid call to runtime\.\w+\(\)/,
 ];
 
 /**

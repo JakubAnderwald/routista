@@ -17,6 +17,28 @@ import * as Sentry from "@sentry/nextjs";
 // is local dev.
 const environment = process.env.NEXT_PUBLIC_VERCEL_ENV ?? 'development';
 
+/**
+ * Messages thrown by browser extension runtimes, matched against the event message.
+ * These usually reach us as unhandled promise rejections with no stack, which
+ * `denyUrls` can't judge, so they have to be matched by message.
+ */
+const EXTENSION_ERROR_MESSAGES: RegExp[] = [
+    // Safari's Web Extension bridge rejects `browser.runtime.*` calls from a content script
+    // when it can't resolve the tab, e.g. "Invalid call to runtime.sendMessage(). Tab not
+    // found." (Sentry ROUTISTA-5, WebKit bug 246620).
+    /Invalid call to runtime\.\w+\(\)/,
+];
+
+/**
+ * Script URLs of browser extensions, matched against the top stack frame. Covers
+ * extension errors that do carry a stack. Safari hides extension script URLs behind
+ * `webkit-masked-url://hidden/`.
+ */
+const EXTENSION_SCRIPT_URLS: RegExp[] = [
+    /^(?:chrome|moz|safari(?:-web)?)-extension:\/\//,
+    /^webkit-masked-url:/,
+];
+
 Sentry.init({
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
@@ -31,6 +53,13 @@ Sentry.init({
 
     // Setting this option to true will print useful information to the console while you're setting up Sentry.
     debug: false,
+
+    // Browser-extension noise. Content scripts run inside our page, so their failures reach
+    // the SDK's global handlers and arrive looking like ours. Routista never calls extension
+    // APIs, so none of this is actionable, and each event (plus the replay it triggers)
+    // spends Free-plan quota. Dropping it here also stops that replay being recorded.
+    ignoreErrors: EXTENSION_ERROR_MESSAGES,
+    denyUrls: EXTENSION_SCRIPT_URLS,
 
     replaysOnErrorSampleRate: 1.0,
 

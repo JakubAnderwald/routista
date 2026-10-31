@@ -127,6 +127,9 @@ Sentry only reports from Vercel deployments (see below), so verify on a preview 
 ### Rate Limit Blocks in Sentry
 Blocked requests appear as warnings with level "warning" and message "Rate limit exceeded". Check `extra` data for IP and path.
 
+### Browser-Extension Errors Are Dropped
+The client SDK drops errors raised by browser extensions before sending them. These are content scripts running inside our page, such as Safari's "Invalid call to runtime.sendMessage(). Tab not found." (ROUTISTA-5). The lists are `ignoreErrors` (messages) and `denyUrls` (extension script URLs) in `instrumentation-client.ts`. If a new extension message shows up in Sentry, add a pattern there and a case to `tests/unit/sentryConfig.test.ts`. Don't add a pattern broad enough to swallow our own errors.
+
 ### Sentry Is Off Locally
 The SDK is disabled whenever the environment is `development`: off-Vercel, where `NEXT_PUBLIC_VERCEL_ENV` is absent, and under `vercel dev`. This holds even with `NEXT_PUBLIC_SENTRY_DSN` in `.env.local`. The org is on Sentry's Free plan, so local events and replays would use up the same monthly quota as real traffic.
 

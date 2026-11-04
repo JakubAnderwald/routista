@@ -9,6 +9,7 @@
 // client-side error or replay ever reached Sentry.
 
 import * as Sentry from "@sentry/nextjs";
+import { SENTRY_DATA_COLLECTION } from "./src/lib/sentryDataCollection";
 
 // Production and preview report into the same Sentry project, so tag every event with
 // its origin. Without this they arrive indistinguishable and a preview-only error looks
@@ -45,6 +46,10 @@ Sentry.init({
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
     environment,
+
+    // Pinned rather than left to SDK defaults, which turn permissive in @sentry/nextjs 11.
+    // See src/lib/sentryDataCollection.ts.
+    dataCollection: SENTRY_DATA_COLLECTION,
 
     // Local dev stays silent: the org is on Sentry's Free plan, where local events and
     // replays count against the same monthly quota as real traffic.

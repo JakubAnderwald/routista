@@ -218,7 +218,7 @@ locale, so `/nonexistent.png` is a 404 rather than the home page with `lang="non
 
 ### Platform
 - **Hosting**: Vercel (Hobby plan)
-- **CI/CD**: Vercel Git Integration + GitHub Actions (security checks, SonarCloud)
+- **CI/CD**: Vercel Git Integration + GitHub Actions (lint, type check, tests, SonarCloud, production build, audits)
 - **Repository**: Connected via Vercel Dashboard, auto-deploys on push
 
 ### Code Quality

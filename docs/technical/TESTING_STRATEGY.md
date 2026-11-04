@@ -467,6 +467,23 @@ Tests run automatically on:
 - Every push (GitHub Actions)
 - Every PR (with coverage upload to SonarCloud)
 
+The `security` job in `.github/workflows/security.yml` runs, in order:
+
+| Step | Command | Why |
+|---|---|---|
+| Lint | `npm run lint` | ESLint, including the security rules |
+| Type check | `npx tsc --noEmit` | Vitest strips types without checking them, so nothing else type-checks the tests or `next.config.ts` |
+| Tests | `npm run test:coverage` | Vitest suite; `coverage/lcov.info` feeds SonarCloud |
+| SonarCloud | scan action | Quality gate, 80% coverage on new code |
+| Production build | `npx next build` | Catches what only breaks `next build` — a config that fails to load, a page that fails to prerender |
+| Audits | `npm audit` | See below |
+
+The build step exists because a Dependabot bump of `@sentry/nextjs` (PR #130) was green in
+this job while every Vercel deployment of it failed loading `next.config.ts`. It calls
+`next build` directly rather than `npm run build`, whose `prebuild` would re-run lint and the
+tests, and it runs without Sentry secrets, so the Sentry plugin skips release creation and
+source-map upload.
+
 `prebuild` checks (`npm run prebuild`):
 1. `npm run lint`
 2. `npm test` (skipped on Vercel, where `$VERCEL` is set — CI already runs the suite)
@@ -482,9 +499,10 @@ than the deploy:
 | `Security Audit (production dependencies)` | `--omit=dev` | **Blocking** — fails the job |
 | `Security Audit (all dependencies, informational)` | full tree | Reports to the job summary only |
 
-Both run last in the job, after lint, tests and Sonar. That order is deliberate: when the
-blocking audit ran first, an advisory short-circuited the job and every open PR lost its
-test signal and its SonarCloud check.
+Both run last in the job, after lint, the type check, tests, Sonar and the build. That
+order is deliberate: when the blocking audit ran first, an advisory short-circuited the job
+and every open PR lost its test signal and its SonarCloud check. The build runs after Sonar
+for the same reason.
 
 ---
 

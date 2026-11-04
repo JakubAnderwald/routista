@@ -40,6 +40,68 @@ describe.each(CONFIGS)('%s Sentry config', (_name, load) => {
         expect(init).toHaveBeenCalledTimes(1);
         expect(init).toHaveBeenCalledWith(expect.objectContaining({ environment, enabled }));
     });
+
+    // What the SDK collects must not depend on its defaults, which turn permissive in
+    // @sentry/nextjs 11 (user IPs, cookies, request bodies with typed addresses).
+    it('passes the shared dataCollection policy', async () => {
+        vi.stubEnv('NEXT_PUBLIC_VERCEL_ENV', 'production');
+
+        await load();
+
+        const { SENTRY_DATA_COLLECTION } = await import('../../src/lib/sentryDataCollection');
+        expect(init).toHaveBeenCalledWith(expect.objectContaining({ dataCollection: SENTRY_DATA_COLLECTION }));
+    });
+});
+
+describe('SENTRY_DATA_COLLECTION', () => {
+    it('sets every category, since an omitted key falls back to the permissive SDK default', async () => {
+        const { SENTRY_DATA_COLLECTION } = await import('../../src/lib/sentryDataCollection');
+
+        expect(Object.keys(SENTRY_DATA_COLLECTION).sort()).toEqual([
+            'cookies',
+            'databaseQueryData',
+            'frameContextLines',
+            'genAI',
+            'graphQL',
+            'httpBodies',
+            'httpHeaders',
+            'mcp',
+            'queues',
+            'stackFrameVariables',
+            'urlQueryParams',
+            'userInfo',
+        ]);
+    });
+
+    it('keeps user info and request/response bodies out of events', async () => {
+        const { SENTRY_DATA_COLLECTION } = await import('../../src/lib/sentryDataCollection');
+
+        expect(SENTRY_DATA_COLLECTION).toMatchObject({
+            userInfo: false,
+            httpBodies: [],
+            genAI: { inputs: false, outputs: false },
+            databaseQueryData: false,
+            // SDK 11 categories, permissive by default there.
+            mcp: { inputs: false, outputs: false },
+            queues: false,
+        });
+    });
+
+    // SDK 10's own list (PII_HEADER_SNIPPETS). Exact, so dropping an entry fails.
+    const SDK10_DENY = { deny: ['forwarded', '-ip', 'remote-', 'via', '-user'] };
+
+    it.each(['cookies', 'urlQueryParams'] as const)('denies IP and proxy names in %s', async (key) => {
+        const { SENTRY_DATA_COLLECTION } = await import('../../src/lib/sentryDataCollection');
+
+        expect(SENTRY_DATA_COLLECTION[key]).toEqual(SDK10_DENY);
+    });
+
+    it('denies IP and proxy headers in both directions', async () => {
+        const { SENTRY_DATA_COLLECTION } = await import('../../src/lib/sentryDataCollection');
+        const deny = SDK10_DENY;
+
+        expect(SENTRY_DATA_COLLECTION.httpHeaders).toEqual({ request: deny, response: deny });
+    });
 });
 
 // Browser-extension noise (ROUTISTA-5). Run the client's options through the SDK's own

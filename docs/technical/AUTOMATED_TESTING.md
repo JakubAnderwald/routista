@@ -8,8 +8,9 @@ For the overall test pyramid, coverage targets and unit/integration guidance, se
 
 ## Why this exists
 
-CI (`.github/workflows/security.yml`) runs audit, lint, and the vitest suite against the
-source. None of that exercises a real browser, so a class of failure slips through:
+CI (`.github/workflows/security.yml`) runs lint, a type check, the vitest suite, a
+production `next build` and the dependency audits. None of that exercises a real browser,
+so a class of failure slips through:
 
 - an icon package drops an export and the glyph silently vanishes
 - a React or Leaflet upgrade breaks hydration only in a real browser

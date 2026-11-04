@@ -1,5 +1,6 @@
 import createNextIntlPlugin from 'next-intl/plugin';
-import { withSentryConfig } from '@sentry/nextjs';
+// The `/config` entry point: the root export is deprecated in @sentry/nextjs 10 and gone in 11.
+import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from "next";
 
 const withNextIntl = createNextIntlPlugin();

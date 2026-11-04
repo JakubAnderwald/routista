@@ -4,6 +4,7 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
+import { SENTRY_DATA_COLLECTION } from "./src/lib/sentryDataCollection";
 
 // See instrumentation-client.ts — one project, events separated by environment tag.
 const environment = process.env.NEXT_PUBLIC_VERCEL_ENV ?? 'development';
@@ -12,6 +13,10 @@ Sentry.init({
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
     environment,
+
+    // Pinned rather than left to SDK defaults, which turn permissive in @sentry/nextjs 11.
+    // See src/lib/sentryDataCollection.ts.
+    dataCollection: SENTRY_DATA_COLLECTION,
 
     // See instrumentation-client.ts — local dev stays out of the Free-plan quota.
     enabled: environment !== 'development',

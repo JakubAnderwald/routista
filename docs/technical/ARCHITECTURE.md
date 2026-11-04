@@ -127,7 +127,27 @@ promise rejections. `denyUrls` drops errors whose top frame is an extension scri
 its error replay, which saves Free-plan quota. `tests/unit/sentryConfig.test.ts` guards both
 lists.
 
-**Files:** `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/app/global-error.tsx`, `next.config.ts`, `middleware.ts`
+What the SDK collects on its own is pinned in `src/lib/sentryDataCollection.ts` and passed as
+`dataCollection` by all three configs. The values are the ones `@sentry/nextjs` 10 resolves by
+default: no user info or client IP, no bodies, and IP and proxy names denied in headers,
+cookies and query params. Version 11 makes every category permissive by default (client IPs,
+`x-forwarded-for`, cookies, bodies). The object must list every category, because an omitted
+key falls back to the permissive base, not to the old default. Its type makes `tsc` fail when
+the SDK adds a category, and `tests/unit/sentryConfig.test.ts` checks the values. SDK 11's new
+`mcp` and `queues` categories are already pinned off: they are spread in, because SDK 10's
+type rejects them, and SDK 10 ignores them.
+
+On SDK 10 part of this is not enforced. Server error events still carry the incoming request
+body, plus the request headers and cookies unfiltered apart from the IP headers. SDK 11
+applies the policy there too, so after the upgrade those events lose the body, and their
+credential and `x-vercel-ip-*` headers come through as `[Filtered]`. The `query` and
+`locations` params of outgoing Radar requests reach breadcrumbs and spans on both versions.
+
+`next.config.ts` imports `withSentryConfig` from `@sentry/nextjs/config`. The root export is
+deprecated in SDK 10 and removed in 11, where importing it there makes the config fail to
+load.
+
+**Files:** `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/lib/sentryDataCollection.ts`, `src/app/global-error.tsx`, `next.config.ts`, `middleware.ts`
 
 > Client init must live in `instrumentation-client.ts`, not `sentry.client.config.ts`. This
 > project builds with Turbopack, and `@sentry/nextjs` only injects the former on that path.
@@ -218,7 +238,7 @@ locale, so `/nonexistent.png` is a 404 rather than the home page with `lang="non
 
 ### Platform
 - **Hosting**: Vercel (Hobby plan)
-- **CI/CD**: Vercel Git Integration + GitHub Actions (security checks, SonarCloud)
+- **CI/CD**: Vercel Git Integration + GitHub Actions (lint, type check, tests, SonarCloud, production build, audits)
 - **Repository**: Connected via Vercel Dashboard, auto-deploys on push
 
 ### Code Quality

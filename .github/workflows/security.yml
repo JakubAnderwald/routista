@@ -29,6 +29,13 @@ jobs:
       - name: Linting (including security rules)
         run: npm run lint
 
+      # Type-check the whole project, including next.config.ts, the Sentry
+      # configs and the tests. Neither lint nor vitest does this: vitest strips
+      # types without checking them, so a type error (e.g. a dependency dropping
+      # an export) would otherwise reach main with every check green.
+      - name: Type check
+        run: npx tsc --noEmit
+
       - name: Run Tests with Coverage
         run: npm run test:coverage
 
@@ -37,6 +44,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # Production build, so a change that only breaks `next build` (a config
+      # that fails to load, a page that fails to prerender) fails the PR here
+      # instead of only as a failed Vercel deployment. Dependabot's
+      # @sentry/nextjs 11 bump (PR #130) was green in this job while every
+      # Vercel build of it died loading next.config.ts.
+      #
+      # `npx next build`, not `npm run build`: the `prebuild` script would re-run
+      # lint and the whole test suite, which already ran above. No Sentry
+      # secrets are passed, so the Sentry plugin skips release creation and
+      # source-map upload (it logs a warning) — uploads stay Vercel's job.
+      #
+      # It runs after the Sonar scan, like the audits below, so a build failure
+      # fails the job without also suppressing the SonarCloud check.
+      - name: Production build
+        run: npx next build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
 
       # The audits run LAST, after lint/tests/Sonar, and this order is load-bearing.
       #

@@ -11,6 +11,13 @@ updates:
       prefix: "fix(deps)"
       prefix-development: "chore(deps)"
     groups:
+      # vitest and @vitest/* pin each other with exact peer versions, so any bump
+      # (majors included) has to land as one PR or `npm ci` fails with ERESOLVE.
+      # Listed before npm-minor-patch: a dependency joins the first group it matches.
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
       # Bundle all minor + patch bumps into one PR; majors stay separate.
       npm-minor-patch:
         update-types:

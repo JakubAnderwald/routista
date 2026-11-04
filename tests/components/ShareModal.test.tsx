@@ -279,6 +279,13 @@ describe('ShareModal', () => {
 
             // Should show generating text
             expect(screen.getByText('generating')).toBeInTheDocument();
+
+            // Let the delayed generation settle inside the test. Otherwise its finally-block
+            // setState can run after jsdom is torn down, which Vitest reports as an unhandled
+            // "ReferenceError: window is not defined" and fails the run.
+            await waitFor(() => {
+                expect(screen.queryByText('generating')).not.toBeInTheDocument();
+            });
         });
     });
 

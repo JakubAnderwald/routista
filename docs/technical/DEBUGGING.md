@@ -124,6 +124,15 @@ Sentry only reports from Vercel deployments (see below), so verify on a preview 
 2. Trigger an error (e.g., generate route with bad params)
 3. Check Sentry Issues for the error with stack trace
 
+To check the **server** SDK specifically, send a request the API rejects and look for a Node
+event. Browser events alone do not prove the server side works:
+```bash
+curl -X POST -H 'content-type: application/json' --data 'x{' <deployment>/api/radar/directions
+```
+It returns 500 and should create a `SyntaxError` issue with `runtime.name: node` and
+`extra.endpoint: /api/radar/directions`. If browser errors arrive but this never does,
+`register()` is not running: check that `src/instrumentation.ts` still sits next to `src/app`.
+
 ### Rate Limit Blocks in Sentry
 Blocked requests appear as warnings with level "warning" and message "Rate limit exceeded". Check `extra` data for IP and path.
 

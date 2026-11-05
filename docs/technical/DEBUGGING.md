@@ -124,19 +124,26 @@ Sentry only reports from Vercel deployments (see below), so verify on a preview 
 2. Trigger an error (e.g., generate route with bad params)
 3. Check Sentry Issues for the error with stack trace
 
-To check the **server** SDK specifically, send a request the API rejects and look for a Node
-event. Browser events alone do not prove the server side works:
+To check the **server** SDK specifically, trip the rate limiter from one machine and look for
+its warning. Browser events alone do not prove the server side works:
 ```bash
-curl -X POST -H 'content-type: application/json' --data 'x{' <deployment>/api/radar/directions
+for i in $(seq 1 11); do
+  curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'content-type: application/json' \
+    --data '{}' <deployment>/api/radar/autocomplete
+done
 ```
-Check the status first. A `429` means the rate limiter (10 requests/min per IP on
-`/api/radar/*`) blocked the probe before the body was read, so no event is expected: wait a
-minute and repeat. A `500` should create a `SyntaxError` issue with `runtime.name: node` and
-`extra.endpoint: /api/radar/directions`. If browser errors arrive but this never does after a
-`500`, the server SDK is not reporting. Either `register()` is not running (check that
-`src/instrumentation.ts` still sits next to `src/app`), or `sentry.server.config.ts` is not
-sending (check `NEXT_PUBLIC_SENTRY_DSN`, and that `enabled` is true for that deployment's
+The `{}` body fails validation with a `400` before Radar is called, so this costs no Radar
+quota. The limit is 10 requests per minute per IP: the 11th returns `429` and should create a
+`Rate limit exceeded` warning with `runtime.name: node` (see below). Never getting a `429`
+means your requests leave from rotating IPs (some proxies, VPNs and cloud sandboxes do this);
+run it from a plain connection. If the `429` arrives but the warning never does, the server SDK
+is not reporting. Either `register()` is not running (check that `src/instrumentation.ts` still
+sits next to `src/app`), or `sentry.server.config.ts` is not sending (check
+`NEXT_PUBLIC_SENTRY_DSN`, and that `enabled` is true for that deployment's
 `NEXT_PUBLIC_VERCEL_ENV`).
+
+Malformed requests (invalid JSON, a body that is not an object, bad `coordinates`) get a `400`
+and are deliberately not reported, so they cannot serve as a probe.
 
 ### Rate Limit Blocks in Sentry
 Blocked requests appear as warnings with level "warning" and message "Rate limit exceeded". Check `extra` data for IP and path.

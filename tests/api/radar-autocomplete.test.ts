@@ -200,20 +200,32 @@ describe('/api/radar/autocomplete', () => {
             );
         });
 
-        it('should return 500 when request body is invalid JSON', async () => {
-            const request = new NextRequest('http://localhost/api/radar/autocomplete', {
+    });
+
+    // Malformed requests are the client's mistake: 400, no Radar call, nothing in Sentry.
+    describe('Bad request bodies (400)', () => {
+        function rawRequest(body: string): NextRequest {
+            return new NextRequest('http://localhost/api/radar/autocomplete', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: 'not valid json',
+                headers: { 'Content-Type': 'application/json' },
+                body,
             });
+        }
 
-            const response = await POST(request);
+        it('should return 400 when the body is not valid JSON', async () => {
+            const response = await POST(rawRequest('not valid json'));
 
-            expect(response.status).toBe(500);
-            const data = await response.json();
-            expect(data.error).toBeDefined();
+            expect(response.status).toBe(400);
+            expect(await response.json()).toEqual({ error: 'Request body must be valid JSON' });
+            expect(Sentry.captureException).not.toHaveBeenCalled();
+        });
+
+        it.each(['null', '[]', '"text"'])('should return 400 when the body is JSON %s', async (body) => {
+            const response = await POST(rawRequest(body));
+
+            expect(response.status).toBe(400);
+            expect(await response.json()).toEqual({ error: 'Request body must be a JSON object' });
+            expect(Sentry.captureException).not.toHaveBeenCalled();
         });
     });
 

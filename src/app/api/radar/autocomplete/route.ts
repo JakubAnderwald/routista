@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRadarAutocomplete } from "@/lib/radarService";
 import { withRateLimit } from "@/lib/apiRateLimit";
+import { badRequest, readJsonObject } from "@/lib/apiRequest";
 import * as Sentry from "@sentry/nextjs";
 
 export async function POST(request: NextRequest) {
@@ -8,21 +9,25 @@ export async function POST(request: NextRequest) {
 }
 
 async function autocomplete(request: NextRequest) {
+    // A malformed request is the client's mistake: answer 400 and keep it out of Sentry.
+    const parsed = await readJsonObject(request);
+    if (!parsed.ok) {
+        return parsed.response;
+    }
+
+    const { query } = parsed.body;
+    if (!query || typeof query !== 'string') {
+        return badRequest("Invalid query parameter");
+    }
+
     try {
-        const body = await request.json();
-        const { query } = body;
-
-        if (!query || typeof query !== 'string') {
-            return NextResponse.json({ error: "Invalid query parameter" }, { status: 400 });
-        }
-
         const result = await getRadarAutocomplete(query);
 
         return NextResponse.json(result);
 
     } catch (error: unknown) {
         console.error("[API] Error fetching autocomplete:", error);
-        
+
         // Capture error in Sentry with context
         Sentry.captureException(error, {
             extra: {

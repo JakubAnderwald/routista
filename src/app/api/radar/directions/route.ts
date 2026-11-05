@@ -4,10 +4,17 @@ import { withRateLimit } from "@/lib/apiRateLimit";
 import { badRequest, isCoordinateList, readJsonObject } from "@/lib/apiRequest";
 import * as Sentry from "@sentry/nextjs";
 
+/** Generates a Radar route for the posted `{ coordinates, mode }`, rate-limited per IP. */
 export async function POST(request: NextRequest) {
     return withRateLimit(request, () => generateRoute(request));
 }
 
+/**
+ * Validates the body, then asks Radar for the route.
+ *
+ * Malformed requests get a 400 and are not reported to Sentry. A Radar failure or other
+ * unexpected error gets a 500 and is reported with the endpoint and point count.
+ */
 async function generateRoute(request: NextRequest) {
     // A malformed request is the client's mistake: answer 400 and keep it out of Sentry.
     const parsed = await readJsonObject(request);

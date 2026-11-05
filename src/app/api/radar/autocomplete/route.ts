@@ -4,10 +4,17 @@ import { withRateLimit } from "@/lib/apiRateLimit";
 import { badRequest, readJsonObject } from "@/lib/apiRequest";
 import * as Sentry from "@sentry/nextjs";
 
+/** Returns Radar address suggestions for the posted `{ query }`, rate-limited per IP. */
 export async function POST(request: NextRequest) {
     return withRateLimit(request, () => autocomplete(request));
 }
 
+/**
+ * Validates the body and `query`, then asks Radar for suggestions.
+ *
+ * Malformed requests get a 400 and are not reported to Sentry. A Radar failure or other
+ * unexpected error gets a 500 and is reported with the endpoint.
+ */
 async function autocomplete(request: NextRequest) {
     // A malformed request is the client's mistake: answer 400 and keep it out of Sentry.
     const parsed = await readJsonObject(request);

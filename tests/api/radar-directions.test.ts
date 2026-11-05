@@ -210,6 +210,7 @@ describe('/api/radar/directions', () => {
 
             expect(response.status).toBe(400);
             expect(await response.json()).toEqual({ error: 'Request body must be a JSON object' });
+            expect(mockGetRadarRoute).not.toHaveBeenCalled();
             expect(Sentry.captureException).not.toHaveBeenCalled();
         });
 

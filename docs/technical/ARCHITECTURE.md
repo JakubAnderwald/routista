@@ -106,8 +106,8 @@ See `docs/technical/ISSUE_47_BASELINE.md`.
 ### API Request Validation
 - Malformed requests get a `400` with `{ error }` and are not reported to Sentry: invalid JSON,
   a body that is not an object, a missing or empty autocomplete `query`, and `coordinates` that
-  are not at least two numeric points. Bots and scanners send these constantly, and as `500`s
-  they filled Sentry with errors that were not ours.
+  are not at least two numeric points. Bots and scanners send these constantly; as `500`s they
+  would fill Sentry with errors that are not ours.
 - Only failures past validation (Radar errors, unexpected exceptions) return `500` and go to
   Sentry with the endpoint as context.
 - Rate limiting runs first, so malformed requests still count toward the per-IP limit.

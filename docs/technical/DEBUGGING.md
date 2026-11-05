@@ -125,7 +125,10 @@ Sentry only reports from Vercel deployments (see below), so verify on a preview 
 3. Check Sentry Issues for the error with stack trace
 
 To check the **server** SDK specifically, trip the rate limiter from one machine and look for
-its warning. Browser events alone do not prove the server side works:
+its warning. Browser events alone do not prove the server side works. This needs a deployment
+with Redis, which in practice means **production**: Preview has no Redis by design (see
+`DEV_SETUP.md`), so its rate limiter is off and this probe can never get a `429` there.
+
 ```bash
 for i in $(seq 1 11); do
   curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'content-type: application/json' \
@@ -134,9 +137,12 @@ done
 ```
 The `{}` body fails validation with a `400` before Radar is called, so this costs no Radar
 quota. The limit is 10 requests per minute per IP: the 11th returns `429` and should create a
-`Rate limit exceeded` warning with `runtime.name: node` (see below). Never getting a `429`
-means your requests leave from rotating IPs (some proxies, VPNs and cloud sandboxes do this);
-run it from a plain connection. If the `429` arrives but the warning never does, the server SDK
+`Rate limit exceeded` warning with `runtime.name: node` (see below). Never getting a `429` means
+either the deployment has no Redis (a Preview, or production with Redis down: the limiter
+fails open and logs `[RateLimit] Redis not configured` or `Redis error, allowing request`), or
+your requests leave from rotating IPs (some proxies, VPNs and cloud sandboxes do this; the
+`X-RateLimit-Remaining` header then keeps resetting to 9). If the `429` arrives but the warning
+never does, the server SDK
 is not reporting. Either `register()` is not running (check that `src/instrumentation.ts` still
 sits next to `src/app`), or `sentry.server.config.ts` is not sending (check
 `NEXT_PUBLIC_SENTRY_DSN`, and that `enabled` is true for that deployment's

@@ -102,6 +102,8 @@ describe('/api/radar/autocomplete', () => {
             const response = await POST(request);
 
             expect(response.status).toBe(400);
+            expect(mockGetRadarAutocomplete).not.toHaveBeenCalled();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
             const data = await response.json();
             expect(data.error).toBe('Invalid query parameter');
         });
@@ -112,6 +114,8 @@ describe('/api/radar/autocomplete', () => {
             const response = await POST(request);
 
             expect(response.status).toBe(400);
+            expect(mockGetRadarAutocomplete).not.toHaveBeenCalled();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
             const data = await response.json();
             expect(data.error).toBe('Invalid query parameter');
         });
@@ -122,6 +126,8 @@ describe('/api/radar/autocomplete', () => {
             const response = await POST(request);
 
             expect(response.status).toBe(400);
+            expect(mockGetRadarAutocomplete).not.toHaveBeenCalled();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
             const data = await response.json();
             expect(data.error).toBe('Invalid query parameter');
         });
@@ -132,6 +138,8 @@ describe('/api/radar/autocomplete', () => {
             const response = await POST(request);
 
             expect(response.status).toBe(400);
+            expect(mockGetRadarAutocomplete).not.toHaveBeenCalled();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
             const data = await response.json();
             expect(data.error).toBe('Invalid query parameter');
         });
@@ -142,6 +150,8 @@ describe('/api/radar/autocomplete', () => {
             const response = await POST(request);
 
             expect(response.status).toBe(400);
+            expect(mockGetRadarAutocomplete).not.toHaveBeenCalled();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
             const data = await response.json();
             expect(data.error).toBe('Invalid query parameter');
         });
@@ -152,6 +162,8 @@ describe('/api/radar/autocomplete', () => {
             const response = await POST(request);
 
             expect(response.status).toBe(400);
+            expect(mockGetRadarAutocomplete).not.toHaveBeenCalled();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
             const data = await response.json();
             expect(data.error).toBe('Invalid query parameter');
         });
@@ -217,6 +229,7 @@ describe('/api/radar/autocomplete', () => {
 
             expect(response.status).toBe(400);
             expect(await response.json()).toEqual({ error: 'Request body must be valid JSON' });
+            expect(mockGetRadarAutocomplete).not.toHaveBeenCalled();
             expect(Sentry.captureException).not.toHaveBeenCalled();
         });
 
@@ -225,6 +238,7 @@ describe('/api/radar/autocomplete', () => {
 
             expect(response.status).toBe(400);
             expect(await response.json()).toEqual({ error: 'Request body must be a JSON object' });
+            expect(mockGetRadarAutocomplete).not.toHaveBeenCalled();
             expect(Sentry.captureException).not.toHaveBeenCalled();
         });
     });

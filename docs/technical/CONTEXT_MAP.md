@@ -75,7 +75,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `middleware.ts`: i18n routing only. Upgrades next-intl's `/en/*` prefix-strip redirect to 308. Its matcher skips `/api`, `_next`, `_vercel`, the Sentry tunnel `/monitoring` (see `next.config.ts`), the generated icons and every path with a dot (`robots.txt`, `sitemap.xml`, static files, bot probes). Each middleware run bills Vercel Active CPU.
 *   `instrumentation-client.ts`: Client-side Sentry initialization. Must use this filename —
     Turbopack builds ignore the older `sentry.client.config.ts`.
-*   `src/instrumentation.ts` (in `src/`, not the root): Loads the server/edge Sentry config via `register()` and reports request errors via `onRequestError`. Next.js only picks it up next to the app dir (`src/app`); at the root it was left out of Vercel's server functions and server-side Sentry never started.
+*   `src/instrumentation.ts` (in `src/`, not the root): Loads the server/edge Sentry config via `register()` and reports request errors via `onRequestError` (the SDK's `captureRequestError`, which flushes before the function is suspended). Next.js only picks it up next to the app dir (`src/app`); at the root it was left out of Vercel's server functions and server-side Sentry never started.
 *   `sentry.server.config.ts`: Server-side Sentry initialization.
 *   `sentry.edge.config.ts`: Edge runtime Sentry initialization.
 *   `next.config.ts`: Next.js config wrapped with Sentry (`withSentryConfig` from `@sentry/nextjs/config`).
@@ -114,7 +114,7 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `rateLimit.test.ts`: Rate limiting logic tests.
     *   `apiRateLimit.test.ts`: `withRateLimit` wrapper: headers on allowed requests, 429 + Sentry warning on blocked ones.
     *   `middleware.test.ts`: Middleware matcher (API, Sentry tunnel, dotted paths and static assets excluded), handler routing, and the 308 `/en` prefix strip.
-    *   `instrumentation.test.ts`: `src/instrumentation.ts` stays in `src/` (no root copy), `register()` loads the server or edge config per runtime, and `onRequestError` reports with the route context.
+    *   `instrumentation.test.ts`: `src/instrumentation.ts` stays in `src/` (no root copy), `register()` loads the server or edge config per runtime, and `onRequestError` is the SDK's `captureRequestError`.
     *   `sentryConfig.test.ts`: The client/server/edge Sentry configs set `environment` from `NEXT_PUBLIC_VERCEL_ENV` and stay disabled locally (`development`) but enabled on preview and production. The client config drops browser-extension errors (ROUTISTA-5), checked through the SDK's real event filter. All three pass the shared `dataCollection` policy, which must list every category.
     *   `seo.test.ts`: Localized URLs, canonical/hreflang alternates, page metadata.
     *   `sitemap.test.ts`: Sitemap entries and robots rules.

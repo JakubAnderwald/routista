@@ -152,7 +152,9 @@ Server and edge init runs from `src/instrumentation.ts`, which must sit in `src/
 Vercel build left it out of every server function, and a missing instrumentation module fails
 silently, so `register()` never ran and no server-side error reached Sentry. Local
 `next start` still loaded it, which is why that went unnoticed.
-`tests/unit/instrumentation.test.ts` guards the location.
+`tests/unit/instrumentation.test.ts` guards the location. Its `onRequestError` is the SDK's
+`captureRequestError`, which keeps the function alive until the event is flushed; a plain
+`captureException` there can be lost when Vercel suspends the function after the response.
 
 **Files:** `instrumentation-client.ts`, `src/instrumentation.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/lib/sentryDataCollection.ts`, `src/app/global-error.tsx`, `next.config.ts`, `middleware.ts`
 

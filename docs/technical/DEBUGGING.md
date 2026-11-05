@@ -129,9 +129,14 @@ event. Browser events alone do not prove the server side works:
 ```bash
 curl -X POST -H 'content-type: application/json' --data 'x{' <deployment>/api/radar/directions
 ```
-It returns 500 and should create a `SyntaxError` issue with `runtime.name: node` and
-`extra.endpoint: /api/radar/directions`. If browser errors arrive but this never does,
-`register()` is not running: check that `src/instrumentation.ts` still sits next to `src/app`.
+Check the status first. A `429` means the rate limiter (10 requests/min per IP on
+`/api/radar/*`) blocked the probe before the body was read, so no event is expected: wait a
+minute and repeat. A `500` should create a `SyntaxError` issue with `runtime.name: node` and
+`extra.endpoint: /api/radar/directions`. If browser errors arrive but this never does after a
+`500`, the server SDK is not reporting. Either `register()` is not running (check that
+`src/instrumentation.ts` still sits next to `src/app`), or `sentry.server.config.ts` is not
+sending (check `NEXT_PUBLIC_SENTRY_DSN`, and that `enabled` is true for that deployment's
+`NEXT_PUBLIC_VERCEL_ENV`).
 
 ### Rate Limit Blocks in Sentry
 Blocked requests appear as warnings with level "warning" and message "Rate limit exceeded". Check `extra` data for IP and path.

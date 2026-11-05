@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
-const { serverConfigLoaded, edgeConfigLoaded, captureException } = vi.hoisted(() => ({
+const { serverConfigLoaded, edgeConfigLoaded, captureRequestError } = vi.hoisted(() => ({
     serverConfigLoaded: vi.fn(),
     edgeConfigLoaded: vi.fn(),
-    captureException: vi.fn(),
+    captureRequestError: vi.fn(),
 }));
 
 // Each config calls Sentry.init when imported; record the import instead.
@@ -17,7 +17,7 @@ vi.mock('../../sentry.edge.config', () => {
     edgeConfigLoaded();
     return {};
 });
-vi.mock('@sentry/nextjs', () => ({ captureException }));
+vi.mock('@sentry/nextjs', () => ({ captureRequestError }));
 
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
@@ -69,18 +69,11 @@ describe('register', () => {
 });
 
 describe('onRequestError', () => {
-    it('captures the error with the route context', async () => {
+    // The SDK's handler, not a hand-rolled captureException: it also keeps the Vercel
+    // function alive until the event is flushed, and skips Next.js control-flow errors.
+    it("is the SDK's captureRequestError", async () => {
         const { onRequestError } = await import('../../src/instrumentation');
-        const err = new Error('boom');
-        const context = {
-            routerKind: 'App Router',
-            routePath: '/api/radar/directions',
-            routeType: 'route',
-            renderSource: 'react-server-components',
-        };
 
-        await onRequestError(err, new Request('https://www.routista.eu/api/radar/directions'), context);
-
-        expect(captureException).toHaveBeenCalledWith(err, { extra: context });
+        expect(onRequestError).toBe(captureRequestError);
     });
 });

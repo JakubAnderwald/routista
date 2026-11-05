@@ -147,7 +147,16 @@ credential and `x-vercel-ip-*` headers come through as `[Filtered]`. The `query`
 deprecated in SDK 10 and removed in 11, where importing it there makes the config fail to
 load.
 
-**Files:** `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/lib/sentryDataCollection.ts`, `src/app/global-error.tsx`, `next.config.ts`, `middleware.ts`
+Server and edge init runs from `src/instrumentation.ts`, which must sit in `src/` next to
+`src/app`: Next.js only looks for it next to the app dir. While it sat at the repo root, the
+Vercel build left it out of every server function, and a missing instrumentation module fails
+silently, so `register()` never ran and no server-side error reached Sentry. Local
+`next start` still loaded it, which is why that went unnoticed.
+`tests/unit/instrumentation.test.ts` guards the location. Its `onRequestError` is the SDK's
+`captureRequestError`, which keeps the function alive until the event is flushed; a plain
+`captureException` there can be lost when Vercel suspends the function after the response.
+
+**Files:** `instrumentation-client.ts`, `src/instrumentation.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/lib/sentryDataCollection.ts`, `src/app/global-error.tsx`, `next.config.ts`, `middleware.ts`
 
 > Client init must live in `instrumentation-client.ts`, not `sentry.client.config.ts`. This
 > project builds with Turbopack, and `@sentry/nextjs` only injects the former on that path.

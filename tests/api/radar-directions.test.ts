@@ -147,21 +147,6 @@ describe('/api/radar/directions', () => {
             expect(data.error).toBe('Radar API Error: 401 Unauthorized');
         });
 
-        it('should return 500 when getRadarRoute throws Invalid coordinates error', async () => {
-            mockGetRadarRoute.mockRejectedValueOnce(new Error('Invalid coordinates'));
-
-            const request = createRequest({
-                coordinates: [],
-                mode: 'foot-walking',
-            });
-
-            const response = await POST(request);
-
-            expect(response.status).toBe(500);
-            const data = await response.json();
-            expect(data.error).toBe('Invalid coordinates');
-        });
-
         it('should return 500 with generic message for non-Error exceptions', async () => {
             mockGetRadarRoute.mockRejectedValueOnce('string error');
 
@@ -193,25 +178,81 @@ describe('/api/radar/directions', () => {
                 expect.objectContaining({
                     extra: expect.objectContaining({
                         endpoint: '/api/radar/directions',
+                        coordinatesCount: 2,
                     }),
                 })
             );
         });
 
-        it('should return 500 when request body is invalid JSON', async () => {
-            const request = new NextRequest('http://localhost/api/radar/directions', {
+    });
+
+    // Malformed requests are the client's mistake: 400, no Radar call, nothing in Sentry.
+    describe('Bad requests (400)', () => {
+        function rawRequest(body: string): NextRequest {
+            return new NextRequest('http://localhost/api/radar/directions', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: 'not valid json',
+                headers: { 'Content-Type': 'application/json' },
+                body,
             });
+        }
 
-            const response = await POST(request);
+        it('should return 400 when the body is not valid JSON', async () => {
+            const response = await POST(rawRequest('not valid json'));
 
-            expect(response.status).toBe(500);
-            const data = await response.json();
-            expect(data.error).toBeDefined();
+            expect(response.status).toBe(400);
+            expect(await response.json()).toEqual({ error: 'Request body must be valid JSON' });
+            expect(mockGetRadarRoute).not.toHaveBeenCalled();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
+        });
+
+        it.each(['null', '[]', '"text"', '42'])('should return 400 when the body is JSON %s', async (body) => {
+            const response = await POST(rawRequest(body));
+
+            expect(response.status).toBe(400);
+            expect(await response.json()).toEqual({ error: 'Request body must be a JSON object' });
+            expect(mockGetRadarRoute).not.toHaveBeenCalled();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
+        });
+
+        it.each([
+            ['missing', undefined],
+            ['empty', []],
+            ['a single point', [[51.5, -0.1]]],
+            ['not an array', 'Berlin'],
+            ['points that are not arrays', [{ lat: 51.5 }, { lat: 51.51 }]],
+            ['non-numeric points', [['51.5', '-0.1'], ['51.51', '-0.09']]],
+            ['points with one number', [[51.5], [51.51]]],
+            ['out of range', [[1000, 0], [1001, 1]]],
+        ])('should return 400 when coordinates are %s', async (_label, coordinates) => {
+            const response = await POST(createRequest({ coordinates, mode: 'foot-walking' }));
+
+            expect(response.status).toBe(400);
+            expect((await response.json()).error).toMatch(/coordinates/);
+            expect(mockGetRadarRoute).not.toHaveBeenCalled();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
+        });
+
+        it.each([
+            ['a number', 42],
+            ['an object', { toString: 'not callable' }],
+            ['an array', ['foot-walking']],
+            ['null', null],
+        ])('should return 400 when mode is %s', async (_label, mode) => {
+            const response = await POST(createRequest({ coordinates: [[51.5, -0.1], [51.51, -0.09]], mode }));
+
+            expect(response.status).toBe(400);
+            expect(await response.json()).toEqual({ error: 'mode must be a string' });
+            expect(mockGetRadarRoute).not.toHaveBeenCalled();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
+        });
+
+        it('should still pass a missing mode through (getRadarRoute falls back to driving)', async () => {
+            mockGetRadarRoute.mockResolvedValueOnce({ type: 'FeatureCollection', features: [] });
+
+            const response = await POST(createRequest({ coordinates: [[51.5, -0.1], [51.51, -0.09]] }));
+
+            expect(response.status).toBe(200);
+            expect(mockGetRadarRoute).toHaveBeenCalledWith({ coordinates: [[51.5, -0.1], [51.51, -0.09]], mode: undefined });
         });
     });
 

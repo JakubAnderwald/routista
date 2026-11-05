@@ -103,6 +103,18 @@ See `docs/technical/ISSUE_47_BASELINE.md`.
 
 **Files:** `src/lib/apiRateLimit.ts`, `src/lib/rateLimit.ts`, `src/app/api/radar/*/route.ts`
 
+### API Request Validation
+- Malformed requests get a `400` with `{ error }` and are not reported to Sentry: invalid JSON,
+  a body that is not an object, a missing or empty autocomplete `query`, `coordinates` that are
+  not at least two `[lat, lng]` points within ±90/±180, and a `mode` that is not a string.
+  An unknown mode string still falls back to driving. Bots and scanners send these constantly; as `500`s they
+  would fill Sentry with errors that are not ours.
+- Only failures past validation (Radar errors, unexpected exceptions) return `500` and go to
+  Sentry with the endpoint as context.
+- Rate limiting runs first, so malformed requests still count toward the per-IP limit.
+
+**Files:** `src/lib/apiRequest.ts`, `src/app/api/radar/*/route.ts`
+
 ### Error Tracking (Sentry)
 - Client, server, and edge runtime error capture
 - Global error boundary for React errors

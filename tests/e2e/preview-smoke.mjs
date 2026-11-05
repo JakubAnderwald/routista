@@ -263,7 +263,9 @@ try {
         data: { coordinates: [[13.405, 52.52], [13.41, 52.525]], mode: 'foot' },
         timeout: 45000,
     });
-    check(r.status() < 500, 'api: directions not 5xx', `status ${r.status()}`);
+    // 200, or 429 if this IP is rate limited. A 400 would mean the API's request validation
+    // rejected a well-formed payload, so it fails here even though it is not a 5xx.
+    check([200, 429].includes(r.status()), 'api: directions accepted (200/429)', `status ${r.status()}`);
 } catch (err) {
     check(false, 'api: directions reachable', err.message.split('\n')[0]);
 }

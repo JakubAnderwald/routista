@@ -63,6 +63,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `riverCrossing.ts`: Bridge selection and river crossing repair. Pure, no I/O.
 *   `overpassService.ts`: OSM water and bridge fetching, with Redis caching.
 *   `redisClient.ts`: Shared Upstash Redis client. Returns null when unconfigured.
+*   `apiRequest.ts`: Request-body validation for the API routes: `readJsonObject`, `isCoordinateList`, `badRequest`. Malformed requests get a 400 and stay out of Sentry.
 *   `imageProcessingCore.ts`: **CRITICAL**. Platform-agnostic shape extraction algorithms (Otsu, boundary tracing).
 *   `imageProcessing.ts`: **CRITICAL**. Browser wrapper for image processing (uses Canvas API + core).
 *   `gpxGenerator.ts`: Utility for file export.
@@ -112,6 +113,7 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `shareImageGenerator.test.ts`: Mobile detection, platform URL tests.
     *   `radarService.test.ts`: Coordinate hashing tests.
     *   `rateLimit.test.ts`: Rate limiting logic tests.
+    *   `apiRequest.test.ts`: `readJsonObject` (400 for malformed or non-object JSON), `isCoordinateList`, `badRequest`.
     *   `apiRateLimit.test.ts`: `withRateLimit` wrapper: headers on allowed requests, 429 + Sentry warning on blocked ones.
     *   `middleware.test.ts`: Middleware matcher (API, Sentry tunnel, dotted paths and static assets excluded), handler routing, and the 308 `/en` prefix strip.
     *   `instrumentation.test.ts`: `src/instrumentation.ts` stays in `src/` (no root copy), `register()` loads the server or edge config per runtime, and `onRequestError` is the SDK's `captureRequestError`.
@@ -128,8 +130,8 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `ShareModal.test.tsx`: Social sharing modal tests.
     *   `StravaButton.test.tsx`: Manual export flow tests (GPX download + opens Strava import page).
 *   `api/`: API route tests.
-    *   `radar-autocomplete.test.ts`: Autocomplete endpoint tests.
-    *   `radar-directions.test.ts`: Directions endpoint tests.
+    *   `radar-autocomplete.test.ts`: Autocomplete endpoint: results, 400 for a bad query or body (not sent to Sentry), 500 + Sentry for Radar failures.
+    *   `radar-directions.test.ts`: Directions endpoint: results, 400 for a bad body or `coordinates` (not sent to Sentry), 500 + Sentry for Radar failures.
 *   `utils/nodeImageProcessing.ts`: Node.js wrapper for image processing (uses Sharp + core).
 *   `e2e/`: E2E test templates.
 

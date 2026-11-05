@@ -24,7 +24,12 @@ async function generateRoute(request: NextRequest) {
 
     const { coordinates, mode } = parsed.body;
     if (!isCoordinateList(coordinates)) {
-        return badRequest("coordinates must be an array of at least 2 [number, number] points");
+        return badRequest("coordinates must be an array of at least 2 [lat, lng] points");
+    }
+    // Unknown mode strings fall back to driving inside getRadarRoute; anything that is not a
+    // string at all would throw there instead.
+    if (mode !== undefined && typeof mode !== "string") {
+        return badRequest("mode must be a string");
     }
 
     try {

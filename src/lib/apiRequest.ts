@@ -40,8 +40,9 @@ export async function readJsonObject(request: Request): Promise<JsonObjectResult
 }
 
 /**
- * Whether `value` is a usable route: at least two points, each with finite numbers in its
- * first two positions.
+ * Whether `value` is a usable route: at least two `[lat, lng]` points (the order Radar is
+ * sent), each a finite latitude within ±90 and longitude within ±180. Anything else would
+ * only come back from Radar as an error.
  *
  * @param value - The untrusted `coordinates` field of a request body.
  */
@@ -54,7 +55,9 @@ export function isCoordinateList(value: unknown): value is [number, number][] {
                 Array.isArray(point) &&
                 point.length >= 2 &&
                 Number.isFinite(point[0]) &&
-                Number.isFinite(point[1])
+                Number.isFinite(point[1]) &&
+                Math.abs(point[0]) <= 90 &&
+                Math.abs(point[1]) <= 180
         )
     );
 }

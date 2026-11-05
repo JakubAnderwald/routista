@@ -54,6 +54,7 @@ describe('isCoordinateList', () => {
         ['many points', Array.from({ length: 50 }, (_, i) => [51.5 + i / 1000, -0.1])],
         ['points with an extra value', [[51.5, -0.1, 12], [51.51, -0.09, 13]]],
         ['negative and zero values', [[0, 0], [-33.9, -151.2]]],
+        ['the extremes of each range', [[90, 180], [-90, -180]]],
     ])('accepts %s', (_label, value) => {
         expect(isCoordinateList(value)).toBe(true);
     });
@@ -71,6 +72,9 @@ describe('isCoordinateList', () => {
         ['NaN', [[NaN, -0.1], [51.51, -0.09]]],
         ['Infinity', [[51.5, Infinity], [51.51, -0.09]]],
         ['a null point', [[51.5, -0.1], null]],
+        ['a latitude beyond ±90', [[90.1, 0], [51.51, -0.09]]],
+        ['a longitude beyond ±180', [[51.5, -180.1], [51.51, -0.09]]],
+        ['far out-of-range values', [[1000, 0], [1001, 1]]],
     ])('rejects %s', (_label, value) => {
         expect(isCoordinateList(value)).toBe(false);
     });

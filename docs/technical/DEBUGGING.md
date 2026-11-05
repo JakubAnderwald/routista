@@ -151,7 +151,7 @@ sits next to `src/app`), or `sentry.server.config.ts` is not sending (check
 `NEXT_PUBLIC_SENTRY_DSN`, and that `enabled` is true for that deployment's
 `NEXT_PUBLIC_VERCEL_ENV`).
 
-Malformed requests (invalid JSON, a body that is not an object, bad `coordinates`) get a `400`
+Malformed requests (invalid JSON, a body that is not an object, bad `coordinates` or `mode`) get a `400`
 and are deliberately not reported, so they cannot serve as a probe.
 
 ### Rate Limit Blocks in Sentry

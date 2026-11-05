@@ -222,6 +222,7 @@ describe('/api/radar/directions', () => {
             ['points that are not arrays', [{ lat: 51.5 }, { lat: 51.51 }]],
             ['non-numeric points', [['51.5', '-0.1'], ['51.51', '-0.09']]],
             ['points with one number', [[51.5], [51.51]]],
+            ['out of range', [[1000, 0], [1001, 1]]],
         ])('should return 400 when coordinates are %s', async (_label, coordinates) => {
             const response = await POST(createRequest({ coordinates, mode: 'foot-walking' }));
 
@@ -229,6 +230,29 @@ describe('/api/radar/directions', () => {
             expect((await response.json()).error).toMatch(/coordinates/);
             expect(mockGetRadarRoute).not.toHaveBeenCalled();
             expect(Sentry.captureException).not.toHaveBeenCalled();
+        });
+
+        it.each([
+            ['a number', 42],
+            ['an object', { toString: 'not callable' }],
+            ['an array', ['foot-walking']],
+            ['null', null],
+        ])('should return 400 when mode is %s', async (_label, mode) => {
+            const response = await POST(createRequest({ coordinates: [[51.5, -0.1], [51.51, -0.09]], mode }));
+
+            expect(response.status).toBe(400);
+            expect(await response.json()).toEqual({ error: 'mode must be a string' });
+            expect(mockGetRadarRoute).not.toHaveBeenCalled();
+            expect(Sentry.captureException).not.toHaveBeenCalled();
+        });
+
+        it('should still pass a missing mode through (getRadarRoute falls back to driving)', async () => {
+            mockGetRadarRoute.mockResolvedValueOnce({ type: 'FeatureCollection', features: [] });
+
+            const response = await POST(createRequest({ coordinates: [[51.5, -0.1], [51.51, -0.09]] }));
+
+            expect(response.status).toBe(200);
+            expect(mockGetRadarRoute).toHaveBeenCalledWith({ coordinates: [[51.5, -0.1], [51.51, -0.09]], mode: undefined });
         });
     });
 

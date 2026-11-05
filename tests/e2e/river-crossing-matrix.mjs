@@ -132,6 +132,7 @@ const CASES = [
         title: 'Star over Madrid, walking — street grid, the easiest case',
         shape: 'star',
         search: 'Madrid, Spain',
+        expect: 'MD ES',
         radius: 800,
         mode: 'Walk',
     },

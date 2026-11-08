@@ -108,13 +108,13 @@ export async function getWaterAndBridges(
         );
     } catch (error) {
         failedLookups.set(key, nowSeconds() + RIVER_CROSSING.overpassFailureMemoSeconds);
+        const reason = error instanceof Error ? error.message : "unknown";
         // Overpass being down must never break route generation.
-        console.warn(
-            `[Overpass] Fetch failed, routing without water data: ${error instanceof Error ? error.message : "unknown"}`
-        );
+        console.warn(`[Overpass] Fetch failed, routing without water data: ${reason}`);
         Sentry.captureMessage("Overpass fetch failed", {
             level: "warning",
-            extra: { service: "overpassService", bbox },
+            tags: { "overpass.failure": classifyOverpassFailure(reason) },
+            extra: { service: "overpassService", bbox, reason },
         });
         return null;
     }
@@ -141,6 +141,18 @@ export async function getWaterAndBridges(
     }
 
     return collection;
+}
+
+/**
+ * Buckets a runQuery failure message into a short Sentry tag, so the issue can be split by
+ * cause: "timeout" (our abort), "http-429"/"http-504"/... (Overpass answered), or "network".
+ */
+export function classifyOverpassFailure(reason: string): string {
+    // Status first: a 504 body mentions "timeout" too.
+    const status = /— (\d{3}):/.exec(reason);
+    if (status) return `http-${status[1]}`;
+    if (/aborted|AbortError|timeout/i.test(reason)) return "timeout";
+    return "network";
 }
 
 /** Seconds since the epoch, for the failure memo. */

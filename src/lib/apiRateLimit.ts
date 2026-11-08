@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
-import { checkRateLimit, getClientIP, DEFAULT_RATE_LIMIT } from './rateLimit';
+import { checkRateLimit, getClientIP, DEFAULT_RATE_LIMIT, type RateLimitConfig } from './rateLimit';
+
+/** Which limit to apply. Without a bucket, the request counts against the default per-IP key. */
+export interface RateLimitOptions {
+    config: RateLimitConfig;
+    /** Separate counter name, so this endpoint's traffic does not share the default budget. */
+    bucket?: string;
+}
 
 /**
  * Rate-limit a /api/radar/* request inside its route handler.
@@ -12,13 +19,15 @@ import { checkRateLimit, getClientIP, DEFAULT_RATE_LIMIT } from './rateLimit';
  */
 export async function withRateLimit(
     request: Request,
-    handler: () => Promise<NextResponse>
+    handler: () => Promise<NextResponse>,
+    { config, bucket }: RateLimitOptions = { config: DEFAULT_RATE_LIMIT }
 ): Promise<NextResponse> {
     const clientIP = getClientIP(request);
-    const result = await checkRateLimit(clientIP, DEFAULT_RATE_LIMIT);
+    const identifier = bucket ? `${bucket}:${clientIP}` : clientIP;
+    const result = await checkRateLimit(identifier, config);
 
     const rateLimitHeaders = {
-        'X-RateLimit-Limit': String(DEFAULT_RATE_LIMIT.limit),
+        'X-RateLimit-Limit': String(config.limit),
         'X-RateLimit-Remaining': String(result.remaining),
         'X-RateLimit-Reset': String(result.reset),
     };
@@ -29,6 +38,8 @@ export async function withRateLimit(
             extra: {
                 ip: clientIP,
                 path: new URL(request.url).pathname,
+                bucket: bucket ?? 'default',
+                limit: config.limit,
                 remaining: result.remaining,
                 reset: result.reset,
             }

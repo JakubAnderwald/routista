@@ -163,7 +163,10 @@
         "long": "Długa",
         "fineTune": "Dostosuj",
         "meters": "metrów",
-        "instructions": "Przeciągnij mapę, aby ustawić środek. Wybierz tryb i długość trasy."
+        "instructions": "Przeciągnij mapę, aby ustawić środek. Wybierz tryb i długość trasy.",
+        "searchPlaceholder": "Szukaj miejsca (np. Warszawa)",
+        "searchRateLimited": "Zbyt wiele wyszukiwań. Odczekaj minutę i spróbuj ponownie.",
+        "searchFailed": "Wyszukiwanie nie powiodło się. Spróbuj ponownie."
     },
     "ImageUpload": {
         "title": "Wgraj swój kształt",

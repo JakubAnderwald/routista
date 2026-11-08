@@ -18,6 +18,11 @@ const TRANSPORT_MODES = [
     { id: "driving-car" as TransportMode, icon: Car },
 ] as const;
 
+/** Characters typed before the first autocomplete lookup. */
+const MIN_SEARCH_CHARS = 3;
+/** Pause in typing before an autocomplete lookup is sent. */
+const SEARCH_DEBOUNCE_MS = 400;
+
 // Dynamic import for Map to avoid SSR issues
 const DynamicMap = dynamic(() => import("@/components/Map"), {
     ssr: false,
@@ -77,6 +82,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
     const [isSearching, setIsSearching] = useState(false);
     const [suggestions, setSuggestions] = useState<RadarAddress[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [searchError, setSearchError] = useState<string | null>(null);
     const [blurTimeoutId, setBlurTimeoutId] = useState<NodeJS.Timeout | null>(null);
     const isProgrammaticMoveRef = useRef(false);
 
@@ -132,10 +138,15 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
 
     // Live search for suggestions
     useEffect(() => {
+        const query = searchQuery.trim();
+        const controller = new AbortController();
+
         const searchLocations = async () => {
-            if (!searchQuery.trim()) {
+            // Short prefixes match nothing useful and each lookup counts against the rate limit.
+            if (query.length < MIN_SEARCH_CHARS) {
                 setSuggestions([]);
                 setShowSuggestions(false);
+                setSearchError(null);
                 return;
             }
 
@@ -146,22 +157,38 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ query: searchQuery }),
+                    body: JSON.stringify({ query }),
+                    signal: controller.signal,
                 });
+                if (!response.ok) {
+                    setSuggestions([]);
+                    setShowSuggestions(false);
+                    setSearchError(response.status === 429 ? t('searchRateLimited') : t('searchFailed'));
+                    return;
+                }
                 const data = await response.json();
+                setSearchError(null);
                 setSuggestions(data.addresses || []);
                 setShowSuggestions(true);
             } catch (error) {
+                // A newer keystroke replaced this lookup; its own request owns the UI state.
+                if (controller.signal.aborted) return;
                 console.error("Search failed", error);
                 setSuggestions([]);
+                setSearchError(t('searchFailed'));
             } finally {
-                setIsSearching(false);
+                if (!controller.signal.aborted) {
+                    setIsSearching(false);
+                }
             }
         };
 
-        const timer = setTimeout(searchLocations, 300);
-        return () => clearTimeout(timer);
-    }, [searchQuery]);
+        const timer = setTimeout(searchLocations, SEARCH_DEBOUNCE_MS);
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [searchQuery, t]);
 
     const handleSuggestionClick = (suggestion: RadarAddress) => {
         // Clear any pending blur timeout
@@ -199,7 +226,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                     <div className="relative">
                         <input
                             type="text"
-                            placeholder="Search location (e.g. New York)"
+                            placeholder={t('searchPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onFocus={() => {
@@ -220,6 +247,12 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
                                 <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                             </div>
+                        )}
+
+                        {searchError && (
+                            <p role="status" className="absolute top-full left-0 right-0 mt-2 px-4 py-2 rounded-xl shadow-lg text-sm bg-white/90 dark:bg-gray-800/90 text-red-600 dark:text-red-400">
+                                {searchError}
+                            </p>
                         )}
 
                         {/* Suggestions dropdown */}

@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRadarAutocomplete } from "@/lib/radarService";
 import { withRateLimit } from "@/lib/apiRateLimit";
+import { AUTOCOMPLETE_RATE_LIMIT } from "@/lib/rateLimit";
 import { badRequest, readJsonObject } from "@/lib/apiRequest";
 import * as Sentry from "@sentry/nextjs";
 
-/** Returns Radar address suggestions for the posted `{ query }`, rate-limited per IP. */
+/**
+ * Returns Radar address suggestions for the posted `{ query }`, rate-limited per IP in its own
+ * bucket so typing cannot exhaust the route-generation limit.
+ */
 export async function POST(request: NextRequest) {
-    return withRateLimit(request, () => autocomplete(request));
+    return withRateLimit(request, () => autocomplete(request), {
+        config: AUTOCOMPLETE_RATE_LIMIT,
+        bucket: "autocomplete",
+    });
 }
 
 /**

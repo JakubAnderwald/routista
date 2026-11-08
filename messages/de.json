@@ -163,7 +163,10 @@
         "long": "Lang",
         "fineTune": "Feinabstimmung",
         "meters": "Meter",
-        "instructions": "Ziehe die Karte, um den Mittelpunkt zu wählen. Wähle Modus und Routenlänge."
+        "instructions": "Ziehe die Karte, um den Mittelpunkt zu wählen. Wähle Modus und Routenlänge.",
+        "searchPlaceholder": "Ort suchen (z. B. Berlin)",
+        "searchRateLimited": "Zu viele Suchanfragen. Bitte warte eine Minute und versuche es erneut.",
+        "searchFailed": "Suche fehlgeschlagen. Bitte versuche es erneut."
     },
     "ImageUpload": {
         "title": "Lade deine Form hoch",

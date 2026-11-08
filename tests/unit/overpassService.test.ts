@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fetchWaterAndBridges, getWaterAndBridges } from "@/lib/overpassService";
+import { classifyOverpassFailure, fetchWaterAndBridges, getWaterAndBridges } from "@/lib/overpassService";
+import * as Sentry from "@sentry/nextjs";
 import { RIVER_CROSSING } from "@/config";
 
 // Hoisted so the mock factory, which runs before imports, can see them.
@@ -356,6 +357,45 @@ describe("getWaterAndBridges", () => {
         expect(mockFetch).toHaveBeenCalledTimes(afterFirst);
     });
 
+    it("tells Sentry why Overpass failed", async () => {
+        redisGet.mockResolvedValueOnce(null);
+        mockFetch.mockResolvedValue({ ok: false, status: 429, text: async () => "rate limited" });
+
+        expect(await getWaterAndBridges([8.5, 8.5, 8.51, 8.51])).toBeNull();
+        expect(Sentry.captureMessage).toHaveBeenCalledWith(
+            "Overpass fetch failed",
+            expect.objectContaining({
+                tags: { "overpass.failure": "http-429" },
+                extra: expect.objectContaining({
+                    bbox: [8.5, 8.5, 8.51, 8.51],
+                    reason: expect.stringContaining("429: rate limited"),
+                }),
+            })
+        );
+    });
+
+    it("tags a well-formed JSON body with malformed elements as a bad response", async () => {
+        redisGet.mockResolvedValueOnce(null);
+        mockFetch.mockResolvedValue(okResponse({ elements: [null] }));
+
+        expect(await getWaterAndBridges([11.5, 11.5, 11.51, 11.51])).toBeNull();
+        expect(Sentry.captureMessage).toHaveBeenCalledWith(
+            "Overpass fetch failed",
+            expect.objectContaining({ tags: { "overpass.failure": "bad-response" } })
+        );
+    });
+
+    it("keeps the HTTP status when the error body cannot be read", async () => {
+        redisGet.mockResolvedValueOnce(null);
+        mockFetch.mockResolvedValue({ ok: false, status: 504, text: async () => { throw new Error("socket hang up"); } });
+
+        expect(await getWaterAndBridges([9.5, 9.5, 9.51, 9.51])).toBeNull();
+        expect(Sentry.captureMessage).toHaveBeenCalledWith(
+            "Overpass fetch failed",
+            expect.objectContaining({ tags: { "overpass.failure": "http-504" } })
+        );
+    });
+
     it("bounds the in-process cache", async () => {
         redisGet.mockResolvedValue(null);
         mockFetch.mockResolvedValue(okResponse(OVERPASS_RESPONSE));
@@ -384,5 +424,17 @@ describe("getWaterAndBridges", () => {
 
         expect(await pending).toBeNull();
         vi.useRealTimers();
+    });
+});
+
+describe("classifyOverpassFailure", () => {
+    it.each([
+        ["Overpass error after 1 attempts — 429: busy", "http-429"],
+        ["Overpass error after 1 attempts — 504: gateway timeout", "http-504"],
+        ["Overpass error after 1 attempts — This operation was aborted", "timeout"],
+        ["Overpass error after 1 attempts — fetch failed", "network"],
+        ["Overpass error after 1 attempts — Unexpected token '<', \"<html>\" is not valid JSON", "bad-response"],
+    ])("buckets %s as %s", (reason, expected) => {
+        expect(classifyOverpassFailure(reason)).toBe(expected);
     });
 });

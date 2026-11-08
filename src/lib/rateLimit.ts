@@ -32,6 +32,15 @@ export const DEFAULT_RATE_LIMIT: RateLimitConfig = {
 };
 
 /**
+ * Autocomplete rate limit. Counted separately from DEFAULT_RATE_LIMIT
+ * (see `bucket` in withRateLimit) so address lookups never block routing.
+ */
+export const AUTOCOMPLETE_RATE_LIMIT: RateLimitConfig = {
+    limit: RATE_LIMIT.autocompleteLimit,
+    windowSeconds: RATE_LIMIT.windowSeconds,
+};
+
+/**
  * Create Redis client from environment variables.
  * Checks both Vercel KV and Upstash naming conventions.
  * Returns null if not configured.

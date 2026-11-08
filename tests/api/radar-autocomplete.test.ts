@@ -48,6 +48,18 @@ describe('/api/radar/autocomplete', () => {
         });
     }
 
+    it('is rate-limited in its own autocomplete bucket, apart from route generation', async () => {
+        mockGetRadarAutocomplete.mockResolvedValueOnce({ addresses: [] });
+
+        await POST(createRequest({ query: 'London' }));
+
+        expect(mockWithRateLimit).toHaveBeenCalledWith(
+            expect.any(Request),
+            expect.any(Function),
+            expect.objectContaining({ bucket: 'autocomplete', config: expect.objectContaining({ limit: 60 }) })
+        );
+    });
+
     describe('Success cases', () => {
         it('should return 200 with address suggestions', async () => {
             const mockAddresses = {
@@ -63,7 +75,7 @@ describe('/api/radar/autocomplete', () => {
 
             const response = await POST(request);
 
-            expect(mockWithRateLimit).toHaveBeenCalledWith(request, expect.any(Function));
+            expect(mockWithRateLimit).toHaveBeenCalledWith(request, expect.any(Function), expect.anything());
 
             expect(response.status).toBe(200);
             const data = await response.json();

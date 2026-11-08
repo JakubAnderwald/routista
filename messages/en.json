@@ -163,7 +163,10 @@
         "long": "Long",
         "fineTune": "Fine-tune",
         "meters": "meters",
-        "instructions": "Drag the map to position the center. Select mode and route length."
+        "instructions": "Drag the map to position the center. Select mode and route length.",
+        "searchPlaceholder": "Search location (e.g. New York)",
+        "searchRateLimited": "Too many searches. Please wait a minute and try again.",
+        "searchFailed": "Search failed. Please try again."
     },
     "ImageUpload": {
         "title": "Upload your shape",

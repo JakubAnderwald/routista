@@ -181,7 +181,10 @@
         "long": "Lang",
         "fineTune": "Finjuster",
         "meters": "meter",
-        "instructions": "Træk kortet for at placere midten. Vælg transport og rutelængde."
+        "instructions": "Træk kortet for at placere midten. Vælg transport og rutelængde.",
+        "searchPlaceholder": "Søg efter sted (f.eks. København)",
+        "searchRateLimited": "For mange søgninger. Vent et minut, og prøv igen.",
+        "searchFailed": "Søgningen mislykkedes. Prøv igen."
     },
     "Header": {
         "home": "Hjem",

@@ -69,4 +69,31 @@ describe('withRateLimit', () => {
             })
         );
     });
+
+    it('counts a bucketed endpoint under its own key and limit', async () => {
+        mockCheckRateLimit.mockResolvedValue({ success: true, remaining: 59, reset: 1_700_000_060 });
+        const config = { limit: 60, windowSeconds: 60 };
+
+        const response = await withRateLimit(request(), async () => NextResponse.json({ ok: true }), {
+            config,
+            bucket: 'autocomplete',
+        });
+
+        expect(mockCheckRateLimit).toHaveBeenCalledWith('autocomplete:203.0.113.7', config);
+        expect(response.headers.get('X-RateLimit-Limit')).toBe('60');
+    });
+
+    it('reports the bucket limit on rejected requests', async () => {
+        mockCheckRateLimit.mockResolvedValue({ success: false, remaining: 0, reset: 1_700_000_060 });
+        const handler = vi.fn();
+
+        const response = await withRateLimit(request(), handler, {
+            config: { limit: 60, windowSeconds: 60 },
+            bucket: 'autocomplete',
+        });
+
+        expect(handler).not.toHaveBeenCalled();
+        expect(response.status).toBe(429);
+        expect(response.headers.get('X-RateLimit-Limit')).toBe('60');
+    });
 });

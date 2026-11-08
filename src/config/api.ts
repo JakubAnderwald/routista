@@ -47,8 +47,15 @@ export const CACHE = {
  * Rate limiting configuration
  */
 export const RATE_LIMIT = {
-    /** Maximum requests allowed in the window */
+    /** Maximum requests allowed in the window (route generation) */
     limit: 10,
+
+    /**
+     * Maximum autocomplete requests in the window. Kept in its own bucket so
+     * typing an address cannot use up the route-generation budget: one slowly
+     * typed address is easily more than 10 debounced lookups.
+     */
+    autocompleteLimit: 60,
     
     /** Time window in seconds */
     windowSeconds: 60,

@@ -82,7 +82,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
     const [isSearching, setIsSearching] = useState(false);
     const [suggestions, setSuggestions] = useState<RadarAddress[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [searchError, setSearchError] = useState<string | null>(null);
+    const [searchError, setSearchError] = useState<'searchRateLimited' | 'searchFailed' | null>(null);
     const [blurTimeoutId, setBlurTimeoutId] = useState<NodeJS.Timeout | null>(null);
     const isProgrammaticMoveRef = useRef(false);
 
@@ -163,7 +163,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                 if (!response.ok) {
                     setSuggestions([]);
                     setShowSuggestions(false);
-                    setSearchError(response.status === 429 ? t('searchRateLimited') : t('searchFailed'));
+                    setSearchError(response.status === 429 ? 'searchRateLimited' : 'searchFailed');
                     return;
                 }
                 const data = await response.json();
@@ -175,7 +175,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                 if (controller.signal.aborted) return;
                 console.error("Search failed", error);
                 setSuggestions([]);
-                setSearchError(t('searchFailed'));
+                setSearchError('searchFailed');
             } finally {
                 if (!controller.signal.aborted) {
                     setIsSearching(false);
@@ -188,7 +188,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
             clearTimeout(timer);
             controller.abort();
         };
-    }, [searchQuery, t]);
+    }, [searchQuery]);
 
     const handleSuggestionClick = (suggestion: RadarAddress) => {
         // Clear any pending blur timeout
@@ -251,7 +251,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
 
                         {searchError && (
                             <p role="status" className="absolute top-full left-0 right-0 mt-2 px-4 py-2 rounded-xl shadow-lg text-sm bg-white/90 dark:bg-gray-800/90 text-red-600 dark:text-red-400">
-                                {searchError}
+                                {t(searchError)}
                             </p>
                         )}
 

@@ -82,4 +82,18 @@ describe('withRateLimit', () => {
         expect(mockCheckRateLimit).toHaveBeenCalledWith('autocomplete:203.0.113.7', config);
         expect(response.headers.get('X-RateLimit-Limit')).toBe('60');
     });
+
+    it('reports the bucket limit on rejected requests', async () => {
+        mockCheckRateLimit.mockResolvedValue({ success: false, remaining: 0, reset: 1_700_000_060 });
+        const handler = vi.fn();
+
+        const response = await withRateLimit(request(), handler, {
+            config: { limit: 60, windowSeconds: 60 },
+            bucket: 'autocomplete',
+        });
+
+        expect(handler).not.toHaveBeenCalled();
+        expect(response.status).toBe(429);
+        expect(response.headers.get('X-RateLimit-Limit')).toBe('60');
+    });
 });

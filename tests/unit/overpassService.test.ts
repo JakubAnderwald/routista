@@ -366,8 +366,22 @@ describe("getWaterAndBridges", () => {
             "Overpass fetch failed",
             expect.objectContaining({
                 tags: { "overpass.failure": "http-429" },
-                extra: expect.objectContaining({ reason: expect.stringContaining("429: rate limited") }),
+                extra: expect.objectContaining({
+                    bbox: [8.5, 8.5, 8.51, 8.51],
+                    reason: expect.stringContaining("429: rate limited"),
+                }),
             })
+        );
+    });
+
+    it("tags a well-formed JSON body with malformed elements as a bad response", async () => {
+        redisGet.mockResolvedValueOnce(null);
+        mockFetch.mockResolvedValue(okResponse({ elements: [null] }));
+
+        expect(await getWaterAndBridges([11.5, 11.5, 11.51, 11.51])).toBeNull();
+        expect(Sentry.captureMessage).toHaveBeenCalledWith(
+            "Overpass fetch failed",
+            expect.objectContaining({ tags: { "overpass.failure": "bad-response" } })
         );
     });
 

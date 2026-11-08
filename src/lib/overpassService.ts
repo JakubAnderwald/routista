@@ -146,7 +146,7 @@ export async function getWaterAndBridges(
 /**
  * Buckets a runQuery failure message into a short Sentry tag, so the issue can be split by
  * cause: "timeout" (our abort), "http-429"/"http-504"/... (Overpass answered with an error),
- * "bad-response" (200 with an unparseable body), or "network".
+ * "bad-response" (200 with an unparseable or malformed body), or "network".
  */
 export function classifyOverpassFailure(reason: string): string {
     // Status first: a 504 body mentions "timeout" too.
@@ -154,7 +154,7 @@ export function classifyOverpassFailure(reason: string): string {
     if (status) return `http-${status[1]}`;
     if (/aborted|AbortError|timeout/i.test(reason)) return "timeout";
     // Overpass answered 200 but the body was not usable JSON.
-    if (/JSON|Unexpected (token|end)/i.test(reason)) return "bad-response";
+    if (/JSON|Unexpected (token|end)|bad response/i.test(reason)) return "bad-response";
     return "network";
 }
 
@@ -212,7 +212,13 @@ export async function fetchWaterAndBridges(
 out geom;`;
 
     const data = await runQuery(query, timeoutMs, attempts);
-    return toFeatureCollection(data.elements ?? []);
+    try {
+        return toFeatureCollection(data.elements ?? []);
+    } catch (error) {
+        // Parseable JSON in an unexpected shape: Overpass's fault, not the network's.
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Overpass bad response — ${message}`);
+    }
 }
 
 /**

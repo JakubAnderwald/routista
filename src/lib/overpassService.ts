@@ -145,13 +145,16 @@ export async function getWaterAndBridges(
 
 /**
  * Buckets a runQuery failure message into a short Sentry tag, so the issue can be split by
- * cause: "timeout" (our abort), "http-429"/"http-504"/... (Overpass answered), or "network".
+ * cause: "timeout" (our abort), "http-429"/"http-504"/... (Overpass answered with an error),
+ * "bad-response" (200 with an unparseable body), or "network".
  */
 export function classifyOverpassFailure(reason: string): string {
     // Status first: a 504 body mentions "timeout" too.
     const status = /— (\d{3}):/.exec(reason);
     if (status) return `http-${status[1]}`;
     if (/aborted|AbortError|timeout/i.test(reason)) return "timeout";
+    // Overpass answered 200 but the body was not usable JSON.
+    if (/JSON|Unexpected (token|end)/i.test(reason)) return "bad-response";
     return "network";
 }
 
@@ -246,7 +249,9 @@ async function runQuery(
                 return (await response.json()) as { elements: OverpassElement[] };
             }
 
-            lastError = `${response.status}: ${(await response.text()).slice(0, 200)}`;
+            // Keep the status even if the error body cannot be read: it is what Sentry is tagged by.
+            const body = await response.text().catch(() => "");
+            lastError = `${response.status}: ${body.slice(0, 200)}`;
             if (response.status !== 429 && response.status !== 504) break;
         } catch (error) {
             lastError = error instanceof Error ? error.message : String(error);

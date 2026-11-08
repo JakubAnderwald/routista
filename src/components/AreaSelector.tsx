@@ -141,9 +141,15 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
         const query = searchQuery.trim();
         const controller = new AbortController();
 
+        /**
+         * Looks up suggestions for `query`, unless it is too short. Results of a lookup that a
+         * newer keystroke aborted are dropped; that newer lookup owns the UI state.
+         */
         const searchLocations = async () => {
             // Short prefixes match nothing useful and each lookup counts against the rate limit.
             if (query.length < MIN_SEARCH_CHARS) {
+                // A longer query's lookup may have been aborted mid-flight, leaving the spinner on.
+                setIsSearching(false);
                 setSuggestions([]);
                 setShowSuggestions(false);
                 setSearchError(null);
@@ -167,6 +173,7 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                     return;
                 }
                 const data = await response.json();
+                if (controller.signal.aborted) return;
                 setSearchError(null);
                 setSuggestions(data.addresses || []);
                 setShowSuggestions(true);
@@ -228,7 +235,11 @@ export function AreaSelector({ onAreaSelect, initialCenter = [51.505, -0.09], in
                             type="text"
                             placeholder={t('searchPlaceholder')}
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                // The old message described the previous query, not this one.
+                                setSearchError(null);
+                            }}
                             onFocus={() => {
                                 // Clear any pending blur timeout when refocusing
                                 if (blurTimeoutId) {

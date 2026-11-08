@@ -371,6 +371,17 @@ describe("getWaterAndBridges", () => {
         );
     });
 
+    it("keeps the HTTP status when the error body cannot be read", async () => {
+        redisGet.mockResolvedValueOnce(null);
+        mockFetch.mockResolvedValue({ ok: false, status: 504, text: async () => { throw new Error("socket hang up"); } });
+
+        expect(await getWaterAndBridges([9.5, 9.5, 9.51, 9.51])).toBeNull();
+        expect(Sentry.captureMessage).toHaveBeenCalledWith(
+            "Overpass fetch failed",
+            expect.objectContaining({ tags: { "overpass.failure": "http-504" } })
+        );
+    });
+
     it("bounds the in-process cache", async () => {
         redisGet.mockResolvedValue(null);
         mockFetch.mockResolvedValue(okResponse(OVERPASS_RESPONSE));
@@ -408,6 +419,7 @@ describe("classifyOverpassFailure", () => {
         ["Overpass error after 1 attempts — 504: gateway timeout", "http-504"],
         ["Overpass error after 1 attempts — This operation was aborted", "timeout"],
         ["Overpass error after 1 attempts — fetch failed", "network"],
+        ["Overpass error after 1 attempts — Unexpected token '<', \"<html>\" is not valid JSON", "bad-response"],
     ])("buckets %s as %s", (reason, expected) => {
         expect(classifyOverpassFailure(reason)).toBe(expected);
     });

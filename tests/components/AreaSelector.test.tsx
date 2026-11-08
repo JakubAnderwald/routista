@@ -124,6 +124,53 @@ describe('AreaSelector search', () => {
         expect(console.error).not.toHaveBeenCalled();
     });
 
+    it('stops the spinner when a pending lookup is cut short by a shorter query', async () => {
+        mockFetch.mockImplementation((_url: string, init: RequestInit) => new Promise((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+        }));
+        const { container } = render(<AreaSelector onAreaSelect={vi.fn()} />);
+
+        typeQuery('London');
+        await waitFor(() => expect(container.querySelector('.animate-spin')).not.toBeNull(), WAIT);
+
+        typeQuery('Lo');
+        await waitFor(() => expect(container.querySelector('.animate-spin')).toBeNull(), WAIT);
+    });
+
+    it('drops results that arrive after the lookup was cancelled', async () => {
+        let finishJson: (value: unknown) => void = () => {};
+        mockFetch
+            .mockResolvedValueOnce({ ok: true, status: 200, json: () => new Promise(resolve => { finishJson = resolve; }) })
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({ addresses: [{ latitude: 52.2, longitude: 21, formattedAddress: 'Warsaw, PL' }] }),
+            });
+        render(<AreaSelector onAreaSelect={vi.fn()} />);
+
+        typeQuery('London');
+        await waitFor(() => expect(mockFetch).toHaveBeenCalledOnce(), WAIT);
+        typeQuery('Warsaw');
+        finishJson({ addresses: [{ latitude: 51.5, longitude: -0.1, formattedAddress: 'London, UK' }] });
+        // Before the Warsaw lookup (still debouncing) answers, the stale London list must not show.
+        await new Promise(resolve => setTimeout(resolve, 50));
+        expect(screen.queryByText('London, UK')).not.toBeInTheDocument();
+
+        expect(await screen.findByText('Warsaw, PL', {}, WAIT)).toBeInTheDocument();
+        expect(screen.queryByText('London, UK')).not.toBeInTheDocument();
+    });
+
+    it('hides the previous error as soon as the query is edited', async () => {
+        mockFetch.mockResolvedValue({ ok: false, status: 429, json: async () => ({}) });
+        render(<AreaSelector onAreaSelect={vi.fn()} />);
+
+        typeQuery('London');
+        await screen.findByText('searchRateLimited', {}, WAIT);
+
+        typeQuery('Londo');
+        expect(screen.queryByText('searchRateLimited')).not.toBeInTheDocument();
+    });
+
     it('clears the error once the query is shortened again', async () => {
         mockFetch.mockResolvedValue({ ok: false, status: 429, json: async () => ({}) });
         render(<AreaSelector onAreaSelect={vi.fn()} />);

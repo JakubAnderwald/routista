@@ -13,8 +13,10 @@ const nextConfig: NextConfig = {
     // in server stack frames and culprits ("il", "io", "ig" in radarService/apiRateLimit), and
     // they change from build to build, so the same error can split into a new issue after a
     // deploy. The server bundle runs in a Vercel function, where the extra size costs little.
-    // `serverMinification` is webpack-only; Turbopack reads this. Client and edge stay minified.
+    // Turbopack (the default bundler) reads `turbopackMinify`; `serverMinification` covers a
+    // `next build --webpack`. Client and edge stay minified.
     turbopackMinify: { server: false },
+    serverMinification: false,
   },
 };
 

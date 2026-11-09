@@ -129,8 +129,12 @@ export async function getWaterAndBridges(
     } catch (error) {
         failedLookups.set(key, nowSeconds() + RIVER_CROSSING.overpassFailureMemoSeconds);
         const reason = error instanceof Error ? error.message : "unknown";
+        // Hosts only: a keyed instance (Geofabrik and others) carries its API key in the path.
+        const failures =
+            error instanceof OverpassQueryError
+                ? error.failures.map(f => ({ ...f, endpoint: hostOf(f.endpoint) }))
+                : undefined;
         // Tag by the primary's failure, so the tag means the same as before the fallbacks.
-        const failures = error instanceof OverpassQueryError ? error.failures : undefined;
         const tagged = failures?.[0]?.reason ?? reason;
         // Overpass being down must never break route generation.
         console.warn(`[Overpass] Fetch failed, routing without water data: ${reason}`);
@@ -240,14 +244,9 @@ export async function fetchWaterAndBridges(
 );
 out geom;`;
 
-    const data = await runQuery(query, endpoints, timeoutMs, attempts);
-    try {
-        return toFeatureCollection(data.elements);
-    } catch (error) {
-        // Parseable JSON in an unexpected shape: Overpass's fault, not the network's.
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Overpass bad response — ${message}`);
-    }
+    // Converted inside the race, so a malformed answer counts against the endpoint
+    // that sent it and a healthy fallback can still win.
+    return runQuery(query, endpoints, timeoutMs, attempts, data => toFeatureCollection(data.elements));
 }
 
 /** A usable Overpass answer. */
@@ -295,6 +294,9 @@ class EndpointHttpError extends Error {
     }
 }
 
+/** How long an HTTP error body may take to arrive before the failure is reported without it. */
+const ERROR_BODY_WAIT_MS = 1_000;
+
 /** Remarks Overpass adds to a 200 whose query did not finish; the elements are then partial. */
 const RUNTIME_ERROR_REMARK = /runtime error|timed out|out of memory/i;
 
@@ -313,17 +315,18 @@ function hostOf(endpoint: string): string {
  * Overpass answers 429 when its query slots are full and 504 when a query
  * takes too long; both clear on their own after a short wait.
  */
-async function runQuery(
+async function runQuery<T>(
     query: string,
     endpoints: readonly string[],
     timeoutMs: number,
-    attempts: number
-): Promise<OverpassResponse> {
+    attempts: number,
+    parse: (data: OverpassResponse) => T
+): Promise<T> {
     let lastError: OverpassQueryError | undefined;
 
     for (let attempt = 1; attempt <= attempts; attempt++) {
         try {
-            return await queryWithFallback(query, endpoints, timeoutMs, RIVER_CROSSING.overpassHedgeDelayMs);
+            return await queryWithFallback(query, endpoints, timeoutMs, RIVER_CROSSING.overpassHedgeDelayMs, parse);
         } catch (error) {
             lastError = error as OverpassQueryError;
         }
@@ -351,15 +354,18 @@ async function runQuery(
  * @param endpoints - Interpreter URLs, in order of preference.
  * @param budgetMs - Time limit for the whole race.
  * @param hedgeDelayMs - How long an endpoint may stay silent before the next is asked too.
- * @returns The first usable response.
+ * @param parse - Converts a response. It runs before the race is decided, so
+ *   an answer it rejects counts as that endpoint failing ("bad response").
+ * @returns The first response that parsed.
  * @throws OverpassQueryError with each endpoint's failure if none produced one.
  */
-export function queryWithFallback(
+export function queryWithFallback<T = OverpassResponse>(
     query: string,
     endpoints: readonly string[],
     budgetMs: number,
-    hedgeDelayMs: number
-): Promise<OverpassResponse> {
+    hedgeDelayMs: number,
+    parse: (data: OverpassResponse) => T = data => data as T
+): Promise<T> {
     return new Promise((resolve, reject) => {
         const failures: (OverpassEndpointFailure | undefined)[] = endpoints.map(() => undefined);
         const controllers: AbortController[] = [];
@@ -397,26 +403,38 @@ export function queryWithFallback(
             controllers.push(controller);
             if (started < endpoints.length) hedgeTimer = setTimeout(startNext, hedgeDelayMs);
 
-            queryEndpoint(endpoint, query, controller.signal).then(
-                data =>
-                    settle(() => {
-                        if (index > 0) {
-                            const primary = failures[0]?.reason ?? `no answer after ${Date.now() - startedAt}ms`;
-                            console.log(`[Overpass] Served by ${hostOf(endpoint)} (primary: ${primary})`);
-                        }
-                        resolve(data);
-                    }),
-                error => {
-                    if (settled) return;
-                    failures[index] = {
-                        endpoint,
-                        reason: error instanceof Error ? error.message : String(error),
-                        status: error instanceof EndpointHttpError ? error.status : undefined,
-                    };
-                    if (failures.every(Boolean)) settle(fail);
-                    else startNext();
-                }
-            );
+            queryEndpoint(endpoint, query, controller.signal)
+                .then(data => {
+                    // Already decided: skip converting an answer nobody will use.
+                    if (settled) throw new Error("superseded");
+                    try {
+                        return parse(data);
+                    } catch (error) {
+                        // Parseable JSON in an unexpected shape: Overpass's fault, not the network's.
+                        const message = error instanceof Error ? error.message : String(error);
+                        throw new Error(`bad response — ${message}`);
+                    }
+                })
+                .then(
+                    parsed =>
+                        settle(() => {
+                            if (index > 0) {
+                                const primary = failures[0]?.reason ?? `no answer after ${Date.now() - startedAt}ms`;
+                                console.log(`[Overpass] Served by ${hostOf(endpoint)} (primary: ${primary})`);
+                            }
+                            resolve(parsed);
+                        }),
+                    error => {
+                        if (settled) return;
+                        failures[index] = {
+                            endpoint,
+                            reason: error instanceof Error ? error.message : String(error),
+                            status: error instanceof EndpointHttpError ? error.status : undefined,
+                        };
+                        if (failures.every(Boolean)) settle(fail);
+                        else startNext();
+                    }
+                );
         };
 
         // Only read by settle(), which never runs before this line: every caller is async.
@@ -449,7 +467,7 @@ async function queryEndpoint(endpoint: string, query: string, signal: AbortSigna
 
     if (!response.ok) {
         // Keep the status even if the error body cannot be read: it is what Sentry is tagged by.
-        const body = await response.text().catch(() => "");
+        const body = await readErrorBody(response, ERROR_BODY_WAIT_MS);
         throw new EndpointHttpError(response.status, body);
     }
 
@@ -461,6 +479,24 @@ async function queryEndpoint(endpoint: string, query: string, signal: AbortSigna
         throw new Error("bad response — no elements array");
     }
     return data as OverpassResponse;
+}
+
+/**
+ * Reads an error body for the failure message, giving up after `ms`.
+ *
+ * The status alone is enough to hand over to the next endpoint, so a body
+ * that stalls must not hold that up.
+ */
+async function readErrorBody(response: Response, ms: number): Promise<string> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const giveUp = new Promise<string>(resolve => {
+        timer = setTimeout(() => resolve(""), ms);
+    });
+    try {
+        return await Promise.race([response.text().catch(() => ""), giveUp]);
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 /** Turns raw Overpass elements into water Polygons and bridge LineStrings. */

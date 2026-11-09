@@ -12,5 +12,7 @@ describe('next.config', () => {
         const { default: config } = await import('../../next.config');
 
         expect(config.experimental?.turbopackMinify).toEqual({ server: false });
+        // The same for a webpack build.
+        expect(config.experimental?.serverMinification).toBe(false);
     });
 });

@@ -419,6 +419,18 @@ describe("getWaterAndBridges", () => {
         );
     });
 
+    it("sends Sentry hosts only, never the rest of an endpoint URL", async () => {
+        // Keyed instances (Geofabrik and others) put the API key in the path.
+        vi.stubEnv("OVERPASS_URLS", "https://keyed.example/SECRET-KEY/api/interpreter");
+        redisGet.mockResolvedValueOnce(null);
+        mockFetch.mockResolvedValue(errorResponse(502, "busy"));
+
+        expect(await getWaterAndBridges([15.5, 15.5, 15.51, 15.51])).toBeNull();
+        const [, context] = vi.mocked(Sentry.captureMessage).mock.calls[0];
+        expect(JSON.stringify(context)).not.toContain("SECRET-KEY");
+        expect(context).toMatchObject({ extra: { failures: [{ endpoint: "keyed.example", status: 502 }] } });
+    });
+
     it("does not cache a 200 whose query hit Overpass's own timeout", async () => {
         vi.stubEnv("OVERPASS_URL", "https://only.example/api/interpreter");
         redisGet.mockResolvedValueOnce(null);
@@ -595,6 +607,37 @@ describe("queryWithFallback", () => {
 
         expect(data.elements).toHaveLength(2);
         expect(requestedHosts()).toEqual(["a.example", "b.example", "c.example"]);
+    });
+
+    it("lets a fallback win when the first answer cannot be converted", async () => {
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        routeFetch({
+            "a.example": async () => okResponse({ elements: [null] }),
+            "b.example": async () => okResponse(OVERPASS_RESPONSE),
+        });
+        const parse = (data: { elements: unknown[] }) =>
+            data.elements.map(element => (element as { id: number }).id);
+
+        const ids = await queryWithFallback("q", ENDPOINTS, BUDGET_MS, HEDGE_MS, parse);
+
+        expect(ids).toEqual([1, 2]);
+        expect(requestedHosts()).toEqual(["a.example", "b.example"]);
+    });
+
+    it("hands over on an HTTP error even when its body never arrives", async () => {
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        routeFetch({
+            "a.example": async () => ({ ok: false, status: 502, text: () => new Promise<string>(() => {}) }),
+            "b.example": async () => okResponse(OVERPASS_RESPONSE),
+        });
+
+        const pending = queryWithFallback("q", ENDPOINTS, BUDGET_MS, HEDGE_MS);
+        // Well before the hedge delay would have started the next endpoint.
+        await vi.advanceTimersByTimeAsync(1_000);
+        const data = await pending;
+
+        expect(data.elements).toHaveLength(2);
+        expect(requestedHosts()).toEqual(["a.example", "b.example"]);
     });
 
     it("reports every endpoint's failure, in configured order, when all fail", async () => {

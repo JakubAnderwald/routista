@@ -27,7 +27,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **SEO (canonical, hreflang, sitemap)** | `src/lib/seo.ts`, `src/i18n/pageMetadata.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/config/site.ts` | Self-canonical + hreflang per page, localized titles, crawler files. See ARCHITECTURE.md "Internationalisation & SEO". |
 | **i18n Routing** | `src/i18n/routing.ts`, `middleware.ts` | `localePrefix: 'as-needed'`: English unprefixed, `/en/*` 308s to it, other locales prefixed. |
 | **Rate Limiting** | `src/lib/apiRateLimit.ts`, `src/lib/rateLimit.ts` | IP-based rate limiting (10 req/min) using Upstash Redis, applied inside the `/api/radar/*` route handlers. |
-| **Error Tracking** | `instrumentation-client.ts`, `sentry.*.config.ts`, `src/lib/sentryDataCollection.ts`, `src/app/global-error.tsx`, `tests/unit/sentryConfig.test.ts` | Sentry SDK for client/server/edge error capture. Disabled off-Vercel (`environment: development`) to keep local runs out of the Free-plan quota. The client config drops browser-extension noise (`ignoreErrors` / `denyUrls`, Sentry ROUTISTA-5). All three pin `dataCollection` to the SDK 10 defaults (no user info or client IP, IP and proxy names denied) instead of relying on SDK defaults. See ARCHITECTURE.md for what SDK 10 sends regardless. |
+| **Error Tracking** | `instrumentation-client.ts`, `sentry.*.config.ts`, `src/lib/sentryDataCollection.ts`, `src/app/global-error.tsx`, `tests/unit/sentryConfig.test.ts` | Sentry SDK for client/server/edge error capture. Disabled off-Vercel (`environment: development`) to keep local runs out of the Free-plan quota. The client config drops browser-extension noise (`ignoreErrors` / `denyUrls`, Sentry ROUTISTA-5). All three pin `dataCollection` to the SDK 10 defaults (no user info or client IP, IP and proxy names denied) instead of relying on SDK defaults. All three set `attachStacktrace: false` so message issues are titled by their text, and `next.config.ts` keeps server code unminified (`turbopackMinify.server: false`) so server frames carry real function names. See ARCHITECTURE.md for what SDK 10 sends regardless. |
 | **Product Analytics** | `src/lib/analytics.ts`, `src/components/PostHogProvider.tsx` | PostHog analytics with typed events and automatic pageview tracking. |
 | **Testing Hooks** | `src/app/[locale]/create/CreateClient.tsx` | Contains hidden `data-testid` controls and `window.__routistaTestHelpers`. |
 | **Unit Tests** | `tests/unit/*.test.ts` | Pure function tests for `src/lib/` modules. Run with `npm test`. |
@@ -61,7 +61,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 *   `routeCleanup.ts`: Out-and-back spur removal. Pure, no I/O.
 *   `waterGeometry.ts`: Water polygon queries. Pure, no I/O.
 *   `riverCrossing.ts`: Bridge selection and river crossing repair. Pure, no I/O.
-*   `overpassService.ts`: OSM water and bridge fetching, with Redis caching.
+*   `overpassService.ts`: OSM water and bridge fetching, with Redis caching and a hedged race across fallback Overpass instances (`queryWithFallback`).
 *   `redisClient.ts`: Shared Upstash Redis client. Returns null when unconfigured.
 *   `apiRequest.ts`: Request-body validation for the API routes: `readJsonObject`, `isCoordinateList`, `badRequest`. Malformed requests get a 400 and stay out of Sentry.
 *   `imageProcessingCore.ts`: **CRITICAL**. Platform-agnostic shape extraction algorithms (Otsu, boundary tracing).
@@ -117,7 +117,8 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `apiRateLimit.test.ts`: `withRateLimit` wrapper: headers on allowed requests, 429 + Sentry warning on blocked ones.
     *   `middleware.test.ts`: Middleware matcher (API, Sentry tunnel, dotted paths and static assets excluded), handler routing, and the 308 `/en` prefix strip.
     *   `instrumentation.test.ts`: `src/instrumentation.ts` stays in `src/` (no root copy), `register()` loads the server or edge config per runtime, and `onRequestError` is the SDK's `captureRequestError`.
-    *   `sentryConfig.test.ts`: The client/server/edge Sentry configs set `environment` from `NEXT_PUBLIC_VERCEL_ENV` and stay disabled locally (`development`) but enabled on preview and production. The client config drops browser-extension errors (ROUTISTA-5), checked through the SDK's real event filter. All three pass the shared `dataCollection` policy, which must list every category.
+    *   `sentryConfig.test.ts`: The client/server/edge Sentry configs set `environment` from `NEXT_PUBLIC_VERCEL_ENV` and stay disabled locally (`development`) but enabled on preview and production. The client config drops browser-extension errors (ROUTISTA-5), checked through the SDK's real event filter. All three pass the shared `dataCollection` policy, which must list every category. All three turn off `attachStacktrace`.
+    *   `nextConfig.test.ts`: `next.config.ts` keeps server code unminified (`experimental.turbopackMinify.server: false`).
     *   `seo.test.ts`: Localized URLs, canonical/hreflang alternates, page metadata.
     *   `sitemap.test.ts`: Sitemap entries and robots rules.
     *   `routeGenerator.test.ts`: Route generation client tests.

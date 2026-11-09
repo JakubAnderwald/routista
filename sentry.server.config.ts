@@ -17,6 +17,13 @@ Sentry.init({
     // See src/lib/sentryDataCollection.ts.
     dataCollection: SENTRY_DATA_COLLECTION,
 
+    // @sentry/nextjs 11 turns this on by default, which gives every captureMessage a synthetic
+    // stack trace. Sentry then titles the issue after the top frame's function instead of the
+    // message, and in a production bundle that name is minified: "Rate limit exceeded" arrived
+    // as issue "im" (ROUTISTA-8), "Overpass fetch failed" as "r4" (ROUTISTA-7). Off, messages
+    // are titled and grouped by their text again, as under SDK 10. Real errors keep their stacks.
+    attachStacktrace: false,
+
     // See instrumentation-client.ts — local dev stays out of the Free-plan quota.
     enabled: environment !== 'development',
 

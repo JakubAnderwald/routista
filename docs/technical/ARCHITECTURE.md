@@ -80,13 +80,22 @@ State is primarily managed in the parent page (`src/app/create/page.tsx` or simi
 routes wrong, or stale routes are served for up to 24 hours after a fix ships.
 
 ### OSM Water Data (Overpass, cached in Upstash Redis)
-- Water polygons and bridges are fetched from the public Overpass API
+- Water polygons and bridges are fetched from public Overpass instances: overpass-api.de
+  first, then overpass.private.coffee and overpass.openstreetmap.fr (`OVERPASS_URLS` overrides
+  the list). The main instance is often at capacity, so the request path races them: the next
+  one starts as soon as the previous fails, or after 4 s without an answer. The first usable
+  answer wins and the rest are aborted. Only worldwide instances belong in the list, since a
+  regional one would answer "no water" outside its area and that would be cached.
+- A 200 whose `remark` says the query hit Overpass's own timeout or memory limit counts as a
+  failure, not as an empty area
+- Sentry hears about it only when every instance fails ("Overpass fetch failed", tagged
+  `overpass.failure` by the primary's cause, with each instance's reason in `extra.failures`)
 - Cache TTL: 30 days, keyed by a bounding box snapped to a ~1.1 km grid, plus a per-lambda
   in-memory cache
 - Only fetched for walking and cycling routes that show signs of having used a ferry, so most
   routes never call it
 - Graceful fallback: if Overpass is slow or down, the route is returned exactly as Radar
-  produced it. One attempt with a 15 s timeout bounds the delay, and a failure is remembered
+  produced it. One attempt with a 15 s budget shared by all instances bounds the delay, and a failure is remembered
   for 60 s so an outage does not make every request pay it again.
 - Responses over 800 KB are kept in the per-process cache only, which is bounded to 16 entries
 
@@ -120,6 +129,12 @@ See `docs/technical/ISSUE_47_BASELINE.md`.
 - Global error boundary for React errors
 - API route errors captured with context
 - Rate limit blocks logged as warnings
+- `attachStacktrace: false` in all three configs. `@sentry/nextjs` 11 defaults it to true, and
+  Sentry then titles `captureMessage` issues after the top frame's function name, minified in
+  production ("im", "r4") instead of the message.
+- Server code is built unminified (`experimental.turbopackMinify.server: false` in
+  `next.config.ts`), so server stack frames carry real function names and grouping does not
+  shift between deploys. Client and edge bundles stay minified.
 
 Every event is tagged with `environment` (`production` / `preview` / `development`) so one
 shared Sentry project can separate the three. Filter by environment in the Sentry UI.

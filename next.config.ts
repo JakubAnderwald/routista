@@ -8,6 +8,16 @@ const withNextIntl = createNextIntlPlugin();
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  experimental: {
+    // Keep server function names in production builds. Minified, they are what Sentry shows
+    // in server stack frames and culprits ("il", "io", "ig" in radarService/apiRateLimit), and
+    // they change from build to build, so the same error can split into a new issue after a
+    // deploy. The server bundle runs in a Vercel function, where the extra size costs little.
+    // Turbopack (the default bundler) reads `turbopackMinify`; `serverMinification` covers a
+    // `next build --webpack`. Client and edge stay minified.
+    turbopackMinify: { server: false },
+    serverMinification: false,
+  },
 };
 
 // Wrap with next-intl first, then Sentry

@@ -51,6 +51,9 @@ Sentry.init({
     // See src/lib/sentryDataCollection.ts.
     dataCollection: SENTRY_DATA_COLLECTION,
 
+    // Messages titled by their text, not a minified function name. See sentry.server.config.ts.
+    attachStacktrace: false,
+
     // Local dev stays silent: the org is on Sentry's Free plan, where local events and
     // replays count against the same monthly quota as real traffic.
     enabled: environment !== 'development',

@@ -100,7 +100,8 @@ What this does **not** promise:
 - **Not every OSM response is shared via Redis.** Responses over 800 KB stay in the calling
   process only, and areas over 60 km² are not fetched at all.
 - **If OSM data cannot be fetched, the route is returned exactly as Radar produced it** —
-  including when Overpass is slow, down, or the area is too large.
+  including when Overpass is slow, down, or the area is too large. A busy or silent main
+  Overpass instance hands over to backup instances within the same 15 s budget first.
 
 See `docs/technical/ISSUE_47_BASELINE.md` for the measurements.
 

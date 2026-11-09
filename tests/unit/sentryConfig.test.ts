@@ -51,6 +51,16 @@ describe.each(CONFIGS)('%s Sentry config', (_name, load) => {
         const { SENTRY_DATA_COLLECTION } = await import('../../src/lib/sentryDataCollection');
         expect(init).toHaveBeenCalledWith(expect.objectContaining({ dataCollection: SENTRY_DATA_COLLECTION }));
     });
+
+    // @sentry/nextjs 11 defaults this to true, and Sentry then titles message issues after a
+    // minified function name ("im", "r4") instead of the message.
+    it('turns off synthetic stack traces on messages', async () => {
+        vi.stubEnv('NEXT_PUBLIC_VERCEL_ENV', 'production');
+
+        await load();
+
+        expect(init).toHaveBeenCalledWith(expect.objectContaining({ attachStacktrace: false }));
+    });
 });
 
 describe('SENTRY_DATA_COLLECTION', () => {

@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { classifyOverpassFailure, fetchWaterAndBridges, getWaterAndBridges } from "@/lib/overpassService";
+import {
+    classifyOverpassFailure,
+    fetchWaterAndBridges,
+    getWaterAndBridges,
+    overpassEndpoints,
+    OverpassQueryError,
+    queryWithFallback,
+} from "@/lib/overpassService";
 import * as Sentry from "@sentry/nextjs";
 import { RIVER_CROSSING } from "@/config";
 
@@ -53,6 +60,33 @@ const OVERPASS_RESPONSE = {
 
 function okResponse(body: unknown) {
     return { ok: true, status: 200, json: async () => body, text: async () => JSON.stringify(body) };
+}
+
+function errorResponse(status: number, body: string) {
+    return { ok: false, status, text: async () => body };
+}
+
+/** A request that never answers, and rejects like fetch does once it is aborted. */
+function hang(signal: AbortSignal): Promise<never> {
+    return new Promise((_, reject) => {
+        signal.addEventListener("abort", () =>
+            reject(new DOMException("This operation was aborted", "AbortError"))
+        );
+    });
+}
+
+/** Answers each request by the host it was sent to. */
+function routeFetch(byHost: Record<string, (signal: AbortSignal) => Promise<unknown>>) {
+    mockFetch.mockImplementation((url: string, init: RequestInit) => {
+        const reply = byHost[new URL(url).host];
+        if (!reply) throw new Error(`unexpected request to ${url}`);
+        return reply(init.signal as AbortSignal);
+    });
+}
+
+/** Hosts mockFetch was called with, in order. */
+function requestedHosts(): string[] {
+    return mockFetch.mock.calls.map(([url]) => new URL(url as string).host);
 }
 
 describe("fetchWaterAndBridges", () => {
@@ -342,7 +376,62 @@ describe("getWaterAndBridges", () => {
         mockFetch.mockResolvedValue({ ok: false, status: 429, text: async () => "busy" });
 
         expect(await getWaterAndBridges([6.5, 6.5, 6.51, 6.51])).toBeNull();
-        expect(mockFetch).toHaveBeenCalledTimes(1);
+        // Each endpoint asked once, none of them twice.
+        expect(mockFetch).toHaveBeenCalledTimes(RIVER_CROSSING.overpassEndpoints.length);
+    });
+
+    it("serves from a fallback without reporting to Sentry when the primary is at capacity", async () => {
+        redisGet.mockResolvedValueOnce(null);
+        routeFetch({
+            "overpass-api.de": async () => errorResponse(502, "server is currently at capacity"),
+            "overpass.private.coffee": async () => okResponse(OVERPASS_RESPONSE),
+        });
+
+        const result = await getWaterAndBridges([12.5, 12.5, 12.51, 12.51]);
+
+        expect(result?.features.length).toBeGreaterThan(0);
+        expect(Sentry.captureMessage).not.toHaveBeenCalled();
+        expect(redisSet).toHaveBeenCalled();
+    });
+
+    it("tags an all-endpoint failure by the primary's cause and lists every endpoint", async () => {
+        redisGet.mockResolvedValueOnce(null);
+        routeFetch({
+            "overpass-api.de": async () => errorResponse(502, "at capacity"),
+            "overpass.private.coffee": async () => { throw new Error("fetch failed"); },
+            "overpass.openstreetmap.fr": async () => errorResponse(429, "busy"),
+        });
+
+        expect(await getWaterAndBridges([13.5, 13.5, 13.51, 13.51])).toBeNull();
+        expect(Sentry.captureMessage).toHaveBeenCalledTimes(1);
+        expect(Sentry.captureMessage).toHaveBeenCalledWith(
+            "Overpass fetch failed",
+            expect.objectContaining({
+                tags: { "overpass.failure": "http-502" },
+                extra: expect.objectContaining({
+                    failures: [
+                        expect.objectContaining({ endpoint: expect.stringContaining("overpass-api.de"), status: 502 }),
+                        expect.objectContaining({ reason: "fetch failed" }),
+                        expect.objectContaining({ status: 429 }),
+                    ],
+                }),
+            })
+        );
+    });
+
+    it("does not cache a 200 whose query hit Overpass's own timeout", async () => {
+        vi.stubEnv("OVERPASS_URL", "https://only.example/api/interpreter");
+        redisGet.mockResolvedValueOnce(null);
+        mockFetch.mockResolvedValue(
+            okResponse({ elements: [], remark: 'runtime error: Query timed out in "query" at line 3 after 16 seconds.' })
+        );
+
+        expect(await getWaterAndBridges([14.5, 14.5, 14.51, 14.51])).toBeNull();
+        expect(redisSet).not.toHaveBeenCalled();
+        expect(Sentry.captureMessage).toHaveBeenCalledWith(
+            "Overpass fetch failed",
+            expect.objectContaining({ tags: { "overpass.failure": "bad-response" } })
+        );
     });
 
     it("remembers a failure briefly instead of paying the timeout again", async () => {
@@ -427,8 +516,187 @@ describe("getWaterAndBridges", () => {
     });
 });
 
+describe("queryWithFallback", () => {
+    const ENDPOINTS = [
+        "https://a.example/api/interpreter",
+        "https://b.example/api/interpreter",
+        "https://c.example/api/interpreter",
+    ];
+    const BUDGET_MS = 15_000;
+    const HEDGE_MS = 4_000;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+    });
+
+    it("asks only the primary when it answers", async () => {
+        routeFetch({ "a.example": async () => okResponse(OVERPASS_RESPONSE) });
+
+        const data = await queryWithFallback("q", ENDPOINTS, BUDGET_MS, HEDGE_MS);
+
+        expect(data.elements).toHaveLength(2);
+        expect(requestedHosts()).toEqual(["a.example"]);
+    });
+
+    it("hands over at once when the primary fails outright", async () => {
+        const log = vi.spyOn(console, "log").mockImplementation(() => {});
+        routeFetch({
+            "a.example": async () => errorResponse(502, "at capacity"),
+            "b.example": async () => okResponse(OVERPASS_RESPONSE),
+        });
+
+        const data = await queryWithFallback("q", ENDPOINTS, BUDGET_MS, HEDGE_MS);
+
+        expect(data.elements).toHaveLength(2);
+        // No hedge delay was waited out: the 502 started the next endpoint.
+        expect(vi.getTimerCount()).toBe(0);
+        expect(requestedHosts()).toEqual(["a.example", "b.example"]);
+        expect(log).toHaveBeenCalledWith(expect.stringContaining("Served by b.example (primary: 502: at capacity)"));
+    });
+
+    it("asks the next endpoint too when the primary stays silent, and cancels the primary", async () => {
+        let primarySignal: AbortSignal | undefined;
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        routeFetch({
+            "a.example": signal => {
+                primarySignal = signal;
+                return hang(signal);
+            },
+            "b.example": async () => okResponse(OVERPASS_RESPONSE),
+        });
+
+        const pending = queryWithFallback("q", ENDPOINTS, BUDGET_MS, HEDGE_MS);
+        await vi.advanceTimersByTimeAsync(HEDGE_MS - 1);
+        expect(requestedHosts()).toEqual(["a.example"]);
+
+        await vi.advanceTimersByTimeAsync(1);
+        const data = await pending;
+
+        expect(data.elements).toHaveLength(2);
+        expect(requestedHosts()).toEqual(["a.example", "b.example"]);
+        expect(primarySignal?.aborted).toBe(true);
+    });
+
+    it("moves on from a 200 whose body is not a usable answer", async () => {
+        routeFetch({
+            "a.example": async () => okResponse({ elements: [], remark: "runtime error: Query run out of memory" }),
+            "b.example": async () => okResponse({ remark: "no elements here" }),
+            "c.example": async () => okResponse(OVERPASS_RESPONSE),
+        });
+        vi.spyOn(console, "log").mockImplementation(() => {});
+
+        const data = await queryWithFallback("q", ENDPOINTS, BUDGET_MS, HEDGE_MS);
+
+        expect(data.elements).toHaveLength(2);
+        expect(requestedHosts()).toEqual(["a.example", "b.example", "c.example"]);
+    });
+
+    it("reports every endpoint's failure, in configured order, when all fail", async () => {
+        routeFetch({
+            "a.example": async () => errorResponse(400, "bad query"),
+            "b.example": async () => errorResponse(400, "bad query"),
+            "c.example": async () => { throw new Error("fetch failed"); },
+        });
+
+        const error = await queryWithFallback("q", ENDPOINTS, BUDGET_MS, HEDGE_MS).catch(e => e);
+
+        expect(error).toBeInstanceOf(OverpassQueryError);
+        expect(error.failures).toEqual([
+            { endpoint: ENDPOINTS[0], reason: "400: bad query", status: 400 },
+            { endpoint: ENDPOINTS[1], reason: "400: bad query", status: 400 },
+            { endpoint: ENDPOINTS[2], reason: "fetch failed", status: undefined },
+        ]);
+        expect(error.message).toBe(
+            "Overpass failed on 3 endpoint(s) — a.example: 400: bad query; b.example: 400: bad query; c.example: fetch failed"
+        );
+        // The network failure could clear on a later attempt.
+        expect(error.retryable).toBe(true);
+    });
+
+    it("is not worth retrying when every endpoint rejected the query", async () => {
+        mockFetch.mockResolvedValue(errorResponse(400, "bad query"));
+
+        const error = await queryWithFallback("q", ENDPOINTS, BUDGET_MS, HEDGE_MS).catch(e => e);
+
+        expect(error.retryable).toBe(false);
+    });
+
+    it("gives up on everything when the budget runs out", async () => {
+        const signals: AbortSignal[] = [];
+        mockFetch.mockImplementation((_url: string, init: RequestInit) => {
+            signals.push(init.signal as AbortSignal);
+            return hang(init.signal as AbortSignal);
+        });
+
+        // Short enough that the third endpoint is never reached.
+        const pending = queryWithFallback("q", ENDPOINTS, 6_000, HEDGE_MS).catch(e => e);
+        await vi.advanceTimersByTimeAsync(6_000);
+        const error = await pending;
+
+        expect(error.failures.map((f: { reason: string }) => f.reason)).toEqual([
+            "timeout after 6000ms",
+            "timeout after 6000ms",
+            "not tried",
+        ]);
+        expect(classifyOverpassFailure(error.failures[0].reason)).toBe("timeout");
+        expect(signals).toHaveLength(2);
+        expect(signals.every(signal => signal.aborted)).toBe(true);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+});
+
+describe("overpassEndpoints", () => {
+    afterEach(() => {
+        vi.unstubAllEnvs();
+    });
+
+    it("defaults to the configured list, primary first", () => {
+        vi.stubEnv("OVERPASS_URLS", "");
+        vi.stubEnv("OVERPASS_URL", "");
+
+        expect(overpassEndpoints()).toEqual([...RIVER_CROSSING.overpassEndpoints]);
+        expect(overpassEndpoints()[0]).toContain("overpass-api.de");
+    });
+
+    it("takes a comma-separated OVERPASS_URLS list", () => {
+        vi.stubEnv("OVERPASS_URLS", " https://a.example/api/interpreter, ,https://b.example/api/interpreter ");
+        vi.stubEnv("OVERPASS_URL", "https://ignored.example/api/interpreter");
+
+        expect(overpassEndpoints()).toEqual([
+            "https://a.example/api/interpreter",
+            "https://b.example/api/interpreter",
+        ]);
+    });
+
+    it("pins a single endpoint with the older OVERPASS_URL", () => {
+        vi.stubEnv("OVERPASS_URLS", "");
+        vi.stubEnv("OVERPASS_URL", "https://only.example/api/interpreter");
+
+        expect(overpassEndpoints()).toEqual(["https://only.example/api/interpreter"]);
+    });
+
+    it("keeps fixture capture on the primary alone", async () => {
+        vi.stubEnv("OVERPASS_URLS", "");
+        vi.stubEnv("OVERPASS_URL", "");
+        mockFetch.mockReset();
+        mockFetch.mockResolvedValue(errorResponse(400, "bad query"));
+
+        await expect(fetchWaterAndBridges(BBOX)).rejects.toThrow("400");
+        expect(requestedHosts()).toEqual(["overpass-api.de"]);
+    });
+});
+
 describe("classifyOverpassFailure", () => {
     it.each([
+        ["502: # 502 Gateway Timeout", "http-502"],
+        ["timeout after 15000ms", "timeout"],
+        ["bad response — runtime error: Query timed out", "bad-response"],
         ["Overpass error after 1 attempts — 429: busy", "http-429"],
         ["Overpass error after 1 attempts — 504: gateway timeout", "http-504"],
         ["Overpass error after 1 attempts — This operation was aborted", "timeout"],

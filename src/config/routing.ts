@@ -290,10 +290,33 @@ export const RIVER_CROSSING = {
     maxDataAreaSqKm: 60,
 
     /**
-     * Abort a single Overpass attempt after this long. Route generation waits
-     * at most `overpassAttempts` of these, so keep the two in step.
+     * Overpass instances to ask, in order of preference. Overridden by the
+     * `OVERPASS_URLS` (comma-separated) or `OVERPASS_URL` environment variable.
+     *
+     * The public overpass-api.de is often at capacity (ROUTISTA-7: 502s and
+     * timeouts), so the request path falls back to the others. Every entry
+     * must hold worldwide data: a regional instance answers outside its area
+     * with an empty result, which would be cached as "no water" for a month.
+     */
+    overpassEndpoints: [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.private.coffee/api/interpreter",
+        "https://overpass.openstreetmap.fr/api/interpreter",
+    ],
+
+    /**
+     * Time budget for one Overpass attempt, shared by every endpoint raced in
+     * it. Route generation waits at most `overpassAttempts` of these, so keep
+     * the two in step.
      */
     overpassTimeoutMs: 15_000,
+
+    /**
+     * How long an endpoint gets to answer before the next one is asked too.
+     * An endpoint that fails outright hands over at once instead. The first
+     * usable answer wins and the others are cancelled.
+     */
+    overpassHedgeDelayMs: 4_000,
 
     /**
      * Attempts on the request path. One: a route must not wait on a retry

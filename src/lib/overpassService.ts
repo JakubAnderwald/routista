@@ -476,7 +476,7 @@ async function queryEndpoint(endpoint: string, query: string, signal: AbortSigna
         throw new Error(`bad response — ${data.remark.slice(0, 200)}`);
     }
     if (!Array.isArray(data?.elements)) {
-        throw new Error("bad response — no elements array");
+        throw new TypeError("bad response — no elements array");
     }
     return data as OverpassResponse;
 }

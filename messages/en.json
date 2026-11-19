@@ -131,7 +131,8 @@
         },
         "processing": {
             "title": "Crunching the numbers...",
-            "description": "Matching your shape to the road network."
+            "description": "Matching your shape to the road network.",
+            "riverCheck": "Your route crosses a river, so we're checking where the bridges are to keep you out of the water. This can take up to half a minute."
         },
         "result": {
             "title": "Your Route",

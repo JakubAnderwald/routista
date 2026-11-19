@@ -3,6 +3,13 @@ import { getRadarRoute } from "@/lib/radarService";
 import { withRateLimit } from "@/lib/apiRateLimit";
 import { badRequest, isCoordinateList, readJsonObject } from "@/lib/apiRequest";
 import * as Sentry from "@sentry/nextjs";
+import { encodeRouteStreamMessage, ROUTE_STREAM_CONTENT_TYPE } from "@/lib/routeProgress";
+
+/**
+ * Seconds Vercel lets this function run. The river-crossing repair can wait up to
+ * `RIVER_CROSSING.overpassTimeoutMs` on Overpass on top of several Radar passes.
+ */
+export const maxDuration = 60;
 
 /** Generates a Radar route for the posted `{ coordinates, mode }`, rate-limited per IP. */
 export async function POST(request: NextRequest) {
@@ -32,23 +39,60 @@ async function generateRoute(request: NextRequest) {
         return badRequest("mode must be a string");
     }
 
+    if (request.headers.get("accept")?.includes(ROUTE_STREAM_CONTENT_TYPE)) {
+        return streamRoute(coordinates, mode);
+    }
+
     try {
         const result = await getRadarRoute({ coordinates, mode: mode as string });
 
         return NextResponse.json(result);
 
     } catch (error: unknown) {
-        console.error("[API] Error generating route:", error);
-
-        // Capture error in Sentry with context
-        Sentry.captureException(error, {
-            extra: {
-                endpoint: "/api/radar/directions",
-                coordinatesCount: coordinates.length,
-            }
-        });
-
-        const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
-        return NextResponse.json({ error: errorMessage }, { status: 500 });
+        return NextResponse.json({ error: reportFailure(error, coordinates.length) }, { status: 500 });
     }
+}
+
+/**
+ * Generates the route as NDJSON: progress lines while it works, then one result or error line.
+ *
+ * The status is already 200 once the stream starts, so a failure arrives as an error line.
+ */
+function streamRoute(coordinates: [number, number][], mode: string | undefined): NextResponse {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+            const send = (line: string) => controller.enqueue(encoder.encode(line));
+            try {
+                const data = await getRadarRoute({ coordinates, mode: mode as string }, stage =>
+                    send(encodeRouteStreamMessage({ type: "progress", stage }))
+                );
+                send(encodeRouteStreamMessage({ type: "result", data }));
+            } catch (error: unknown) {
+                send(encodeRouteStreamMessage({ type: "error", error: reportFailure(error, coordinates.length) }));
+            }
+            controller.close();
+        },
+    });
+
+    return new NextResponse(stream, {
+        headers: {
+            "Content-Type": `${ROUTE_STREAM_CONTENT_TYPE}; charset=utf-8`,
+            "Cache-Control": "no-store",
+        },
+    });
+}
+
+/** Logs and reports a route failure to Sentry, returning the message for the client. */
+function reportFailure(error: unknown, coordinatesCount: number): string {
+    console.error("[API] Error generating route:", error);
+
+    Sentry.captureException(error, {
+        extra: {
+            endpoint: "/api/radar/directions",
+            coordinatesCount,
+        }
+    });
+
+    return error instanceof Error ? error.message : "Internal Server Error";
 }

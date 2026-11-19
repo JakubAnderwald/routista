@@ -10,6 +10,7 @@ import {
 } from "./waterGeometry";
 import { BridgeIndex, buildBridgeIndex, planCrossings, repairWaterLegs } from "./riverCrossing";
 import { getWaterAndBridges } from "./overpassService";
+import type { RouteProgressCallback } from "./routeProgress";
 import { getRedisClient } from "./redisClient";
 import { FeatureCollection, Feature } from "geojson";
 import * as Sentry from "@sentry/nextjs";
@@ -330,13 +331,15 @@ function repairBoundingBox(
  * @param waypoints - Waypoints as routed in the first pass.
  * @param routed - The first pass's result.
  * @param mode - Transport mode.
+ * @param onProgress - Told `"river-check"` just before OSM data is looked up.
  * @returns Repaired waypoints with the geometry needed for a second pass, or
  *   null when no repair is needed or possible.
  */
 async function repairRiverCrossings(
     waypoints: [number, number][],
     routed: RoutedWaypoints,
-    mode: TransportMode
+    mode: TransportMode,
+    onProgress?: RouteProgressCallback
 ): Promise<{
     waypoints: [number, number][];
     water: WaterIndex;
@@ -356,6 +359,8 @@ async function repairRiverCrossings(
     const bbox = repairBoundingBox(routed, threshold);
     if (!bbox) return null;
 
+    // A cache miss can wait tens of seconds on public Overpass; let the UI say why.
+    onProgress?.("river-check");
     const osm = await getWaterAndBridges(bbox);
     if (!osm) return null;
 
@@ -384,9 +389,13 @@ async function repairRiverCrossings(
  * This function is designed to be used server-side to keep API keys secure.
  *
  * @param options - Configuration options including coordinates and mode.
+ * @param onProgress - Optional; told about slow stages (see `RouteProgressStage`).
  * @returns A GeoJSON FeatureCollection containing the route.
  */
-export async function getRadarRoute(options: RouteGenerationOptions): Promise<FeatureCollection> {
+export async function getRadarRoute(
+    options: RouteGenerationOptions,
+    onProgress?: RouteProgressCallback
+): Promise<FeatureCollection> {
     const { coordinates, mode } = options;
 
     if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 2) {
@@ -456,7 +465,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     let waypoints = simplifiedCoordinates as [number, number][];
     let routed = await routeWaypoints(waypoints, radarMode, RADAR_API_KEY);
 
-    const repair = await repairRiverCrossings(waypoints, routed, mode as TransportMode);
+    const repair = await repairRiverCrossings(waypoints, routed, mode as TransportMode, onProgress);
     if (repair) {
         waypoints = repair.waypoints;
         routed = await routeWaypoints(waypoints, radarMode, RADAR_API_KEY);

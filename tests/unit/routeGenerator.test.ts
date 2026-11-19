@@ -69,7 +69,10 @@ describe('routeGenerator', () => {
 
             expect(mockFetch).toHaveBeenCalledWith('/api/radar/directions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/x-ndjson, application/json',
+                },
                 body: JSON.stringify({
                     coordinates: options.coordinates,
                     mode: options.mode,
@@ -227,5 +230,77 @@ describe('routeGenerator', () => {
             })).rejects.toThrow('Network error');
         });
     });
-});
 
+    describe('generateRoute with a streamed response', () => {
+        const route = {
+            type: 'FeatureCollection',
+            features: [{
+                type: 'Feature',
+                properties: {},
+                geometry: { type: 'LineString', coordinates: [[-0.1, 51.5], [-0.09, 51.51]] },
+            }],
+        };
+        const options: RouteGenerationOptions = {
+            coordinates: [[51.5, -0.1], [51.51, -0.09]],
+            mode: 'foot-walking',
+        };
+
+        /** A 200 NDJSON response whose body yields each string as a chunk. */
+        function ndjsonResponse(chunks: string[]) {
+            const encoder = new TextEncoder();
+            return {
+                ok: true,
+                headers: new Headers({ 'Content-Type': 'application/x-ndjson; charset=utf-8' }),
+                body: new ReadableStream({
+                    start(controller) {
+                        for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+                        controller.close();
+                    },
+                }),
+                json: async () => { throw new Error('json() must not be used for a stream'); },
+            };
+        }
+
+        it('forwards progress and resolves with the result', async () => {
+            const result = JSON.stringify({ type: 'result', data: route });
+            mockFetch.mockResolvedValueOnce(ndjsonResponse([
+                '{"type":"progress","stage":"river-check"}\n',
+                result.slice(0, 20),
+                `${result.slice(20)}\n`,
+            ]));
+            const onProgress = vi.fn();
+
+            await expect(generateRoute(options, onProgress)).resolves.toEqual(route);
+            expect(onProgress).toHaveBeenCalledWith('river-check');
+        });
+
+        it('works without a progress callback', async () => {
+            mockFetch.mockResolvedValueOnce(ndjsonResponse([
+                '{"type":"progress","stage":"river-check"}\n',
+                `${JSON.stringify({ type: 'result', data: route })}\n`,
+            ]));
+
+            await expect(generateRoute(options)).resolves.toEqual(route);
+        });
+
+        it('throws the message of an error line', async () => {
+            mockFetch.mockResolvedValueOnce(ndjsonResponse([
+                '{"type":"error","error":"Radar API Error: 400 Bad Request - Route not found"}\n',
+            ]));
+
+            await expect(generateRoute(options)).rejects.toThrow('Route not found');
+        });
+
+        it('falls back to a generic message for an empty error', async () => {
+            mockFetch.mockResolvedValueOnce(ndjsonResponse(['{"type":"error","error":""}\n']));
+
+            await expect(generateRoute(options)).rejects.toThrow('Failed to generate route');
+        });
+
+        it('throws when the stream ends without a result', async () => {
+            mockFetch.mockResolvedValueOnce(ndjsonResponse(['{"type":"progress","stage":"river-check"}\n']));
+
+            await expect(generateRoute(options)).rejects.toThrow('incomplete response');
+        });
+    });
+});

@@ -1,3 +1,10 @@
+import { FeatureCollection } from "geojson";
+import {
+    readRouteStream,
+    ROUTE_STREAM_CONTENT_TYPE,
+    RouteProgressCallback,
+} from "./routeProgress";
+
 
 
 
@@ -11,17 +18,20 @@ export interface RouteGenerationOptions {
 
 /**
  * Generates a navigable route that follows the shape of the provided coordinates.
- * 
- * Generates a route by calling our internal API endpoint.
- * This client-side function sends coordinates to /api/radar/directions
- * which then proxies to the Radar API on the server.
- * 
+ *
+ * Calls our internal API endpoint, /api/radar/directions, which proxies to the
+ * Radar API on the server. It asks for the streamed NDJSON protocol so slow
+ * server stages can be reported through `onProgress`; a plain JSON answer is
+ * accepted too.
+ *
  * @param options - Route generation options
+ * @param onProgress - Optional; called for each progress stage the server reports.
  * @returns GeoJSON FeatureCollection containing the route
  */
-import { FeatureCollection } from "geojson";
-
-export async function generateRoute(options: RouteGenerationOptions): Promise<FeatureCollection> {
+export async function generateRoute(
+    options: RouteGenerationOptions,
+    onProgress?: RouteProgressCallback
+): Promise<FeatureCollection> {
     const { coordinates, mode } = options;
 
     if (!coordinates || coordinates.length < 2) {
@@ -34,6 +44,7 @@ export async function generateRoute(options: RouteGenerationOptions): Promise<Fe
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            Accept: `${ROUTE_STREAM_CONTENT_TYPE}, application/json`,
         },
         body: JSON.stringify({ coordinates, mode }),
     });
@@ -43,5 +54,20 @@ export async function generateRoute(options: RouteGenerationOptions): Promise<Fe
         throw new Error(errorData.error || `Failed to generate route: ${response.statusText}`);
     }
 
-    return await response.json();
+    const contentType = response.headers?.get("content-type") ?? "";
+    if (!contentType.includes(ROUTE_STREAM_CONTENT_TYPE) || !response.body) {
+        return await response.json();
+    }
+
+    let result: FeatureCollection | undefined;
+    let failure: string | undefined;
+    await readRouteStream(response.body, message => {
+        if (message.type === "progress") onProgress?.(message.stage);
+        else if (message.type === "result") result = message.data;
+        else failure = message.error;
+    });
+
+    if (failure !== undefined) throw new Error(failure || "Failed to generate route");
+    if (!result) throw new Error("Failed to generate route: incomplete response");
+    return result;
 }

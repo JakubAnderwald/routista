@@ -20,7 +20,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import fs from "fs";
 import path from "path";
-import { SCENARIOS } from "../fixtures/scenarios";
+import { SCENARIOS, scenarioWaypoints } from "../fixtures/scenarios";
+import { getRadarRoute } from "@/lib/radarService";
 import { loadRadarFixture, replayFetch } from "../utils/radarFixtures";
 import { useWaterFixture } from "../utils/mockOverpass";
 import { measureScenario, ScenarioMetrics } from "../utils/routeMeasurement";
@@ -144,4 +145,22 @@ describe("river scenarios", () => {
             checkNoSpurs(scenario, await measureScenario(scenario));
         }
     );
+
+    it.each([
+        ["london-heart-foot", ["river-check"]],
+        ["london-heart-car", []],
+    ])("reports progress stages for %s", { timeout: 120_000 }, async (id, expected) => {
+        const scenario = SCENARIOS.find(s => s.id === id)!;
+        useWaterFixture(scenario.city);
+        vi.stubGlobal("fetch", replayFetch(loadRadarFixture(scenario.id)));
+
+        const stages: string[] = [];
+        await getRadarRoute(
+            { coordinates: await scenarioWaypoints(scenario), mode: scenario.mode },
+            stage => stages.push(stage)
+        );
+
+        // Walking along the Thames needs the OSM lookup; driving never does.
+        expect(stages).toEqual(expected);
+    });
 });

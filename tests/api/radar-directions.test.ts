@@ -336,5 +336,81 @@ describe('/api/radar/directions', () => {
             });
         });
     });
-});
 
+    describe('Streamed responses (Accept: application/x-ndjson)', () => {
+        const route = {
+            type: 'FeatureCollection' as const,
+            features: [],
+        };
+
+        function createStreamRequest(body: object): NextRequest {
+            return new NextRequest('http://localhost/api/radar/directions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/x-ndjson, application/json',
+                },
+                body: JSON.stringify(body),
+            });
+        }
+
+        async function linesOf(response: Response): Promise<unknown[]> {
+            const text = await response.text();
+            return text.split('\n').filter(Boolean).map(line => JSON.parse(line));
+        }
+
+        it('streams progress lines, then the result', async () => {
+            mockGetRadarRoute.mockImplementationOnce(async (_options, onProgress) => {
+                onProgress?.('river-check');
+                return route;
+            });
+
+            const response = await POST(createStreamRequest({
+                coordinates: [[51.5, -0.1], [51.51, -0.09]],
+                mode: 'foot-walking',
+            }));
+
+            expect(response.status).toBe(200);
+            expect(response.headers.get('content-type')).toContain('application/x-ndjson');
+            expect(await linesOf(response)).toEqual([
+                { type: 'progress', stage: 'river-check' },
+                { type: 'result', data: route },
+            ]);
+        });
+
+        it('sends an error line and reports to Sentry when routing fails', async () => {
+            mockGetRadarRoute.mockRejectedValueOnce(new Error('Radar API Error: 400 Bad Request'));
+
+            const response = await POST(createStreamRequest({
+                coordinates: [[51.5, -0.1], [51.51, -0.09]],
+                mode: 'foot-walking',
+            }));
+
+            expect(response.status).toBe(200);
+            expect(await linesOf(response)).toEqual([
+                { type: 'error', error: 'Radar API Error: 400 Bad Request' },
+            ]);
+            expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
+                extra: { endpoint: '/api/radar/directions', coordinatesCount: 2 },
+            });
+        });
+
+        it('uses a generic message for non-Error failures', async () => {
+            mockGetRadarRoute.mockRejectedValueOnce('nope');
+
+            const response = await POST(createStreamRequest({
+                coordinates: [[51.5, -0.1], [51.51, -0.09]],
+            }));
+
+            expect(await linesOf(response)).toEqual([{ type: 'error', error: 'Internal Server Error' }]);
+        });
+
+        it('still answers a malformed request with a plain 400', async () => {
+            const response = await POST(createStreamRequest({ coordinates: [[51.5, -0.1]] }));
+
+            expect(response.status).toBe(400);
+            expect(response.headers.get('content-type')).toContain('application/json');
+            expect(mockGetRadarRoute).not.toHaveBeenCalled();
+        });
+    });
+});

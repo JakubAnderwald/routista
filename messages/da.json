@@ -131,7 +131,8 @@
         },
         "processing": {
             "title": "Regner på det...",
-            "description": "Matcher din form til vejnettet."
+            "description": "Matcher din form til vejnettet.",
+            "riverCheck": "Din rute krydser en flod, så vi tjekker, hvor broerne er, så den ikke fører dig gennem vandet. Det kan tage op til et halvt minut."
         },
         "result": {
             "title": "Din rute",

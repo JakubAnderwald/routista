@@ -504,6 +504,32 @@ function ferryMetersOf(routed: RoutedWaypoints, thresholdMeters: number): number
 }
 
 /**
+ * One fallback re-route, or null when it failed or came back empty.
+ *
+ * A failed request must not cost the user the route they already have, and an
+ * empty answer has no ferry edges only because it has no edges at all, so
+ * neither may win against the current best.
+ */
+async function tryReroute(
+    waypoints: [number, number][],
+    radarMode: string,
+    apiKey: string
+): Promise<RoutedWaypoints | null> {
+    let rerouted: RoutedWaypoints;
+    try {
+        rerouted = await routeWaypoints(waypoints, radarMode, apiKey);
+    } catch (error) {
+        console.warn(
+            `[RadarService] Ferry fallback re-route failed, keeping the best route so far: ` +
+            `${error instanceof Error ? error.message : "unknown"}`
+        );
+        return null;
+    }
+    const empty = rerouted.features.length === 0 || rerouted.legPaths.size === 0 || rerouted.distance <= 0;
+    return empty ? null : rerouted;
+}
+
+/**
  * The no-data repair: drop waypoints beside ferry edges, re-route, and repeat
  * while each pass cuts ferry travel without making the route longer. A pass
  * that does neither is discarded, so the fallback never returns a route that
@@ -543,19 +569,8 @@ async function applyFerryFallback(
     let candidate: [number, number][] | null = reduced === waypoints ? null : reduced;
 
     for (let pass = 0; candidate && pass < RIVER_CROSSING.maxRepairPasses; pass++) {
-        let rerouted: RoutedWaypoints;
-        try {
-            rerouted = await routeWaypoints(candidate, radarMode, apiKey);
-        } catch (error) {
-            // A failed re-route must not cost the user the route they already have.
-            console.warn(
-                `[RadarService] Ferry fallback re-route failed, keeping the best route so far: ` +
-                `${error instanceof Error ? error.message : "unknown"}`
-            );
-            break;
-        }
-        // An empty answer has no ferry edges only because it has no edges at all.
-        if (rerouted.features.length === 0 || rerouted.legPaths.size === 0 || !(rerouted.distance > 0)) break;
+        const rerouted = await tryReroute(candidate, radarMode, apiKey);
+        if (!rerouted) break;
 
         const ferryMeters = ferryMetersOf(rerouted, threshold);
         if (ferryMeters >= best.ferryMeters || rerouted.distance > best.routed.distance) break;

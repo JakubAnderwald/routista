@@ -100,8 +100,10 @@ What this does **not** promise:
 - **Not every OSM response is shared via Redis.** Responses over 800 KB stay in the calling
   process only, and areas over 60 km² are not fetched at all.
 - **If OSM data cannot be fetched, the waypoints beside Radar's ferry edges are dropped and the
-  route re-routed**, so it crosses on a bridge with a little less shape detail on the water.
-  If that does not reduce ferry travel without lengthening the route, Radar's route is kept.
+  route re-routed** to reduce ferry travel, with a little less shape detail on the water. This
+  is not guaranteed to reach a bridge: some ferry edges can remain. A pass is kept only if it
+  reduces ferry travel without lengthening the route, otherwise Radar's route is kept. Such
+  routes are not cached, so a retry after the background fill gets the full repair.
   This covers Overpass being slow, down, or the area being too large. A busy or silent main
   Overpass instance hands over to backup instances within the same 35 s budget first, and a
   failed lookup is retried in the background and cached for the next route in that area. If the

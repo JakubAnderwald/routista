@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { hashCoordinates, getRadarRoute, getRadarAutocomplete, chunkWaypoints } from '../../src/lib/radarService';
 import { calculateRouteLength } from '../../src/lib/geoUtils';
 
-// Mock the Redis module
+// Mock the Redis module; set is shared so a test can check what was cached.
+const mockRedisSet = vi.hoisted(() => vi.fn());
 vi.mock('@upstash/redis', () => ({
-    Redis: vi.fn().mockImplementation(() => ({
-        get: vi.fn(),
-        set: vi.fn(),
-    })),
+    // A class, so `new Redis()` works; an arrow-function mock cannot be constructed.
+    Redis: class {
+        get = vi.fn();
+        set = mockRedisSet;
+    },
 }));
 
 // Mock Sentry
@@ -459,6 +461,58 @@ describe('radarService', () => {
                 expect(result.features[0].properties?.riverCrossing).toBeUndefined();
                 // The first pass's three legs, not the rejected re-route's one.
                 expect(result.features[0].properties?.legs).toHaveLength(3);
+            });
+
+            it('keeps the first route when the fallback re-route comes back empty', async () => {
+                vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
+                mockGetWaterAndBridges.mockResolvedValueOnce(null as never);
+                mockFetch.mockResolvedValueOnce(ferryPass).mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => ({ routes: [] }),
+                });
+
+                const result = await getRadarRoute({ coordinates: waypoints, mode: 'foot-walking' });
+
+                expect(result.features[0].properties?.riverCrossing).toBeUndefined();
+                expect(result.features[0].properties?.legs).toHaveLength(3);
+            });
+
+            it('keeps the first route when the fallback re-route fails', async () => {
+                vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
+                mockGetWaterAndBridges.mockResolvedValueOnce(null as never);
+                mockFetch.mockResolvedValueOnce(ferryPass).mockResolvedValueOnce({
+                    ok: false,
+                    status: 429,
+                    statusText: 'Too Many Requests',
+                    text: async () => 'slow down',
+                });
+
+                const result = await getRadarRoute({ coordinates: waypoints, mode: 'foot-walking' });
+
+                expect(result.features[0].properties?.legs).toHaveLength(3);
+            });
+
+            it('does not cache a route built while the water lookup was failing', async () => {
+                vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
+                vi.stubEnv('KV_REST_API_URL', 'https://redis.example');
+                vi.stubEnv('KV_REST_API_TOKEN', 'token');
+                mockGetWaterAndBridges.mockResolvedValueOnce(null as never);
+                mockFetch.mockResolvedValueOnce(ferryPass).mockResolvedValueOnce(overBridge);
+
+                await getRadarRoute({ coordinates: waypoints, mode: 'foot-walking' });
+
+                expect(mockRedisSet).not.toHaveBeenCalled();
+            });
+
+            it('still caches when the lookup succeeded', async () => {
+                vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
+                vi.stubEnv('KV_REST_API_URL', 'https://redis.example');
+                vi.stubEnv('KV_REST_API_TOKEN', 'token');
+                mockFetch.mockResolvedValueOnce(ferryPass);
+
+                await getRadarRoute({ coordinates: waypoints, mode: 'foot-walking' });
+
+                expect(mockRedisSet).toHaveBeenCalledTimes(1);
             });
 
             it('leaves the route alone when the lookup finds no water to bridge', async () => {

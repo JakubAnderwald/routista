@@ -41,4 +41,22 @@ describe("radarFixtures replay", () => {
 
         await expect(fetchReplay(url("51.1,-0.2|51.2,-0.1"))).rejects.toThrow("No recorded response");
     });
+
+    it("prefers an exact recording and refuses an ambiguous rounded match", async () => {
+        const a = url("51.1,-0.12345678901234565|51.2,-0.1");
+        const b = url("51.1,-0.12345678901234566|51.2,-0.1");
+        const fixture: RadarFixture = {
+            scenario: "test",
+            capturedAt: "2026-01-01T00:00:00Z",
+            requests: {
+                [a]: { status: 200, body: { which: "a" } },
+                [b]: { status: 200, body: { which: "b" } },
+            },
+        };
+        const fetchReplay = replayFetch(fixture);
+
+        expect(await (await fetchReplay(a)).json()).toEqual({ which: "a" });
+        expect(await (await fetchReplay(b)).json()).toEqual({ which: "b" });
+        await expect(fetchReplay(url("51.1,-0.12345678901234567|51.2,-0.1"))).rejects.toThrow("Ambiguous");
+    });
 });

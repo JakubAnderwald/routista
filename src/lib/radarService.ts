@@ -353,6 +353,8 @@ async function repairRiverCrossings(
     water?: WaterIndex;
     bridges?: BridgeIndex;
     diagnostics: RiverCrossingDiagnostics;
+    /** Set by the no-data fallback when the lookup failed rather than being skipped. */
+    transient?: boolean;
 } | null> {
     if (!RIVER_CROSSING.affectedModes.includes(mode)) return null;
 
@@ -365,13 +367,15 @@ async function repairRiverCrossings(
     );
 
     const bbox = repairBoundingBox(routed, threshold);
-    if (!bbox) return ferryFallback(waypoints, routed, threshold);
+    // Too big to fetch is permanent, so that route may be cached as it is.
+    if (!bbox) return ferryFallback(waypoints, routed, threshold, false);
 
     // A cache miss can wait tens of seconds on public Overpass; let the UI say why.
     onProgress?.("river-check");
     const osm = await getWaterAndBridges(bbox);
     onProgress?.("river-check-done");
-    if (!osm) return ferryFallback(waypoints, routed, threshold);
+    // A failed lookup is transient: the background fill may soon have the data.
+    if (!osm) return ferryFallback(waypoints, routed, threshold, true);
 
     const water = buildWaterIndex(osm);
     const bridges = buildBridgeIndex(osm, water);
@@ -400,27 +404,35 @@ async function repairRiverCrossings(
  * @param waypoints - Waypoints as routed in the first pass.
  * @param routed - The first pass's result.
  * @param threshold - Ferry-length edge threshold for the mode.
- * @returns Reduced waypoints and diagnostics, or null if nothing was dropped.
+ * @param transient - Whether the data was unavailable only for now (a failed
+ *   lookup), so the result must not be cached as if the repair had run.
+ * @returns Reduced waypoints and diagnostics; null if nothing was dropped and
+ *   the cause was permanent. With a transient cause and nothing to drop, the
+ *   waypoints come back unchanged so the caller still skips the route cache.
  */
 function ferryFallback(
     waypoints: [number, number][],
     routed: RoutedWaypoints,
-    threshold: number
-): { waypoints: [number, number][]; diagnostics: RiverCrossingDiagnostics } | null {
+    threshold: number,
+    transient: boolean
+): { waypoints: [number, number][]; diagnostics: RiverCrossingDiagnostics; transient: boolean } | null {
     const plan = dropFerryWaypoints(
         waypoints,
         routed.legPaths.values(),
         threshold,
         RIVER_CROSSING.ferryFallbackRadiusMeters
     );
-    if (!plan) return null;
+    if (!plan && !transient) return null;
 
-    console.warn(`[RadarService] No water data; dropping ${plan.dropped} waypoint(s) beside ferry edges`);
+    if (plan) {
+        console.warn(`[RadarService] No water data; dropping ${plan.dropped} waypoint(s) beside ferry edges`);
+    }
     return {
-        waypoints: plan.waypoints,
+        waypoints: plan?.waypoints ?? waypoints,
+        transient,
         diagnostics: {
             fallback: "no-osm-data",
-            waypointsDropped: plan.dropped,
+            waypointsDropped: plan?.dropped ?? 0,
             waypointsInWater: 0,
             crossings: 0,
             unbridgedRuns: 0,
@@ -518,14 +530,33 @@ async function applyFerryFallback(
     mode: TransportMode,
     radarMode: string,
     apiKey: string
-): Promise<{ waypoints: [number, number][]; routed: RoutedWaypoints; diagnostics?: RiverCrossingDiagnostics }> {
+): Promise<{
+    waypoints: [number, number][];
+    routed: RoutedWaypoints;
+    diagnostics?: RiverCrossingDiagnostics;
+    /** False when the route was built without water data that may soon be available. */
+    cacheable?: boolean;
+}> {
     const threshold = ROUTE_QUALITY.longEdgeThresholdMeters[mode];
     let best = { waypoints, routed, ferryMeters: ferryMetersOf(routed, threshold) };
     const original = best;
-    let candidate: [number, number][] | null = reduced;
+    let candidate: [number, number][] | null = reduced === waypoints ? null : reduced;
 
     for (let pass = 0; candidate && pass < RIVER_CROSSING.maxRepairPasses; pass++) {
-        const rerouted = await routeWaypoints(candidate, radarMode, apiKey);
+        let rerouted: RoutedWaypoints;
+        try {
+            rerouted = await routeWaypoints(candidate, radarMode, apiKey);
+        } catch (error) {
+            // A failed re-route must not cost the user the route they already have.
+            console.warn(
+                `[RadarService] Ferry fallback re-route failed, keeping the best route so far: ` +
+                `${error instanceof Error ? error.message : "unknown"}`
+            );
+            break;
+        }
+        // An empty answer has no ferry edges only because it has no edges at all.
+        if (rerouted.features.length === 0 || rerouted.legPaths.size === 0 || !(rerouted.distance > 0)) break;
+
         const ferryMeters = ferryMetersOf(rerouted, threshold);
         if (ferryMeters >= best.ferryMeters || rerouted.distance > best.routed.distance) break;
 
@@ -540,7 +571,9 @@ async function applyFerryFallback(
     }
 
     if (best === original) {
-        console.log(`[RadarService] Ferry fallback did not reduce ferry travel; keeping Radar's route`);
+        if (candidate !== null || reduced !== waypoints) {
+            console.log(`[RadarService] Ferry fallback did not reduce ferry travel; keeping Radar's route`);
+        }
         return { waypoints, routed };
     }
 
@@ -571,11 +604,20 @@ async function applyRiverRepair(
     radarMode: string,
     apiKey: string,
     onProgress?: RouteProgressCallback
-): Promise<{ waypoints: [number, number][]; routed: RoutedWaypoints; diagnostics?: RiverCrossingDiagnostics }> {
+): Promise<{
+    waypoints: [number, number][];
+    routed: RoutedWaypoints;
+    diagnostics?: RiverCrossingDiagnostics;
+    /** False when the route was built without water data that may soon be available. */
+    cacheable?: boolean;
+}> {
     const repair = await repairRiverCrossings(waypoints, routed, mode, onProgress);
     if (!repair) return { waypoints, routed };
     if (repair.diagnostics.fallback) {
-        return applyFerryFallback(waypoints, routed, repair.waypoints, repair.diagnostics, mode, radarMode, apiKey);
+        const fallback = await applyFerryFallback(
+            waypoints, routed, repair.waypoints, repair.diagnostics, mode, radarMode, apiKey
+        );
+        return { ...fallback, cacheable: !repair.transient };
     }
 
     waypoints = repair.waypoints;
@@ -768,7 +810,13 @@ export async function getRadarRoute(
         ]
     };
 
-    await writeCachedRoute(cacheKey, result);
+    // A route built while the water lookup was failing would otherwise outlive
+    // the background fill that fixes it by a whole cache TTL.
+    if (repaired.cacheable === false) {
+        console.log(`[RadarService] Not caching: built without water data that may soon be available`);
+    } else {
+        await writeCachedRoute(cacheKey, result);
+    }
 
     return result;
 }

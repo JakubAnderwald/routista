@@ -5,11 +5,9 @@ import { badRequest, isCoordinateList, readJsonObject } from "@/lib/apiRequest";
 import * as Sentry from "@sentry/nextjs";
 import { encodeRouteStreamMessage, ROUTE_STREAM_CONTENT_TYPE } from "@/lib/routeProgress";
 
-/**
- * Seconds Vercel lets this function run. The river-crossing repair can wait up to
- * `RIVER_CROSSING.overpassTimeoutMs` on Overpass on top of several Radar passes.
- */
-export const maxDuration = 60;
+// No `maxDuration` here on purpose: the platform default (300 s on Fluid compute) covers the
+// worst case of a 35 s river check plus up to five chunked Radar passes. A lower limit would
+// cut the NDJSON stream off before its result or error line.
 
 /** Generates a Radar route for the posted `{ coordinates, mode }`, rate-limited per IP. */
 export async function POST(request: NextRequest) {

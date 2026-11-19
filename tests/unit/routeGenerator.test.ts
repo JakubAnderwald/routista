@@ -265,13 +265,14 @@ describe('routeGenerator', () => {
             const result = JSON.stringify({ type: 'result', data: route });
             mockFetch.mockResolvedValueOnce(ndjsonResponse([
                 '{"type":"progress","stage":"river-check"}\n',
+                '{"type":"progress","stage":"river-check-done"}\n',
                 result.slice(0, 20),
                 `${result.slice(20)}\n`,
             ]));
             const onProgress = vi.fn();
 
             await expect(generateRoute(options, onProgress)).resolves.toEqual(route);
-            expect(onProgress).toHaveBeenCalledWith('river-check');
+            expect(onProgress.mock.calls).toEqual([['river-check'], ['river-check-done']]);
         });
 
         it('works without a progress callback', async () => {

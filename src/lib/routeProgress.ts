@@ -20,8 +20,10 @@ export const ROUTE_STREAM_CONTENT_TYPE = "application/x-ndjson";
  *
  * `river-check`: the route looked like it crossed water and OSM water and
  * bridge data is being fetched, which can take tens of seconds.
+ * `river-check-done`: that lookup has finished (with or without data), so a
+ * notice about it that has not appeared yet should not appear.
  */
-export type RouteProgressStage = "river-check";
+export type RouteProgressStage = "river-check" | "river-check-done";
 
 /** Callback the route generator uses to report a stage. */
 export type RouteProgressCallback = (stage: RouteProgressStage) => void;

@@ -147,7 +147,7 @@ describe("river scenarios", () => {
     );
 
     it.each([
-        ["london-heart-foot", ["river-check"]],
+        ["london-heart-foot", ["river-check", "river-check-done"]],
         ["london-heart-car", []],
     ])("reports progress stages for %s", { timeout: 120_000 }, async (id, expected) => {
         const scenario = SCENARIOS.find(s => s.id === id)!;

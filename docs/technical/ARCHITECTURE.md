@@ -100,9 +100,11 @@ routes wrong, or stale routes are served for up to 24 hours after a fix ships.
   a failure is remembered for 60 s so an outage does not make every request pay it again.
 - Progress: a client sending `Accept: application/x-ndjson` to `/api/radar/directions` gets
   NDJSON (`src/lib/routeProgress.ts`): a `{"type":"progress","stage":"river-check"}` line when
-  the OSM lookup starts, then one `result` or `error` line. The create page shows "your route
-  crosses a river" once that stage has run for 3 s (`RIVER_CHECK_NOTICE_DELAY_MS`). Other
-  clients still get plain JSON. The route's `maxDuration` is 60 s.
+  the OSM lookup starts and `river-check-done` when it ends, then one `result` or `error` line.
+  The create page shows "your route crosses a river" only if the lookup is still running after
+  3 s (`RIVER_CHECK_NOTICE_DELAY_MS`). Other clients still get plain JSON. The route keeps the
+  platform's default duration limit (300 s on Fluid compute): a 35 s lookup plus up to five
+  chunked Radar passes would not fit in 60 s.
 - Responses over 800 KB are kept in the per-process cache only, which is bounded to 16 entries
 
 **Files:** `src/lib/overpassService.ts`, `src/lib/riverCrossing.ts`.

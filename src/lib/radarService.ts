@@ -362,6 +362,7 @@ async function repairRiverCrossings(
     // A cache miss can wait tens of seconds on public Overpass; let the UI say why.
     onProgress?.("river-check");
     const osm = await getWaterAndBridges(bbox);
+    onProgress?.("river-check-done");
     if (!osm) return null;
 
     const water = buildWaterIndex(osm);

@@ -203,6 +203,8 @@ export default function CreateClient() {
             const { generateRoute } = await import("@/lib/routeGenerator");
             const data = await generateRoute({ coordinates: geoPoints, mode }, stage => {
                 if (stage === "river-check") riverNotice.trigger();
+                // A lookup that finished in time must not raise the notice during later routing.
+                if (stage === "river-check-done") riverNotice.cancel();
             });
             setRouteData(data);
 

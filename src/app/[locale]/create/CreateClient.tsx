@@ -414,9 +414,9 @@ export default function CreateClient() {
                             <h2 className="text-xl font-semibold mb-2 dark:text-white">{t('processing.title')}</h2>
                             <p className="text-gray-500 dark:text-gray-400">{t('processing.description')}</p>
                             {riverCheckSlow && (
-                                <p data-testid="river-check-notice" role="status" className="mt-4 max-w-md text-center text-sm text-blue-700 dark:text-blue-300">
+                                <output data-testid="river-check-notice" className="mt-4 block max-w-md text-center text-sm text-blue-700 dark:text-blue-300">
                                     {t('processing.riverCheck')}
-                                </p>
+                                </output>
                             )}
                         </div>
                     )}

@@ -14,6 +14,7 @@ This file maps concepts and features to their source of truth in the codebase. U
 | **Spur Cleanup** | `src/lib/routeCleanup.ts` | Splices out-and-back excursions out of a routed polyline — the branch into a side street that turns round and comes straight back. See `docs/technical/SPUR_CLEANUP.md`. |
 | **Water Geometry** | `src/lib/waterGeometry.ts` | Pure point-in-water and route-in-water queries over OSM water polygons. Used to tell a bridge crossing from a route travelling along a river (issue #47). |
 | **River Crossings** | `src/lib/riverCrossing.ts` | Moves waypoints out of water onto bridges, and pins crossings into legs that still travel on water. See `docs/technical/ISSUE_47_BASELINE.md`. |
+| **Route Progress Stream** | `src/lib/routeProgress.ts` | NDJSON progress protocol for `/api/radar/directions` (river-check stage) and the delayed "crosses a river" notice. |
 | **OSM Water Data** | `src/lib/overpassService.ts` | Fetches water polygons and bridges from Overpass, cached in Redis for 30 days. Only called when a route shows signs of using a ferry. |
 | **Main UI Flow** | `src/app/[locale]/create/CreateClient.tsx` | State machine for the "Create" wizard (Upload -> Area -> Mode -> Result). |
 | **Map Visualization** | `src/components/ResultMap.tsx` | Displays the generated route and original shape on Leaflet. |
@@ -122,6 +123,7 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `seo.test.ts`: Localized URLs, canonical/hreflang alternates, page metadata.
     *   `sitemap.test.ts`: Sitemap entries and robots rules.
     *   `routeGenerator.test.ts`: Route generation client tests.
+    *   `routeProgress.test.ts`: NDJSON stream parsing and delayed notice.
     *   `utils.test.ts`: Utility function tests.
     *   `analytics.test.ts`: Analytics service tests (tracking, localhost, timing).
     *   `fastGlobShim.test.ts`: The ESLint plugin resolves `fast-glob` to `shims/fast-glob`, and literal directories aren't expanded.

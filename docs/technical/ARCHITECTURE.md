@@ -83,7 +83,7 @@ routes wrong, or stale routes are served for up to 24 hours after a fix ships.
 - Water polygons and bridges are fetched from public Overpass instances: overpass-api.de
   first, then overpass.private.coffee and overpass.openstreetmap.fr (`OVERPASS_URLS` overrides
   the list). The main instance is often at capacity, so the request path races them: the next
-  one starts as soon as the previous fails, or after 4 s without an answer. The first usable
+  one starts as soon as the previous fails, or after 3 s without an answer. The first usable
   answer wins and the rest are aborted. Only worldwide instances belong in the list, since a
   regional one would answer "no water" outside its area and that would be cached.
 - A 200 whose `remark` says the query hit Overpass's own timeout or memory limit counts as a
@@ -95,8 +95,16 @@ routes wrong, or stale routes are served for up to 24 hours after a fix ships.
 - Only fetched for walking and cycling routes that show signs of having used a ferry, so most
   routes never call it
 - Graceful fallback: if Overpass is slow or down, the route is returned exactly as Radar
-  produced it. One attempt with a 15 s budget shared by all instances bounds the delay, and a failure is remembered
-  for 60 s so an outage does not make every request pay it again.
+  produced it. One attempt with a 35 s budget shared by all instances bounds the delay (public
+  instances took 8-40 s for one query under load on 2026-11-19, so 15 s timed every one out), and
+  a failure is remembered for 60 s so an outage does not make every request pay it again.
+- Progress: a client sending `Accept: application/x-ndjson` to `/api/radar/directions` gets
+  NDJSON (`src/lib/routeProgress.ts`): a `{"type":"progress","stage":"river-check"}` line when
+  the OSM lookup starts and `river-check-done` when it ends, then one `result` or `error` line.
+  The create page shows "your route crosses a river" only if the lookup is still running after
+  3 s (`RIVER_CHECK_NOTICE_DELAY_MS`). Other clients still get plain JSON. The route keeps the
+  platform's default duration limit (300 s on Fluid compute): a 35 s lookup plus up to five
+  chunked Radar passes would not fit in 60 s.
 - Responses over 800 KB are kept in the per-process cache only, which is bounded to 16 entries
 
 **Files:** `src/lib/overpassService.ts`, `src/lib/riverCrossing.ts`.

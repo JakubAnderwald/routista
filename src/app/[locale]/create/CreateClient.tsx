@@ -10,7 +10,8 @@ import { extractShapeFromImage } from "@/lib/imageProcessing";
 import { scalePointsToGeo, calculateRouteLength, calculateRouteAccuracy } from "@/lib/geoUtils";
 import { generateGPX, downloadGPX } from "@/lib/gpxGenerator";
 import { useTranslations } from 'next-intl';
-import { TransportMode } from "@/config";
+import { RIVER_CHECK_NOTICE_DELAY_MS, TransportMode } from "@/config";
+import { createDelayedNotice, type DelayedNotice } from "@/lib/routeProgress";
 import { useABVariant } from "@/components/ABTestProvider";
 import { ShareModal } from "@/components/ShareModal";
 import { StravaButton } from "@/components/StravaButton";
@@ -48,6 +49,10 @@ export default function CreateClient() {
     // Variant A: 4 steps (upload -> area -> mode -> result)
     // Variant B: 3 steps (upload -> area+mode -> result)
     const [step, setStep] = useState<"upload" | "area" | "mode" | "processing" | "result">("upload");
+    // Shown when the server's river check runs long (slow public Overpass).
+    const [riverCheckSlow, setRiverCheckSlow] = useState(false);
+    const riverNoticeRef = useRef<DelayedNotice | null>(null);
+    useEffect(() => () => riverNoticeRef.current?.cancel(), []);
     const [image, setImage] = useState<File | null>(null);
     const [center, setCenter] = useState<[number, number]>([51.505, -0.09]);
     const [radius, setRadius] = useState(1000);
@@ -182,6 +187,10 @@ export default function CreateClient() {
         const getLatency = startTiming();
 
         setStep("processing");
+        setRiverCheckSlow(false);
+        riverNoticeRef.current?.cancel();
+        const riverNotice = createDelayedNotice(RIVER_CHECK_NOTICE_DELAY_MS, () => setRiverCheckSlow(true));
+        riverNoticeRef.current = riverNotice;
         console.log(`[CreateClient] Starting route generation...`);
         console.log(`[CreateClient] Input: ${shapePoints.length} shape points, center: [${center[0].toFixed(4)}, ${center[1].toFixed(4)}], radius: ${radius}m, mode: ${mode}`);
 
@@ -192,7 +201,11 @@ export default function CreateClient() {
 
             // 2. Generate route on client-side
             const { generateRoute } = await import("@/lib/routeGenerator");
-            const data = await generateRoute({ coordinates: geoPoints, mode });
+            const data = await generateRoute({ coordinates: geoPoints, mode }, stage => {
+                if (stage === "river-check") riverNotice.trigger();
+                // A lookup that finished in time must not raise the notice during later routing.
+                if (stage === "river-check-done") riverNotice.cancel();
+            });
             setRouteData(data);
 
             // Calculate stats
@@ -233,6 +246,9 @@ export default function CreateClient() {
             alert(message);
             // Go back to the appropriate step based on variant
             setStep(variant === 'A' ? "mode" : "area");
+        } finally {
+            riverNotice.cancel();
+            setRiverCheckSlow(false);
         }
     };
 
@@ -399,6 +415,11 @@ export default function CreateClient() {
                             <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-900 border-t-blue-600 dark:border-t-blue-500 rounded-full animate-spin mb-6"></div>
                             <h2 className="text-xl font-semibold mb-2 dark:text-white">{t('processing.title')}</h2>
                             <p className="text-gray-500 dark:text-gray-400">{t('processing.description')}</p>
+                            {riverCheckSlow && (
+                                <output data-testid="river-check-notice" className="mt-4 block max-w-md text-center text-sm text-blue-700 dark:text-blue-300">
+                                    {t('processing.riverCheck')}
+                                </output>
+                            )}
                         </div>
                     )}
 

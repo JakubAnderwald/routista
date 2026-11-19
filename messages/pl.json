@@ -131,7 +131,8 @@
         },
         "processing": {
             "title": "Przetwarzanie...",
-            "description": "Dopasowywanie kształtu do sieci dróg."
+            "description": "Dopasowywanie kształtu do sieci dróg.",
+            "riverCheck": "Twoja trasa przecina rzekę, więc sprawdzamy, gdzie są mosty, żeby nie prowadziła przez wodę. Może to potrwać do pół minuty."
         },
         "result": {
             "title": "Twoja trasa",

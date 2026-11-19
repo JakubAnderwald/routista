@@ -131,7 +131,8 @@
         },
         "processing": {
             "title": "Berechne...",
-            "description": "Deine Form wird an das Straßennetz angepasst."
+            "description": "Deine Form wird an das Straßennetz angepasst.",
+            "riverCheck": "Deine Route überquert einen Fluss. Wir prüfen gerade, wo die Brücken sind, damit sie nicht durchs Wasser führt. Das kann bis zu einer halben Minute dauern."
         },
         "result": {
             "title": "Deine Route",

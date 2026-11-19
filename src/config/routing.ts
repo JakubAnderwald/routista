@@ -206,6 +206,12 @@ export const SPUR_CLEANUP = {
  * waypoints that land in water have to be moved onto a bridge before routing.
  * See `docs/technical/ISSUE_47_BASELINE.md`.
  */
+/**
+ * How long the river check may run before the create page explains the wait,
+ * in milliseconds. Cached lookups finish well inside this, so they show nothing.
+ */
+export const RIVER_CHECK_NOTICE_DELAY_MS = 3_000;
+
 export const RIVER_CROSSING = {
     /** Modes whose routing graph contains ferries, and so need the repair. */
     affectedModes: ["foot-walking", "cycling-regular"] as TransportMode[],
@@ -308,15 +314,22 @@ export const RIVER_CROSSING = {
      * Time budget for one Overpass attempt, shared by every endpoint raced in
      * it. Route generation waits at most `overpassAttempts` of these, so keep
      * the two in step.
+     *
+     * Public instances are slow under load: on 2026-11-19 the same Barcelona
+     * query took 8-40 s on overpass.openstreetmap.fr, and 15 s left every
+     * instance timing out (ROUTISTA "Overpass fetch failed"). The client tells
+     * the user why the wait is long (see `RIVER_CHECK_NOTICE_DELAY_MS`), and
+     * the directions route's `maxDuration` must stay above this.
      */
-    overpassTimeoutMs: 15_000,
+    overpassTimeoutMs: 35_000,
 
     /**
      * How long an endpoint gets to answer before the next one is asked too.
      * An endpoint that fails outright hands over at once instead. The first
-     * usable answer wins and the others are cancelled.
+     * usable answer wins and the others are cancelled. With three endpoints
+     * the last one starts at 6 s and still gets most of the budget.
      */
-    overpassHedgeDelayMs: 4_000,
+    overpassHedgeDelayMs: 3_000,
 
     /**
      * Attempts on the request path. One: a route must not wait on a retry

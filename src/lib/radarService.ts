@@ -10,6 +10,7 @@ import {
 } from "./waterGeometry";
 import { BridgeIndex, buildBridgeIndex, planCrossings, repairWaterLegs } from "./riverCrossing";
 import { getWaterAndBridges } from "./overpassService";
+import type { RouteProgressCallback } from "./routeProgress";
 import { getRedisClient } from "./redisClient";
 import { FeatureCollection, Feature } from "geojson";
 import * as Sentry from "@sentry/nextjs";
@@ -330,13 +331,15 @@ function repairBoundingBox(
  * @param waypoints - Waypoints as routed in the first pass.
  * @param routed - The first pass's result.
  * @param mode - Transport mode.
+ * @param onProgress - Told `"river-check"` just before OSM data is looked up.
  * @returns Repaired waypoints with the geometry needed for a second pass, or
  *   null when no repair is needed or possible.
  */
 async function repairRiverCrossings(
     waypoints: [number, number][],
     routed: RoutedWaypoints,
-    mode: TransportMode
+    mode: TransportMode,
+    onProgress?: RouteProgressCallback
 ): Promise<{
     waypoints: [number, number][];
     water: WaterIndex;
@@ -356,7 +359,10 @@ async function repairRiverCrossings(
     const bbox = repairBoundingBox(routed, threshold);
     if (!bbox) return null;
 
+    // A cache miss can wait tens of seconds on public Overpass; let the UI say why.
+    onProgress?.("river-check");
     const osm = await getWaterAndBridges(bbox);
+    onProgress?.("river-check-done");
     if (!osm) return null;
 
     const water = buildWaterIndex(osm);
@@ -380,13 +386,116 @@ async function repairRiverCrossings(
 }
 
 /**
+ * Reads a cached route from Redis, if Redis is configured.
+ *
+ * @param cacheKey - Route cache key.
+ * @returns The cached route, or null on a miss, a Redis error, or no Redis.
+ */
+async function readCachedRoute(cacheKey: string): Promise<FeatureCollection | null> {
+    const redis = getRedisClient();
+    if (!redis) {
+        console.log(`[RadarService] Redis not configured, proceeding without cache`);
+        return null;
+    }
+
+    try {
+        const cachedResult = await redis.get<FeatureCollection>(cacheKey);
+        if (cachedResult) {
+            console.log(`[RadarService] Cache HIT for key: ${cacheKey}`);
+            return cachedResult;
+        }
+        console.log(`[RadarService] Cache MISS for key: ${cacheKey}`);
+    } catch (cacheError) {
+        // Redis error - continue without cache
+        console.log(`[RadarService] Cache error, proceeding without cache: ${cacheError instanceof Error ? cacheError.message : 'unknown error'}`);
+    }
+    return null;
+}
+
+/**
+ * Caches a route for future requests, if Redis is configured. Errors are logged, not thrown.
+ *
+ * @param cacheKey - Route cache key.
+ * @param result - Route to store.
+ */
+async function writeCachedRoute(cacheKey: string, result: FeatureCollection): Promise<void> {
+    const redis = getRedisClient();
+    if (!redis) return;
+
+    try {
+        await redis.set(cacheKey, result, { ex: CACHE.ttlSeconds });
+        console.log(`[RadarService] Cached result with key: ${cacheKey} (TTL: ${CACHE.ttlSeconds}s)`);
+    } catch (cacheError) {
+        // Redis error - continue without caching
+        console.log(`[RadarService] Failed to cache result: ${cacheError instanceof Error ? cacheError.message : 'unknown error'}`);
+    }
+}
+
+/**
+ * Runs the river crossing repair on a first routing pass and re-routes when it
+ * moved waypoints.
+ *
+ * @param waypoints - Waypoints as routed in the first pass.
+ * @param routed - The first pass's result.
+ * @param mode - Transport mode.
+ * @param radarMode - Radar's name for the mode.
+ * @param apiKey - Radar API key.
+ * @param onProgress - Told `"river-check"` when OSM data is looked up.
+ * @returns Final waypoints and routing, plus diagnostics when a repair ran.
+ */
+async function applyRiverRepair(
+    waypoints: [number, number][],
+    routed: RoutedWaypoints,
+    mode: TransportMode,
+    radarMode: string,
+    apiKey: string,
+    onProgress?: RouteProgressCallback
+): Promise<{ waypoints: [number, number][]; routed: RoutedWaypoints; diagnostics?: RiverCrossingDiagnostics }> {
+    const repair = await repairRiverCrossings(waypoints, routed, mode, onProgress);
+    if (!repair) return { waypoints, routed };
+
+    waypoints = repair.waypoints;
+    routed = await routeWaypoints(waypoints, radarMode, apiKey);
+
+    // Radar can still divert to a pier and back between two dry waypoints,
+    // so pin a bridge into any leg that is still travelling on water.
+    // Pinning one leg can expose another, so repeat until nothing changes.
+    for (let pass = 0; pass < RIVER_CROSSING.maxRepairPasses; pass++) {
+        const pinned = repairWaterLegs(
+            waypoints,
+            routed.legPaths,
+            repair.water,
+            repair.bridges,
+            ROUTE_QUALITY.longEdgeThresholdMeters[mode]
+        );
+        if (pinned.repaired === 0) break;
+
+        waypoints = pinned.waypoints;
+        routed = await routeWaypoints(waypoints, radarMode, apiKey);
+        repair.diagnostics.repairedLegs += pinned.repaired;
+    }
+
+    console.log(
+        `[RadarService] River repair: ${repair.diagnostics.waypointsInWater} waypoints in water, ` +
+        `${repair.diagnostics.crossings} bridge crossing(s), ` +
+        `${repair.diagnostics.unbridgedRuns} unbridged, ${repair.diagnostics.repairedLegs} leg(s) pinned`
+    );
+
+    return { waypoints, routed, diagnostics: repair.diagnostics };
+}
+
+/**
  * Generates a route by calling the Radar API.
  * This function is designed to be used server-side to keep API keys secure.
  *
  * @param options - Configuration options including coordinates and mode.
+ * @param onProgress - Optional; told about slow stages (see `RouteProgressStage`).
  * @returns A GeoJSON FeatureCollection containing the route.
  */
-export async function getRadarRoute(options: RouteGenerationOptions): Promise<FeatureCollection> {
+export async function getRadarRoute(
+    options: RouteGenerationOptions,
+    onProgress?: RouteProgressCallback
+): Promise<FeatureCollection> {
     const { coordinates, mode } = options;
 
     if (!coordinates || !Array.isArray(coordinates) || coordinates.length < 2) {
@@ -404,25 +513,8 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     // Generate cache key from simplified coordinates and mode
     const cacheKey = `${CACHE.routeKeyPrefix}${mode}:${hashCoordinates(simplifiedCoordinates as [number, number][])}`;
     
-    // Get Redis client (may be null if not configured)
-    const redis = getRedisClient();
-    
-    // Try to get cached result (only if Redis is configured)
-    if (redis) {
-        try {
-            const cachedResult = await redis.get<FeatureCollection>(cacheKey);
-            if (cachedResult) {
-                console.log(`[RadarService] Cache HIT for key: ${cacheKey}`);
-                return cachedResult;
-            }
-            console.log(`[RadarService] Cache MISS for key: ${cacheKey}`);
-        } catch (cacheError) {
-            // Redis error - continue without cache
-            console.log(`[RadarService] Cache error, proceeding without cache: ${cacheError instanceof Error ? cacheError.message : 'unknown error'}`);
-        }
-    } else {
-        console.log(`[RadarService] Redis not configured, proceeding without cache`);
-    }
+    const cachedResult = await readCachedRoute(cacheKey);
+    if (cachedResult) return cachedResult;
 
     const RADAR_API_KEY = process.env.NEXT_PUBLIC_RADAR_LIVE_PK || process.env.NEXT_PUBLIC_RADAR_TEST_PK;
 
@@ -456,35 +548,9 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
     let waypoints = simplifiedCoordinates as [number, number][];
     let routed = await routeWaypoints(waypoints, radarMode, RADAR_API_KEY);
 
-    const repair = await repairRiverCrossings(waypoints, routed, mode as TransportMode);
-    if (repair) {
-        waypoints = repair.waypoints;
-        routed = await routeWaypoints(waypoints, radarMode, RADAR_API_KEY);
-
-        // Radar can still divert to a pier and back between two dry waypoints,
-        // so pin a bridge into any leg that is still travelling on water.
-        // Pinning one leg can expose another, so repeat until nothing changes.
-        for (let pass = 0; pass < RIVER_CROSSING.maxRepairPasses; pass++) {
-            const pinned = repairWaterLegs(
-                waypoints,
-                routed.legPaths,
-                repair.water,
-                repair.bridges,
-                ROUTE_QUALITY.longEdgeThresholdMeters[mode as TransportMode]
-            );
-            if (pinned.repaired === 0) break;
-
-            waypoints = pinned.waypoints;
-            routed = await routeWaypoints(waypoints, radarMode, RADAR_API_KEY);
-            repair.diagnostics.repairedLegs += pinned.repaired;
-        }
-
-        console.log(
-            `[RadarService] River repair: ${repair.diagnostics.waypointsInWater} waypoints in water, ` +
-            `${repair.diagnostics.crossings} bridge crossing(s), ` +
-            `${repair.diagnostics.unbridgedRuns} unbridged, ${repair.diagnostics.repairedLegs} leg(s) pinned`
-        );
-    }
+    const repaired = await applyRiverRepair(waypoints, routed, mode as TransportMode, radarMode, RADAR_API_KEY, onProgress);
+    waypoints = repaired.waypoints;
+    routed = repaired.routed;
 
     // If no features were generated (e.g. API errors for all chunks), fallback to straight line
     if (routed.features.length === 0) {
@@ -556,7 +622,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
                         routedDuration: routed.duration
                     },
                     legs: routed.legs,
-                    ...(repair ? { riverCrossing: repair.diagnostics } : {}),
+                    ...(repaired.diagnostics ? { riverCrossing: repaired.diagnostics } : {}),
                     ...(cleanup.spurs.length > 0
                         ? {
                               spurCleanup: {
@@ -577,16 +643,7 @@ export async function getRadarRoute(options: RouteGenerationOptions): Promise<Fe
         ]
     };
 
-    // Cache the result for future requests (only if Redis is configured)
-    if (redis) {
-        try {
-            await redis.set(cacheKey, result, { ex: CACHE.ttlSeconds });
-            console.log(`[RadarService] Cached result with key: ${cacheKey} (TTL: ${CACHE.ttlSeconds}s)`);
-        } catch (cacheError) {
-            // Redis error - continue without caching
-            console.log(`[RadarService] Failed to cache result: ${cacheError instanceof Error ? cacheError.message : 'unknown error'}`);
-        }
-    }
+    await writeCachedRoute(cacheKey, result);
 
     return result;
 }

@@ -124,6 +124,7 @@ This file maps concepts and features to their source of truth in the codebase. U
     *   `sitemap.test.ts`: Sitemap entries and robots rules.
     *   `routeGenerator.test.ts`: Route generation client tests.
     *   `routeProgress.test.ts`: NDJSON stream parsing and delayed notice.
+    *   `radarFixtures.test.ts`: fixture replay matching (tolerates float noise between Node versions).
     *   `utils.test.ts`: Utility function tests.
     *   `analytics.test.ts`: Analytics service tests (tracking, localhost, timing).
     *   `fastGlobShim.test.ts`: The ESLint plugin resolves `fast-glob` to `shims/fast-glob`, and literal directories aren't expanded.

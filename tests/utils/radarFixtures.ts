@@ -107,6 +107,38 @@ export function loadWaterFixture(city: CityName): FeatureCollection {
     return JSON.parse(fs.readFileSync(file, "utf-8")) as FeatureCollection;
 }
 
+/** Decimal places waypoint coordinates are compared at: 1e-9 degrees is about 0.1 mm. */
+const REPLAY_COORDINATE_DECIMALS = 9;
+
+/**
+ * Normalises a Radar request URL for fixture lookup.
+ *
+ * Rounds every number in the `locations` parameter to
+ * `REPLAY_COORDINATE_DECIMALS`, so floating-point noise between Node versions
+ * still finds the recorded response, while a genuinely different waypoint
+ * does not. Anything else in the URL must match exactly.
+ *
+ * @param url - Request URL.
+ * @returns The lookup key.
+ */
+export function replayKey(url: string): string {
+    const parsed = new URL(url);
+    const locations = parsed.searchParams.get("locations");
+    if (locations === null) return url;
+
+    const rounded = locations
+        .split("|")
+        .map(point =>
+            point
+                .split(",")
+                .map(value => Number(Number(value).toFixed(REPLAY_COORDINATE_DECIMALS)).toString())
+                .join(",")
+        )
+        .join("|");
+    parsed.searchParams.set("locations", rounded);
+    return parsed.toString();
+}
+
 /**
  * Builds a `fetch` replacement that answers from a recorded fixture.
  *
@@ -117,9 +149,32 @@ export function loadWaterFixture(city: CityName): FeatureCollection {
  * @returns A fetch implementation for `vi.stubGlobal('fetch', ...)`.
  */
 export function replayFetch(fixture: RadarFixture): typeof fetch {
+    // Exact URL first; then by normalised URL, because Node versions disagree
+    // on the last digit of Math.sin/cos, so waypoints computed on one can
+    // differ by 1e-17 degrees from the ones recorded on another. Two different
+    // recordings that normalise to the same key are ambiguous and never matched
+    // that way.
+    const byKey = new Map<string, RecordedResponse | "ambiguous">();
+    for (const [url, recorded] of Object.entries(fixture.requests)) {
+        const key = replayKey(url);
+        const existing = byKey.get(key);
+        byKey.set(
+            key,
+            existing === undefined || JSON.stringify(existing) === JSON.stringify(recorded) ? recorded : "ambiguous"
+        );
+    }
+
     return (async (input: RequestInfo | URL) => {
         const url = typeof input === "string" ? input : input.toString();
-        const recorded = fixture.requests[url];
+        const normalised =
+            (fixture.requests[url] as RecordedResponse | undefined) ?? byKey.get(replayKey(url));
+        if (normalised === "ambiguous") {
+            throw new Error(
+                `Ambiguous replay for ${url} in fixture "${fixture.scenario}": ` +
+                    `several recordings match it once coordinates are rounded`
+            );
+        }
+        const recorded = normalised;
 
         if (!recorded) {
             throw new Error(

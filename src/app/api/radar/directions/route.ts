@@ -6,8 +6,9 @@ import * as Sentry from "@sentry/nextjs";
 import { encodeRouteStreamMessage, ROUTE_STREAM_CONTENT_TYPE } from "@/lib/routeProgress";
 
 // No `maxDuration` here on purpose: the platform default (300 s on Fluid compute) covers the
-// worst case of a 35 s river check plus up to five chunked Radar passes. A lower limit would
-// cut the NDJSON stream off before its result or error line.
+// typical worst case of a 35 s river check plus up to five chunked Radar passes (~125 s). It is
+// not a hard bound: Radar fetches have no timeout of their own. A lower limit would cut the
+// NDJSON stream off before its result or error line.
 
 /** Generates a Radar route for the posted `{ coordinates, mode }`, rate-limited per IP. */
 export async function POST(request: NextRequest) {

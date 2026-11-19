@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { FeatureCollection } from "geojson";
 import { buildWaterIndex } from "@/lib/waterGeometry";
 import {
+    dropFerryWaypoints,
     buildBridgeIndex,
     chooseBridge,
     crossingWaypointsBetween,
@@ -447,3 +448,45 @@ describe("London bridge fixture", () => {
         expect(index.bridges.map(b => b.name)).not.toContain("Fisherman's Hall Wharf");
     });
 });
+
+describe("dropFerryWaypoints", () => {
+    // [lat, lng]; 0.001 degrees of longitude is about 69 m here.
+    const waypoints: [number, number][] = [
+        [51.5000, -0.1000],
+        [51.5005, -0.0990],
+        [51.5000, -0.0950],
+        [51.5005, -0.0910],
+        [51.5000, -0.0900],
+    ];
+
+    it("drops waypoints within the radius of a ferry-length edge", () => {
+        // One 550 m edge from w1 to w3, passing right by w2.
+        const legPaths = [[[51.5005, -0.0990], [51.5005, -0.0910]] as [number, number][]];
+
+        const plan = dropFerryWaypoints(waypoints, legPaths, 400, 100);
+
+        expect(plan).toEqual({ waypoints: [waypoints[0], waypoints[4]], dropped: 3 });
+    });
+
+    it("always keeps the first and last waypoints", () => {
+        const legPaths = [[[51.5000, -0.1000], [51.5000, -0.0900]] as [number, number][]];
+
+        const plan = dropFerryWaypoints(waypoints, legPaths, 400, 100);
+
+        expect(plan?.waypoints[0]).toEqual(waypoints[0]);
+        expect(plan?.waypoints.at(-1)).toEqual(waypoints[4]);
+    });
+
+    it("returns null when no edge is ferry-length", () => {
+        const legPaths = [[[51.5000, -0.1000], [51.5005, -0.0990], [51.5000, -0.0950]] as [number, number][]];
+
+        expect(dropFerryWaypoints(waypoints, legPaths, 400, 100)).toBeNull();
+    });
+
+    it("returns null when the ferry edge is nowhere near an inner waypoint", () => {
+        const legPaths = [[[51.5100, -0.1000], [51.5100, -0.0900]] as [number, number][]];
+
+        expect(dropFerryWaypoints(waypoints, legPaths, 400, 100)).toBeNull();
+    });
+});
+

@@ -20,6 +20,14 @@ vi.mock("@upstash/redis", () => ({
     },
 }));
 
+// Background fills are collected here instead of running, so a test can start them.
+const { afterCallbacks } = vi.hoisted(() => ({ afterCallbacks: [] as (() => Promise<unknown>)[] }));
+vi.mock("next/server", () => ({
+    after: (callback: () => Promise<unknown>) => {
+        afterCallbacks.push(callback);
+    },
+}));
+
 vi.mock("@sentry/nextjs", () => ({
     captureException: vi.fn(),
     captureMessage: vi.fn(),
@@ -513,6 +521,43 @@ describe("getWaterAndBridges", () => {
 
         // Evicted, so it had to be fetched again rather than growing forever.
         expect(mockFetch.mock.calls.length).toBeGreaterThan(before);
+    });
+
+    it("fills the cache in the background after a failed lookup, once per area", async () => {
+        afterCallbacks.length = 0;
+        redisGet.mockResolvedValue(null);
+        mockFetch.mockResolvedValue({ ok: false, status: 504, text: async () => "slow" });
+
+        expect(await getWaterAndBridges([20.5, 20.5, 20.51, 20.51])).toBeNull();
+        expect(afterCallbacks).toHaveLength(1);
+
+        mockFetch.mockReset();
+        mockFetch.mockResolvedValue(okResponse(OVERPASS_RESPONSE));
+        await afterCallbacks[0]();
+
+        expect(redisSet).toHaveBeenCalledWith(
+            expect.stringContaining("osm:water:"),
+            expect.anything(),
+            expect.anything()
+        );
+        // The failure memo is cleared, so the next route in the area gets the data.
+        expect((await getWaterAndBridges([20.5, 20.5, 20.51, 20.51]))?.features.length).toBeGreaterThan(0);
+        redisGet.mockReset();
+    });
+
+    it("does not start a second background fill while one is in flight", async () => {
+        afterCallbacks.length = 0;
+        redisGet.mockResolvedValue(null);
+        mockFetch.mockResolvedValue({ ok: false, status: 504, text: async () => "slow" });
+
+        await getWaterAndBridges([21.5, 21.5, 21.51, 21.51]);
+        vi.spyOn(Date, "now").mockReturnValue(Date.now() + 120_000);
+        await getWaterAndBridges([21.5, 21.5, 21.51, 21.51]);
+
+        expect(afterCallbacks).toHaveLength(1);
+        // A failed background fill only logs; it never throws.
+        await expect(afterCallbacks[0]()).resolves.toBeUndefined();
+        redisGet.mockReset();
     });
 
     it("returns null rather than throwing when Overpass is unavailable", async () => {

@@ -13,6 +13,7 @@
 
 import { Feature, FeatureCollection, Position } from "geojson";
 import * as Sentry from "@sentry/nextjs";
+import { after } from "next/server";
 import { RIVER_CROSSING } from "@/config";
 import { getRedisClient } from "./redisClient";
 
@@ -64,6 +65,9 @@ const memoryCache = new Map<string, FeatureCollection>();
 
 /** Keys whose last lookup failed, with the time the memo expires. */
 const failedLookups = new Map<string, number>();
+
+/** Keys with a background retry in flight, so a burst of failures starts only one. */
+const backgroundFills = new Set<string>();
 
 /** Stores a response, evicting the oldest entries once the cache is full. */
 function rememberInMemory(key: string, collection: FeatureCollection): void {
@@ -143,15 +147,62 @@ export async function getWaterAndBridges(
             tags: { "overpass.failure": classifyOverpassFailure(tagged) },
             extra: { service: "overpassService", bbox, reason, failures },
         });
+        scheduleBackgroundFill(key, bbox);
         return null;
     }
 
+    await storeCollection(key, collection);
+    return collection;
+}
+
+/**
+ * Retries a failed lookup after the response has gone out, with a longer
+ * budget, and caches the answer so the next route in the area is repaired.
+ *
+ * Runs through Next's `after()` so the function stays alive for it on Vercel.
+ * Outside a request (scripts, tests) it simply runs detached. Never throws.
+ *
+ * @param key - Cache key of the failed lookup.
+ * @param bbox - Bounding box as `[south, west, north, east]`.
+ */
+function scheduleBackgroundFill(key: string, bbox: [number, number, number, number]): void {
+    if (backgroundFills.has(key)) return;
+    backgroundFills.add(key);
+
+    const run = () =>
+        fetchWaterAndBridges(bbox, RIVER_CROSSING.overpassBackgroundTimeoutMs, 1, overpassEndpoints())
+            .then(collection => storeCollection(key, collection))
+            .then(() => console.log(`[Overpass] Background fill cached ${key}`))
+            .catch(error =>
+                console.warn(
+                    `[Overpass] Background fill failed for ${key}: ${error instanceof Error ? error.message : "unknown"}`
+                )
+            )
+            .finally(() => backgroundFills.delete(key));
+
+    try {
+        after(run);
+    } catch {
+        // Not inside a request (scripts, tests): run it once this call has returned.
+        setTimeout(run, 0);
+    }
+}
+
+/**
+ * Caches a fetched collection in memory and, when it fits, in Redis, and
+ * clears any failure memo for its key.
+ *
+ * @param key - Cache key.
+ * @param collection - Water and bridge geometry.
+ */
+async function storeCollection(key: string, collection: FeatureCollection): Promise<void> {
     console.log(
         `[Overpass] Fetched ${collection.features.length} features for ${key}`
     );
     failedLookups.delete(key);
     rememberInMemory(key, collection);
 
+    const redis = getRedisClient();
     const bytes = JSON.stringify(collection).length;
     if (redis && bytes <= RIVER_CROSSING.maxCachedDataBytes) {
         try {
@@ -166,8 +217,6 @@ export async function getWaterAndBridges(
         // for repeat requests hitting the same lambda.
         console.log(`[Overpass] ${bytes} bytes too large to share via Redis, memory only`);
     }
-
-    return collection;
 }
 
 /**

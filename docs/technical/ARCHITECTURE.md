@@ -76,7 +76,7 @@ State is primarily managed in the parent page (`src/app/create/page.tsx` or simi
 
 **Files:** `src/lib/radarService.ts`, `src/lib/redisClient.ts`
 
-**Cache key is versioned** (`route:v2:`). Bump it whenever a change makes previously cached
+**Cache key is versioned** (`route:v6:`; v6 dropped routes cached with a ferry leg while Overpass was failing). Bump it whenever a change makes previously cached
 routes wrong, or stale routes are served for up to 24 hours after a fix ships.
 
 ### OSM Water Data (Overpass, cached in Upstash Redis)
@@ -94,10 +94,17 @@ routes wrong, or stale routes are served for up to 24 hours after a fix ships.
   in-memory cache
 - Only fetched for walking and cycling routes that show signs of having used a ferry, so most
   routes never call it
-- Graceful fallback: if Overpass is slow or down, the route is returned exactly as Radar
-  produced it. One attempt with a 35 s budget shared by all instances bounds the delay (public
-  instances took 8-40 s for one query under load on 2026-11-19, so 15 s timed every one out), and
-  a failure is remembered for 60 s so an outage does not make every request pay it again.
+- Graceful fallback: one attempt with a 35 s budget shared by all instances bounds the delay
+  (public instances took 8-40 s for one query under load on 2026-11-19, so 15 s timed every one
+  out), and a failure is remembered for 60 s so an outage does not make every request pay it again.
+- No-data fallback: when the lookup fails, waypoints within 100 m of a ferry-length edge
+  (`ferryFallbackRadiusMeters`) are dropped and the route re-routed, repeating while each pass
+  cuts ferry-edge length without making the route longer; otherwise Radar's route is kept.
+  Measured live with Overpass unavailable: water on the London walking heart 7.2 km -> 3.0 km,
+  on the star 3.5 km -> 0.45 km; the cycling heart is left as Radar drew it.
+- Background fill: a failed lookup is retried once after the response (`after()`), with a
+  90 s budget (`overpassBackgroundTimeoutMs`), and cached, so the next route in the area gets
+  the full bridge repair.
 - Progress: a client sending `Accept: application/x-ndjson` to `/api/radar/directions` gets
   NDJSON (`src/lib/routeProgress.ts`): a `{"type":"progress","stage":"river-check"}` line when
   the OSM lookup starts and `river-check-done` when it ends, then one `result` or `error` line.

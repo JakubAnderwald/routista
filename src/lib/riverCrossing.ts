@@ -601,3 +601,58 @@ function dedupeAdjacent(points: [number, number][]): [number, number][] {
         (point, i) => i === 0 || calculateDistance(points[i - 1], point) > 1
     );
 }
+
+/** What `dropFerryWaypoints` produced. */
+export interface FerryFallbackPlan {
+    /** The waypoints to route instead. */
+    waypoints: [number, number][];
+    /** How many waypoints were dropped. */
+    dropped: number;
+}
+
+/**
+ * Drops the waypoints that put the router on a ferry, for when no water data
+ * is available.
+ *
+ * Without OSM there is no way to tell which waypoints are in the river, but
+ * the router's own ferry legs show where it is: a ferry-length edge runs along
+ * the water, so a waypoint right beside one is a waypoint the router could
+ * only satisfy from that ferry. Dropping those leaves the neighbours on land,
+ * and the router joins them over a bridge. The shape loses a little detail
+ * where it crosses the water, which beats a route down the middle of it.
+ *
+ * The first and last waypoints are always kept.
+ *
+ * @param waypoints - Waypoints as routed, `[lat, lng]`.
+ * @param legPaths - Routed geometry per leg as `[lat, lng]`.
+ * @param thresholdMeters - Edge length above which an edge counts as a ferry.
+ * @param radiusMeters - How close to such an edge a waypoint must be to go.
+ * @returns The reduced waypoints, or null when nothing was dropped.
+ */
+export function dropFerryWaypoints(
+    waypoints: [number, number][],
+    legPaths: Iterable<[number, number][]>,
+    thresholdMeters: number,
+    radiusMeters: number
+): FerryFallbackPlan | null {
+    const ferryEdges: [[number, number], [number, number]][] = [];
+    for (const path of legPaths) {
+        for (let i = 0; i < path.length - 1; i++) {
+            if (calculateDistance(path[i], path[i + 1]) > thresholdMeters) {
+                ferryEdges.push([path[i], path[i + 1]]);
+            }
+        }
+    }
+    if (ferryEdges.length === 0) return null;
+
+    const last = waypoints.length - 1;
+    const kept = waypoints.filter(
+        (point, i) =>
+            i === 0 ||
+            i === last ||
+            !ferryEdges.some(([a, b]) => distanceToSegmentMeters(point, a, b) <= radiusMeters)
+    );
+
+    const dropped = waypoints.length - kept.length;
+    return dropped === 0 ? null : { waypoints: kept, dropped };
+}

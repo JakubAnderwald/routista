@@ -8,7 +8,7 @@ import {
     buildWaterIndex,
     WaterIndex,
 } from "./waterGeometry";
-import { BridgeIndex, buildBridgeIndex, planCrossings, repairWaterLegs } from "./riverCrossing";
+import { BridgeIndex, buildBridgeIndex, dropFerryWaypoints, planCrossings, repairWaterLegs } from "./riverCrossing";
 import { getWaterAndBridges } from "./overpassService";
 import type { RouteProgressCallback } from "./routeProgress";
 import { getRedisClient } from "./redisClient";
@@ -270,6 +270,13 @@ async function routeWaypoints(
 
 /** What the river crossing repair changed, reported under `properties`. */
 interface RiverCrossingDiagnostics {
+    /**
+     * "no-osm-data": water data was unavailable, so waypoints beside the
+     * router's ferry edges were dropped instead of being moved onto bridges.
+     */
+    fallback?: "no-osm-data";
+    /** Waypoints the fallback dropped. */
+    waypointsDropped?: number;
     waypointsInWater: number;
     crossings: number;
     unbridgedRuns: number;
@@ -342,8 +349,9 @@ async function repairRiverCrossings(
     onProgress?: RouteProgressCallback
 ): Promise<{
     waypoints: [number, number][];
-    water: WaterIndex;
-    bridges: BridgeIndex;
+    /** Absent for the no-data fallback, which has no geometry to pin bridges with. */
+    water?: WaterIndex;
+    bridges?: BridgeIndex;
     diagnostics: RiverCrossingDiagnostics;
 } | null> {
     if (!RIVER_CROSSING.affectedModes.includes(mode)) return null;
@@ -357,13 +365,13 @@ async function repairRiverCrossings(
     );
 
     const bbox = repairBoundingBox(routed, threshold);
-    if (!bbox) return null;
+    if (!bbox) return ferryFallback(waypoints, routed, threshold);
 
     // A cache miss can wait tens of seconds on public Overpass; let the UI say why.
     onProgress?.("river-check");
     const osm = await getWaterAndBridges(bbox);
     onProgress?.("river-check-done");
-    if (!osm) return null;
+    if (!osm) return ferryFallback(waypoints, routed, threshold);
 
     const water = buildWaterIndex(osm);
     const bridges = buildBridgeIndex(osm, water);
@@ -381,6 +389,43 @@ async function repairRiverCrossings(
             unbridgedRuns: plan.unbridgedRuns,
             repairedLegs: 0,
             bridges: plan.crossings.map(crossing => crossing.bridgeName ?? "unnamed"),
+        },
+    };
+}
+
+/**
+ * The repair to use when no water data is available: drop the waypoints
+ * beside the router's ferry edges, so it re-routes over a bridge.
+ *
+ * @param waypoints - Waypoints as routed in the first pass.
+ * @param routed - The first pass's result.
+ * @param threshold - Ferry-length edge threshold for the mode.
+ * @returns Reduced waypoints and diagnostics, or null if nothing was dropped.
+ */
+function ferryFallback(
+    waypoints: [number, number][],
+    routed: RoutedWaypoints,
+    threshold: number
+): { waypoints: [number, number][]; diagnostics: RiverCrossingDiagnostics } | null {
+    const plan = dropFerryWaypoints(
+        waypoints,
+        routed.legPaths.values(),
+        threshold,
+        RIVER_CROSSING.ferryFallbackRadiusMeters
+    );
+    if (!plan) return null;
+
+    console.warn(`[RadarService] No water data; dropping ${plan.dropped} waypoint(s) beside ferry edges`);
+    return {
+        waypoints: plan.waypoints,
+        diagnostics: {
+            fallback: "no-osm-data",
+            waypointsDropped: plan.dropped,
+            waypointsInWater: 0,
+            crossings: 0,
+            unbridgedRuns: 0,
+            repairedLegs: 0,
+            bridges: [],
         },
     };
 }
@@ -432,6 +477,82 @@ async function writeCachedRoute(cacheKey: string, result: FeatureCollection): Pr
 }
 
 /**
+ * Total length of a pass's ferry-length edges: how much of it the router
+ * spent on ways no pedestrian or cyclist can use.
+ */
+function ferryMetersOf(routed: RoutedWaypoints, thresholdMeters: number): number {
+    let total = 0;
+    for (const path of routed.legPaths.values()) {
+        for (let i = 0; i < path.length - 1; i++) {
+            const edge = calculateDistance(path[i], path[i + 1]);
+            if (edge > thresholdMeters) total += edge;
+        }
+    }
+    return total;
+}
+
+/**
+ * The no-data repair: drop waypoints beside ferry edges, re-route, and repeat
+ * while each pass cuts ferry travel without making the route longer. A pass
+ * that does neither is discarded, so the fallback never returns a route that
+ * uses more ferry, or is longer, than the one Radar produced.
+ *
+ * Length is checked as well because ferry travel is not always one long
+ * edge: where Radar splits a ferry way at many snapped waypoints the edges are
+ * short, and dropping some waypoints can send the router on a bigger detour.
+ *
+ * @param waypoints - Waypoints as routed in the first pass.
+ * @param routed - The first pass's result.
+ * @param reduced - The first pass's waypoints with the ferry ones dropped.
+ * @param diagnostics - The fallback's diagnostics, updated with the total dropped.
+ * @param mode - Transport mode.
+ * @param radarMode - Radar's name for the mode.
+ * @param apiKey - Radar API key.
+ * @returns The best waypoints and routing, with diagnostics when it helped.
+ */
+async function applyFerryFallback(
+    waypoints: [number, number][],
+    routed: RoutedWaypoints,
+    reduced: [number, number][],
+    diagnostics: RiverCrossingDiagnostics,
+    mode: TransportMode,
+    radarMode: string,
+    apiKey: string
+): Promise<{ waypoints: [number, number][]; routed: RoutedWaypoints; diagnostics?: RiverCrossingDiagnostics }> {
+    const threshold = ROUTE_QUALITY.longEdgeThresholdMeters[mode];
+    let best = { waypoints, routed, ferryMeters: ferryMetersOf(routed, threshold) };
+    const original = best;
+    let candidate: [number, number][] | null = reduced;
+
+    for (let pass = 0; candidate && pass < RIVER_CROSSING.maxRepairPasses; pass++) {
+        const rerouted = await routeWaypoints(candidate, radarMode, apiKey);
+        const ferryMeters = ferryMetersOf(rerouted, threshold);
+        if (ferryMeters >= best.ferryMeters || rerouted.distance > best.routed.distance) break;
+
+        best = { waypoints: candidate, routed: rerouted, ferryMeters };
+        if (ferryMeters === 0) break;
+        candidate = dropFerryWaypoints(
+            candidate,
+            rerouted.legPaths.values(),
+            threshold,
+            RIVER_CROSSING.ferryFallbackRadiusMeters
+        )?.waypoints ?? null;
+    }
+
+    if (best === original) {
+        console.log(`[RadarService] Ferry fallback did not reduce ferry travel; keeping Radar's route`);
+        return { waypoints, routed };
+    }
+
+    diagnostics.waypointsDropped = waypoints.length - best.waypoints.length;
+    console.log(
+        `[RadarService] Ferry fallback: dropped ${diagnostics.waypointsDropped} waypoint(s), ` +
+        `${Math.round(best.ferryMeters)}m of ferry edges left`
+    );
+    return { waypoints: best.waypoints, routed: best.routed, diagnostics };
+}
+
+/**
  * Runs the river crossing repair on a first routing pass and re-routes when it
  * moved waypoints.
  *
@@ -453,6 +574,9 @@ async function applyRiverRepair(
 ): Promise<{ waypoints: [number, number][]; routed: RoutedWaypoints; diagnostics?: RiverCrossingDiagnostics }> {
     const repair = await repairRiverCrossings(waypoints, routed, mode, onProgress);
     if (!repair) return { waypoints, routed };
+    if (repair.diagnostics.fallback) {
+        return applyFerryFallback(waypoints, routed, repair.waypoints, repair.diagnostics, mode, radarMode, apiKey);
+    }
 
     waypoints = repair.waypoints;
     routed = await routeWaypoints(waypoints, radarMode, apiKey);
@@ -460,12 +584,13 @@ async function applyRiverRepair(
     // Radar can still divert to a pier and back between two dry waypoints,
     // so pin a bridge into any leg that is still travelling on water.
     // Pinning one leg can expose another, so repeat until nothing changes.
-    for (let pass = 0; pass < RIVER_CROSSING.maxRepairPasses; pass++) {
+    const { water, bridges } = repair;
+    for (let pass = 0; water && bridges && pass < RIVER_CROSSING.maxRepairPasses; pass++) {
         const pinned = repairWaterLegs(
             waypoints,
             routed.legPaths,
-            repair.water,
-            repair.bridges,
+            water,
+            bridges,
             ROUTE_QUALITY.longEdgeThresholdMeters[mode]
         );
         if (pinned.repaired === 0) break;

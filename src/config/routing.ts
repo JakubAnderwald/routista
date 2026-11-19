@@ -269,6 +269,18 @@ export const RIVER_CROSSING = {
     /** Padding around the shape when asking OSM for water and bridges. */
     dataPaddingMeters: 1500,
 
+    /**
+     * Used only when OSM water data could not be fetched: waypoints within
+     * this distance of a ferry-length edge are dropped before re-routing, so
+     * the router has to cross on a bridge instead.
+     *
+     * Ferries run mid-river and waypoints that snap onto one sit in the water
+     * beside it. On the London fixtures 100 m catches the in-water waypoints
+     * next to the ferry while dropping almost none on the embankments; 150 m
+     * starts taking land waypoints from the shape.
+     */
+    ferryFallbackRadiusMeters: 100,
+
     /** How many legs may be repaired in a single pass. */
     maxPostRouteRepairs: 8,
 
@@ -343,6 +355,15 @@ export const RIVER_CROSSING = {
      * this, every request during an outage pays the full timeout again.
      */
     overpassFailureMemoSeconds: 60,
+
+    /**
+     * Budget for the background retry after a request-path lookup fails, in
+     * milliseconds. The user already has their route (with the no-data
+     * fallback); this only fills the cache so the next route in that area
+     * gets the full repair. Public instances answered the slow queries in up to
+     * 40 s on 2026-11-19, so give them well over that.
+     */
+    overpassBackgroundTimeoutMs: 90_000,
 
     /** Entries kept in the per-process OSM cache before the oldest is dropped. */
     maxMemoryCacheEntries: 16,

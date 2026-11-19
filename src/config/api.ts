@@ -37,7 +37,7 @@ export const CACHE = {
      * 24 hours. Both v4 and v5 were caught by a verification run coming back
      * byte-identical from a preview that had already shipped the new code.
      */
-    routeKeyPrefix: "route:v5:",
+    routeKeyPrefix: "route:v6:",
     
     /** Key prefix for rate limit entries */
     rateLimitKeyPrefix: "ratelimit:",

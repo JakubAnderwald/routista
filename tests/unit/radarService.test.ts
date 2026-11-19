@@ -16,6 +16,13 @@ vi.mock('@sentry/nextjs', () => ({
     captureMessage: vi.fn(),
 }));
 
+// Water data lookups succeed with nothing in them, so the river repair stays out of
+// these tests unless one sets it up (see "river repair without water data").
+const mockGetWaterAndBridges = vi.hoisted(() =>
+    vi.fn(async () => ({ type: 'FeatureCollection' as const, features: [] }))
+);
+vi.mock('../../src/lib/overpassService', () => ({ getWaterAndBridges: mockGetWaterAndBridges }));
+
 // Mock fetch
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -384,6 +391,85 @@ describe('radarService', () => {
             expect(legs[0].straightMeters).toBeGreaterThan(300);
             expect(legs[0].maxEdgeMeters).toBeGreaterThan(300);
             expect(legs[1].maxEdgeMeters).toBeLessThan(400);
+        });
+
+        describe('river repair without water data', () => {
+            /** A Radar response whose legs follow the given [lng, lat] paths. */
+            function radarResponse(legPaths: number[][][]) {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        routes: [{
+                            distance: { value: 1000 },
+                            duration: { value: 600 },
+                            geometry: { type: 'LineString', coordinates: legPaths.flat() },
+                            legs: legPaths.map(coordinates => ({
+                                distance: { value: 300 },
+                                geometry: { type: 'LineString', coordinates },
+                            })),
+                        }],
+                    }),
+                };
+            }
+
+            // Zig-zag so simplification keeps every point. The middle leg is one
+            // 570 m edge: the router took a ferry between w1 and w2.
+            const waypoints: [number, number][] = [
+                [51.5000, -0.1000],
+                [51.5010, -0.0990],
+                [51.5000, -0.0910],
+                [51.5010, -0.0900],
+            ];
+            const ferryPass = radarResponse([
+                [[-0.1000, 51.5000], [-0.0990, 51.5010]],
+                [[-0.0990, 51.5010], [-0.0910, 51.5000]],
+                [[-0.0910, 51.5000], [-0.0900, 51.5010]],
+            ]);
+            const overBridge = radarResponse([
+                [[-0.1000, 51.5000], [-0.0975, 51.5002], [-0.0950, 51.5005], [-0.0925, 51.5007], [-0.0900, 51.5010]],
+            ]);
+
+            it('drops the waypoints beside the ferry edge and re-routes when the lookup fails', async () => {
+                vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
+                mockGetWaterAndBridges.mockResolvedValueOnce(null as never);
+                mockFetch.mockResolvedValueOnce(ferryPass).mockResolvedValueOnce(overBridge);
+
+                const result = await getRadarRoute({ coordinates: waypoints, mode: 'foot-walking' });
+
+                expect(mockFetch).toHaveBeenCalledTimes(2);
+                const rerouted = new URL(mockFetch.mock.calls[1][0]).searchParams.get('locations')!;
+                expect(rerouted.split('|')).toHaveLength(2);
+                expect(result.features[0].properties?.riverCrossing).toMatchObject({
+                    fallback: 'no-osm-data',
+                    waypointsDropped: 2,
+                });
+            });
+
+            it("keeps Radar's route when dropping waypoints does not reduce ferry travel", async () => {
+                vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
+                mockGetWaterAndBridges.mockResolvedValueOnce(null as never);
+                // The re-route still takes a 690 m ferry hop between the two waypoints left.
+                mockFetch.mockResolvedValueOnce(ferryPass).mockResolvedValueOnce(
+                    radarResponse([[[-0.1000, 51.5000], [-0.0900, 51.5010]]])
+                );
+
+                const result = await getRadarRoute({ coordinates: waypoints, mode: 'foot-walking' });
+
+                expect(mockFetch).toHaveBeenCalledTimes(2);
+                expect(result.features[0].properties?.riverCrossing).toBeUndefined();
+                // The first pass's three legs, not the rejected re-route's one.
+                expect(result.features[0].properties?.legs).toHaveLength(3);
+            });
+
+            it('leaves the route alone when the lookup finds no water to bridge', async () => {
+                vi.stubEnv('NEXT_PUBLIC_RADAR_LIVE_PK', 'test-api-key');
+                mockFetch.mockResolvedValueOnce(ferryPass);
+
+                const result = await getRadarRoute({ coordinates: waypoints, mode: 'foot-walking' });
+
+                expect(mockFetch).toHaveBeenCalledTimes(1);
+                expect(result.features[0].properties?.riverCrossing).toBeUndefined();
+            });
         });
 
         it('should tolerate a Radar response with no legs', async () => {
